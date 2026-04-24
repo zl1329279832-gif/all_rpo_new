@@ -37,6 +37,7 @@ public class CollisionDetector {
                 if (bulletBounds.intersects(wall.getBounds())) {
                     if (wall.getType() != Wall.Type.WATER && wall.getType() != Wall.Type.GRASS) {
                         if (wall.getType() == Wall.Type.BRICK || wall.getType() == Wall.Type.BASE ||
+                            wall.getType() == Wall.Type.TARGET ||
                             (wall.getType() == Wall.Type.STEEL && bullet.isEnhanced())) {
                             wall.takeDamage();
                         }

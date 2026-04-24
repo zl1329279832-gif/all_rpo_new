@@ -61,6 +61,38 @@ public class InputHandler implements KeyListener {
         return pressedThisFrame.contains(KeyEvent.VK_R);
     }
 
+    public boolean isUpPressedOnce() {
+        return pressedThisFrame.contains(KeyEvent.VK_W) || pressedThisFrame.contains(KeyEvent.VK_UP);
+    }
+
+    public boolean isDownPressedOnce() {
+        return pressedThisFrame.contains(KeyEvent.VK_S) || pressedThisFrame.contains(KeyEvent.VK_DOWN);
+    }
+
+    public boolean isSelectPressedOnce() {
+        return pressedThisFrame.contains(KeyEvent.VK_ENTER);
+    }
+
+    public boolean isNum1Pressed() {
+        return pressedThisFrame.contains(KeyEvent.VK_1) || pressedThisFrame.contains(KeyEvent.VK_NUMPAD1);
+    }
+
+    public boolean isNum2Pressed() {
+        return pressedThisFrame.contains(KeyEvent.VK_2) || pressedThisFrame.contains(KeyEvent.VK_NUMPAD2);
+    }
+
+    public boolean isNum3Pressed() {
+        return pressedThisFrame.contains(KeyEvent.VK_3) || pressedThisFrame.contains(KeyEvent.VK_NUMPAD3);
+    }
+
+    public boolean isNum4Pressed() {
+        return pressedThisFrame.contains(KeyEvent.VK_4) || pressedThisFrame.contains(KeyEvent.VK_NUMPAD4);
+    }
+
+    public boolean isNum5Pressed() {
+        return pressedThisFrame.contains(KeyEvent.VK_5) || pressedThisFrame.contains(KeyEvent.VK_NUMPAD5);
+    }
+
     public void resetFrameState() {
         pressedThisFrame.clear();
     }

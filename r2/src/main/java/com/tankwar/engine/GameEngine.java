@@ -28,20 +28,30 @@ public class GameEngine {
     private int totalEnemies;
     private long lastEnemySpawnTime;
 
+    private GameConstants.GameMode gameMode;
     private String gameState;
     private boolean running;
     private boolean gameStarted;
+
+    private int totalTargets;
+    private int destroyedTargets;
+
+    private int selectedMenuOption;
+    private int selectedLevelOption;
 
     private Random random;
 
     public GameEngine() {
         this.random = new Random();
         this.level = 1;
+        this.gameMode = GameConstants.GameMode.PRACTICE;
+        this.selectedMenuOption = 0;
+        this.selectedLevelOption = 0;
         initGame();
     }
 
     private void initGame() {
-        this.gameMap = new GameMap(level);
+        this.gameMap = new GameMap(level, gameMode);
         this.player = new PlayerTank(304, 336);
         this.enemies = new ArrayList<>();
         this.bullets = new ArrayList<>();
@@ -52,10 +62,13 @@ public class GameEngine {
         this.lives = 3;
         this.enemiesSpawned = 0;
         this.enemiesKilled = 0;
-        this.totalEnemies = 10 + (level - 1) * 5;
+        this.totalEnemies = gameMode == GameConstants.GameMode.PRACTICE ? 10 + (level - 1) * 5 : 5 + level * 2;
         this.lastEnemySpawnTime = System.currentTimeMillis();
 
-        this.gameState = gameStarted ? "PLAYING" : "START";
+        this.totalTargets = gameMap.getTotalTargets();
+        this.destroyedTargets = 0;
+
+        this.gameState = gameStarted ? "PLAYING" : "MENU";
         this.running = true;
     }
 
@@ -64,14 +77,38 @@ public class GameEngine {
         gameState = "PLAYING";
     }
 
+    public void selectGameMode(GameConstants.GameMode mode) {
+        this.gameMode = mode;
+        if (mode == GameConstants.GameMode.BATTLE) {
+            gameState = "LEVEL_SELECT";
+        } else {
+            level = 1;
+            gameStarted = false;
+            initGame();
+        }
+    }
+
+    public void selectLevel(int levelNum) {
+        this.level = levelNum;
+        gameStarted = false;
+        initGame();
+    }
+
     public void update(boolean moveUp, boolean moveDown, boolean moveLeft, boolean moveRight,
-                      boolean shoot, boolean pausePressed, boolean restartPressed) {
+                      boolean shoot, boolean pausePressed, boolean restartPressed,
+                      boolean upPressedOnce, boolean downPressedOnce, boolean selectPressedOnce,
+                      boolean num1Pressed, boolean num2Pressed, boolean num3Pressed,
+                      boolean num4Pressed, boolean num5Pressed) {
         if (!running) return;
 
-        if (gameState.equals("START")) {
-            if (moveUp || moveDown || moveLeft || moveRight || shoot || pausePressed || restartPressed) {
-                startGame();
-            }
+        if (gameState.equals("MENU")) {
+            handleMenuInput(upPressedOnce, downPressedOnce, selectPressedOnce, num1Pressed, num2Pressed);
+            return;
+        }
+
+        if (gameState.equals("LEVEL_SELECT")) {
+            handleLevelSelectInput(upPressedOnce, downPressedOnce, selectPressedOnce,
+                                   num1Pressed, num2Pressed, num3Pressed, num4Pressed, num5Pressed);
             return;
         }
 
@@ -85,13 +122,32 @@ public class GameEngine {
 
         if (restartPressed) {
             if (gameState.equals("GAME_OVER")) {
-                level = 1;
-                gameStarted = false;
-                initGame();
+                if (gameMode == GameConstants.GameMode.BATTLE) {
+                    gameState = "LEVEL_SELECT";
+                } else {
+                    level = 1;
+                    gameStarted = false;
+                    initGame();
+                }
             } else if (gameState.equals("VICTORY")) {
-                level++;
+                if (gameMode == GameConstants.GameMode.BATTLE) {
+                    if (level < GameConstants.MAX_BATTLE_LEVELS) {
+                        level++;
+                        gameStarted = false;
+                        initGame();
+                    } else {
+                        gameState = "MENU";
+                        gameStarted = false;
+                        level = 1;
+                    }
+                } else {
+                    level++;
+                    gameStarted = false;
+                    initGame();
+                }
+            } else if (gameState.equals("PLAYING") || gameState.equals("PAUSED")) {
+                gameState = "MENU";
                 gameStarted = false;
-                initGame();
             }
         }
 
@@ -109,13 +165,73 @@ public class GameEngine {
         checkGameConditions();
     }
 
+    private void handleMenuInput(boolean upPressedOnce, boolean downPressedOnce,
+                                  boolean selectPressedOnce, boolean num1Pressed, boolean num2Pressed) {
+        if (upPressedOnce) {
+            selectedMenuOption = (selectedMenuOption - 1 + 3) % 3;
+        }
+        if (downPressedOnce) {
+            selectedMenuOption = (selectedMenuOption + 1) % 3;
+        }
+        if (num1Pressed) {
+            selectedMenuOption = 0;
+            selectGameMode(GameConstants.GameMode.PRACTICE);
+        }
+        if (num2Pressed) {
+            selectedMenuOption = 1;
+            selectGameMode(GameConstants.GameMode.BATTLE);
+        }
+
+        if (selectPressedOnce) {
+            switch (selectedMenuOption) {
+                case 0:
+                    selectGameMode(GameConstants.GameMode.PRACTICE);
+                    break;
+                case 1:
+                    selectGameMode(GameConstants.GameMode.BATTLE);
+                    break;
+                case 2:
+                    gameStarted = true;
+                    gameState = "PLAYING";
+                    break;
+            }
+        }
+    }
+
+    private void handleLevelSelectInput(boolean upPressedOnce, boolean downPressedOnce,
+                                         boolean selectPressedOnce,
+                                         boolean num1Pressed, boolean num2Pressed, boolean num3Pressed,
+                                         boolean num4Pressed, boolean num5Pressed) {
+        if (upPressedOnce) {
+            selectedLevelOption = (selectedLevelOption - 1 + GameConstants.MAX_BATTLE_LEVELS) % GameConstants.MAX_BATTLE_LEVELS;
+        }
+        if (downPressedOnce) {
+            selectedLevelOption = (selectedLevelOption + 1) % GameConstants.MAX_BATTLE_LEVELS;
+        }
+
+        if (num1Pressed) {
+            selectLevel(1);
+        } else if (num2Pressed) {
+            selectLevel(2);
+        } else if (num3Pressed) {
+            selectLevel(3);
+        } else if (num4Pressed) {
+            selectLevel(4);
+        } else if (num5Pressed) {
+            selectLevel(5);
+        }
+
+        if (selectPressedOnce) {
+            selectLevel(selectedLevelOption + 1);
+        }
+    }
+
     private void updatePlayer(boolean moveUp, boolean moveDown, boolean moveLeft, boolean moveRight, boolean shoot) {
         if (!player.isActive()) return;
 
         int oldX = player.getX();
         int oldY = player.getY();
 
-        // 根据按键移动坦克 - 一次只朝一个方向移动（经典坦克大战风格）
         if (moveUp) {
             player.moveUp();
         } else if (moveDown) {
@@ -126,13 +242,11 @@ public class GameEngine {
             player.moveRight();
         }
 
-        // 检查碰撞：墙、边界、敌人
         boolean collision = CollisionDetector.checkTankWallCollision(player, gameMap.getWalls()) ||
                            CollisionDetector.checkTankBoundaryCollision(player) ||
                            checkTankEnemyCollision(player);
 
         if (collision) {
-            // 发生碰撞，回退到原始位置
             player.setX(oldX);
             player.setY(oldY);
         }
@@ -225,6 +339,8 @@ public class GameEngine {
                 explosions.add(new Explosion(hitWall.getX(), hitWall.getY(), GameConstants.EXPLOSION_FRAMES));
             }
 
+            checkTargetDestruction();
+
             Tank hitTank = CollisionDetector.checkBulletTankCollision(bullet, player, enemies);
             if (hitTank != null) {
                 explosions.add(new Explosion(hitTank.getX(), hitTank.getY(), GameConstants.EXPLOSION_FRAMES));
@@ -245,6 +361,16 @@ public class GameEngine {
 
         bullets.removeIf(b -> !b.isActive());
         enemies.removeIf(e -> !e.isActive());
+    }
+
+    private void checkTargetDestruction() {
+        if (gameMode == GameConstants.GameMode.BATTLE) {
+            int currentDestroyed = gameMap.getDestroyedTargets();
+            if (currentDestroyed > destroyedTargets) {
+                score += (currentDestroyed - destroyedTargets) * 50;
+                destroyedTargets = currentDestroyed;
+            }
+        }
     }
 
     private void updateExplosions() {
@@ -314,14 +440,22 @@ public class GameEngine {
     private void checkGameConditions() {
         if (gameMap.isBaseDestroyed()) {
             gameState = "GAME_OVER";
-        } else if (enemiesKilled >= totalEnemies && enemies.isEmpty()) {
-            gameState = "VICTORY";
+        } else if (gameMode == GameConstants.GameMode.BATTLE) {
+            if (gameMap.allTargetsDestroyed()) {
+                gameState = "VICTORY";
+            }
+        } else {
+            if (enemiesKilled >= totalEnemies && enemies.isEmpty()) {
+                gameState = "VICTORY";
+            }
         }
     }
 
     public void render(GamePanel panel) {
         panel.setGameData(gameMap, player, enemies, bullets, explosions, powerUps,
-                          score, lives, totalEnemies - enemiesKilled, totalEnemies, gameState);
+                          score, lives, totalEnemies - enemiesKilled, totalEnemies, gameState,
+                          gameMode, level, totalTargets, destroyedTargets,
+                          selectedMenuOption, selectedLevelOption);
         panel.repaint();
     }
 

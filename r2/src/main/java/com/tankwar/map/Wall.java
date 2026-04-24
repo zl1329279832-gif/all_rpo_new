@@ -4,7 +4,7 @@ import java.awt.*;
 
 public class Wall {
     public enum Type {
-        BRICK, STEEL, BASE, WATER, GRASS
+        BRICK, STEEL, BASE, WATER, GRASS, TARGET
     }
 
     private int x, y;
@@ -17,11 +17,17 @@ public class Wall {
         this.y = y;
         this.type = type;
         this.active = true;
-        this.health = type == Type.BRICK ? 2 : (type == Type.BASE ? 1 : Integer.MAX_VALUE);
+        if (type == Type.BRICK) {
+            this.health = 2;
+        } else if (type == Type.BASE || type == Type.TARGET) {
+            this.health = 1;
+        } else {
+            this.health = Integer.MAX_VALUE;
+        }
     }
 
     public void takeDamage() {
-        if (type == Type.BRICK || type == Type.BASE) {
+        if (type == Type.BRICK || type == Type.BASE || type == Type.TARGET) {
             health--;
             if (health <= 0) {
                 active = false;
@@ -48,6 +54,9 @@ public class Wall {
                 break;
             case GRASS:
                 drawGrass(g, x, y, size);
+                break;
+            case TARGET:
+                drawTarget(g, x, y, size);
                 break;
         }
     }
@@ -107,6 +116,17 @@ public class Wall {
             int gy = y + size - 10;
             g.fillRect(gx, gy, 2, 10);
         }
+    }
+
+    private void drawTarget(Graphics g, int x, int y, int size) {
+        g.setColor(new Color(255, 50, 50));
+        g.fillRect(x, y, size, size);
+        g.setColor(new Color(255, 200, 50));
+        g.fillRect(x + 4, y + 4, size - 8, size - 8);
+        g.setColor(new Color(255, 100, 100));
+        g.fillOval(x + 8, y + 8, size - 16, size - 16);
+        g.setColor(Color.WHITE);
+        g.fillOval(x + 12, y + 12, size - 24, size - 24);
     }
 
     public boolean isActive() {

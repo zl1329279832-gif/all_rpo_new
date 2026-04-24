@@ -18,4 +18,10 @@ public class GameConstants {
 
     public static final int MAX_ENEMIES = 5;
     public static final int ENEMY_SPAWN_DELAY = 3000;
+
+    public enum GameMode {
+        PRACTICE, BATTLE
+    }
+
+    public static final int MAX_BATTLE_LEVELS = 5;
 }
