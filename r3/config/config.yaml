@@ -1,0 +1,16 @@
+default_scan_dir: ""
+exclude_dirs:
+    - .git
+    - node_modules
+    - dist
+    - bin
+    - tmp
+default_file_types:
+    - txt
+    - jpg
+    - png
+    - pdf
+    - docx
+    - xlsx
+log_path: logs/app.log
+theme: light
