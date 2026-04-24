@@ -61,7 +61,7 @@ export DB_PORT=3306
 export DB_USER=root
 export DB_PASSWORD=your_password
 export DB_NAME=risk_engine
-export SERVER_PORT=8080
+export SERVER_PORT=8081
 ```
 
 ### 4. 安装依赖

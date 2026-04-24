@@ -15,14 +15,17 @@ import (
 	"fyne.io/fyne/v2/widget"
 )
 
+// FileBatchApp 文件批量处理应用
 type FileBatchApp struct {
 	app            fyne.App
 	window         fyne.Window
-	configService  *service.ConfigService
-	fileService    *service.FileService
-	logger         *utils.Logger
+	configService  model.ConfigManager
+	fileService    model.FileOperator
+	logger         model.Logger
 	files          []*model.FileInfo
 	selectedFiles  []*model.FileInfo
+	
+	// UI组件
 	fileList       *widget.List
 	logList        *widget.List
 	progressBar    *widget.ProgressBar
@@ -33,6 +36,7 @@ type FileBatchApp struct {
 	renameStartNum *widget.Entry
 }
 
+// NewFileBatchApp 创建新的应用实例
 func NewFileBatchApp() *FileBatchApp {
 	configService := service.NewConfigService("config/config.yaml")
 	logger, _ := utils.NewLogger("logs/app.log")
@@ -47,13 +51,14 @@ func NewFileBatchApp() *FileBatchApp {
 	}
 }
 
+// Run 运行应用
 func (fba *FileBatchApp) Run() error {
 	if err := fba.configService.Load(); err != nil {
-		fba.logger.Error(fmt.Sprintf("加载配置失败: %v", err))
+		fba.logger.Error(fmt.Sprintf("load config failed: %v", err))
 	}
 
 	fba.app = app.New()
-	fba.window = fba.app.NewWindow("本地文件批量处理工具")
+	fba.window = fba.app.NewWindow("File Batch Tool - 文件批量处理工具")
 	fba.window.Resize(fyne.NewSize(1200, 800))
 
 	fba.buildUI()
@@ -62,8 +67,25 @@ func (fba *FileBatchApp) Run() error {
 	return nil
 }
 
+// ==================== UI构建 ====================
+
+// buildUI 构建主界面
 func (fba *FileBatchApp) buildUI() {
-	toolbar := widget.NewToolbar(
+	toolbar := fba.buildToolbar()
+	leftPanel := fba.buildLeftPanel()
+	rightPanel := fba.buildRightPanel()
+	statusBar := fba.buildStatusBar()
+	
+	split := container.NewHSplit(leftPanel, rightPanel)
+	split.SetOffset(0.6)
+
+	mainContainer := container.NewBorder(toolbar, statusBar, nil, nil, split)
+	fba.window.SetContent(mainContainer)
+}
+
+// buildToolbar 构建工具栏
+func (fba *FileBatchApp) buildToolbar() fyne.CanvasObject {
+	return widget.NewToolbar(
 		widget.NewToolbarAction(theme.FolderOpenIcon(), fba.selectFolder),
 		widget.NewToolbarSeparator(),
 		widget.NewToolbarAction(theme.ContentAddIcon(), fba.selectFiles),
@@ -74,43 +96,32 @@ func (fba *FileBatchApp) buildUI() {
 		widget.NewToolbarSpacer(),
 		widget.NewToolbarAction(theme.HelpIcon(), fba.showAbout),
 	)
-
-	leftPanel := fba.buildLeftPanel()
-	rightPanel := fba.buildRightPanel()
-	split := container.NewHSplit(leftPanel, rightPanel)
-	split.SetOffset(0.6)
-
-	fba.statusLabel = widget.NewLabel("就绪")
-	fba.progressBar = widget.NewProgressBar()
-	statusBar := container.NewBorder(nil, nil, nil, nil,
-		container.NewVBox(fba.progressBar, fba.statusLabel))
-
-	mainContainer := container.NewBorder(toolbar, statusBar, nil, nil, split)
-	fba.window.SetContent(mainContainer)
 }
 
+// buildLeftPanel 构建左侧面板
 func (fba *FileBatchApp) buildLeftPanel() fyne.CanvasObject {
 	config := fba.configService.Get()
 
 	fba.dirEntry = widget.NewEntry()
-	fba.dirEntry.SetPlaceHolder("选择要扫描的目录...")
+	fba.dirEntry.SetPlaceHolder("Select directory to scan...")
 	fba.dirEntry.SetText(config.DefaultScanDir)
 
-	dirBtn := widget.NewButton("浏览...", fba.selectFolder)
+	dirBtn := widget.NewButton("Browse...", fba.selectFolder)
 
 	fba.typeEntry = widget.NewEntry()
-	fba.typeEntry.SetPlaceHolder("文件类型过滤，如: txt,jpg,png")
+	fba.typeEntry.SetPlaceHolder("File types: txt,jpg,png")
 	if len(config.DefaultFileTypes) > 0 {
 		fba.typeEntry.SetText(strings.Join(config.DefaultFileTypes, ","))
 	}
 
-	scanBtn := widget.NewButton("开始扫描", fba.scanFiles)
+	scanBtn := widget.NewButton("Start Scan", fba.scanFiles)
 	scanBtn.Importance = widget.HighImportance
 
 	filterContainer := container.NewBorder(nil, nil, nil, dirBtn, fba.dirEntry)
-	typeContainer := container.NewBorder(nil, nil, widget.NewLabel("文件类型:"), nil, fba.typeEntry)
+	typeContainer := container.NewBorder(nil, nil, widget.NewLabel("File Types:"), nil, fba.typeEntry)
 	controlContainer := container.NewVBox(filterContainer, typeContainer, scanBtn)
 
+	// 文件列表
 	fba.fileList = widget.NewList(
 		func() int { return len(fba.files) },
 		func() fyne.CanvasObject {
@@ -135,19 +146,20 @@ func (fba *FileBatchApp) buildLeftPanel() fyne.CanvasObject {
 				fba.updateSelectedFiles()
 			}
 			nameLabel.SetText(file.Name)
-			sizeLabel.SetText(fba.formatSize(file.Size))
+			sizeLabel.SetText(utils.FormatSize(file.Size))
 			typeLabel.SetText(file.FileType)
 		},
 	)
 
-	selectAllBtn := widget.NewButton("全选", func() {
+	selectAllBtn := widget.NewButton("Select All", func() {
 		for _, f := range fba.files {
 			f.Selected = true
 		}
 		fba.updateSelectedFiles()
 		fba.fileList.Refresh()
 	})
-	deselectAllBtn := widget.NewButton("取消全选", func() {
+	
+	deselectAllBtn := widget.NewButton("Deselect All", func() {
 		for _, f := range fba.files {
 			f.Selected = false
 		}
@@ -169,6 +181,7 @@ func (fba *FileBatchApp) buildLeftPanel() fyne.CanvasObject {
 	)
 }
 
+// buildRightPanel 构建右侧面板
 func (fba *FileBatchApp) buildRightPanel() fyne.CanvasObject {
 	renameTab := fba.buildRenameTab()
 	copyMoveTab := fba.buildCopyMoveTab()
@@ -176,35 +189,36 @@ func (fba *FileBatchApp) buildRightPanel() fyne.CanvasObject {
 	logTab := fba.buildLogTab()
 
 	tabs := container.NewAppTabs(
-		container.NewTabItem("批量重命名", renameTab),
-		container.NewTabItem("复制/移动", copyMoveTab),
-		container.NewTabItem("重复文件", duplicateTab),
-		container.NewTabItem("处理日志", logTab),
+		container.NewTabItem("Batch Rename", renameTab),
+		container.NewTabItem("Copy/Move", copyMoveTab),
+		container.NewTabItem("Duplicates", duplicateTab),
+		container.NewTabItem("Logs", logTab),
 	)
 
 	return tabs
 }
 
+// buildRenameTab 构建重命名标签页
 func (fba *FileBatchApp) buildRenameTab() fyne.CanvasObject {
 	fba.renamePrefix = widget.NewEntry()
-	fba.renamePrefix.SetPlaceHolder("文件名前缀，如: photo_")
+	fba.renamePrefix.SetPlaceHolder("Prefix: photo_")
 	fba.renamePrefix.SetText("file_")
 
 	fba.renameStartNum = widget.NewEntry()
-	fba.renameStartNum.SetPlaceHolder("起始编号，如: 1")
+	fba.renameStartNum.SetPlaceHolder("Start number: 1")
 	fba.renameStartNum.SetText("1")
 
-	previewLabel := widget.NewLabel("预览: file_1.xxx, file_2.xxx...")
+	previewLabel := widget.NewLabel("Preview: file_1.xxx, file_2.xxx...")
 
-	renameBtn := widget.NewButton("开始重命名", fba.doRename)
+	renameBtn := widget.NewButton("Start Rename", fba.doRename)
 	renameBtn.Importance = widget.HighImportance
 
 	return container.NewVBox(
-		widget.NewCard("批量重命名设置", "",
+		widget.NewCard("Batch Rename Settings", "",
 			container.NewVBox(
 				widget.NewForm(
-					widget.NewFormItem("文件名前缀:", fba.renamePrefix),
-					widget.NewFormItem("起始编号:", fba.renameStartNum),
+					widget.NewFormItem("File Prefix:", fba.renamePrefix),
+					widget.NewFormItem("Start Number:", fba.renameStartNum),
 				),
 				previewLabel,
 				widget.NewSeparator(),
@@ -214,11 +228,12 @@ func (fba *FileBatchApp) buildRenameTab() fyne.CanvasObject {
 	)
 }
 
+// buildCopyMoveTab 构建复制移动标签页
 func (fba *FileBatchApp) buildCopyMoveTab() fyne.CanvasObject {
 	destEntry := widget.NewEntry()
-	destEntry.SetPlaceHolder("目标目录...")
+	destEntry.SetPlaceHolder("Destination directory...")
 
-	destBtn := widget.NewButton("浏览...", func() {
+	destBtn := widget.NewButton("Browse...", func() {
 		dialog.ShowFolderOpen(func(uri fyne.ListableURI, err error) {
 			if err == nil && uri != nil {
 				destEntry.SetText(uri.Path())
@@ -226,25 +241,25 @@ func (fba *FileBatchApp) buildCopyMoveTab() fyne.CanvasObject {
 		}, fba.window)
 	})
 
-	copyBtn := widget.NewButton("批量复制", func() {
+	copyBtn := widget.NewButton("Batch Copy", func() {
 		if destEntry.Text == "" {
-			dialog.ShowError(fmt.Errorf("请选择目标目录"), fba.window)
+			dialog.ShowError(fmt.Errorf("please select destination directory"), fba.window)
 			return
 		}
 		fba.doCopy(destEntry.Text)
 	})
 	copyBtn.Importance = widget.HighImportance
 
-	moveBtn := widget.NewButton("批量移动", func() {
+	moveBtn := widget.NewButton("Batch Move", func() {
 		if destEntry.Text == "" {
-			dialog.ShowError(fmt.Errorf("请选择目标目录"), fba.window)
+			dialog.ShowError(fmt.Errorf("please select destination directory"), fba.window)
 			return
 		}
 		fba.doMove(destEntry.Text)
 	})
 
 	return container.NewVBox(
-		widget.NewCard("目标目录", "",
+		widget.NewCard("Destination Directory", "",
 			container.NewBorder(nil, nil, nil, destBtn, destEntry),
 		),
 		widget.NewSeparator(),
@@ -252,8 +267,9 @@ func (fba *FileBatchApp) buildCopyMoveTab() fyne.CanvasObject {
 	)
 }
 
+// buildDuplicateTab 构建重复文件标签页
 func (fba *FileBatchApp) buildDuplicateTab() fyne.CanvasObject {
-	detectBtn := widget.NewButton("检测重复文件", fba.detectDuplicates)
+	detectBtn := widget.NewButton("Detect Duplicates", fba.detectDuplicates)
 	detectBtn.Importance = widget.HighImportance
 
 	resultList := widget.NewList(
@@ -269,6 +285,7 @@ func (fba *FileBatchApp) buildDuplicateTab() fyne.CanvasObject {
 	)
 }
 
+// buildLogTab 构建日志标签页
 func (fba *FileBatchApp) buildLogTab() fyne.CanvasObject {
 	fba.logList = widget.NewList(
 		func() int { return len(fba.logger.GetLogs()) },
@@ -281,7 +298,7 @@ func (fba *FileBatchApp) buildLogTab() fyne.CanvasObject {
 		},
 	)
 
-	clearBtn := widget.NewButton("清空日志", func() {
+	clearBtn := widget.NewButton("Clear Logs", func() {
 		fba.logger.Clear()
 		fba.logList.Refresh()
 	})
@@ -289,6 +306,19 @@ func (fba *FileBatchApp) buildLogTab() fyne.CanvasObject {
 	return container.NewBorder(nil, clearBtn, nil, nil, fba.logList)
 }
 
+// buildStatusBar 构建状态栏
+func (fba *FileBatchApp) buildStatusBar() fyne.CanvasObject {
+	fba.statusLabel = widget.NewLabel("Ready")
+	fba.progressBar = widget.NewProgressBar()
+	fba.progressBar.Hide()
+	
+	return container.NewBorder(nil, nil, nil, nil,
+		container.NewVBox(fba.progressBar, fba.statusLabel))
+}
+
+// ==================== 事件处理 ====================
+
+// selectFolder 选择文件夹
 func (fba *FileBatchApp) selectFolder() {
 	dialog.ShowFolderOpen(func(uri fyne.ListableURI, err error) {
 		if err == nil && uri != nil {
@@ -297,19 +327,21 @@ func (fba *FileBatchApp) selectFolder() {
 	}, fba.window)
 }
 
+// selectFiles 选择文件
 func (fba *FileBatchApp) selectFiles() {
 	fd := dialog.NewFileOpen(func(uri fyne.URIReadCloser, err error) {
 		if err == nil && uri != nil {
-			fba.logger.Info("选择文件: " + uri.URI().Path())
+			fba.logger.Info("Selected file: " + uri.URI().Path())
 		}
 	}, fba.window)
 	fd.Show()
 }
 
+// scanFiles 扫描文件
 func (fba *FileBatchApp) scanFiles() {
 	dir := fba.dirEntry.Text
 	if dir == "" {
-		dialog.ShowError(fmt.Errorf("请选择要扫描的目录"), fba.window)
+		dialog.ShowError(fmt.Errorf("please select directory to scan"), fba.window)
 		return
 	}
 
@@ -320,37 +352,35 @@ func (fba *FileBatchApp) scanFiles() {
 		}
 	}
 
-	fba.statusLabel.SetText("正在扫描...")
+	fba.statusLabel.SetText("Scanning...")
 	fba.progressBar.Show()
 	fba.progressBar.SetValue(0)
 
 	go func() {
 		config := fba.configService.Get()
 		files, err := fba.fileService.ScanDirectory(dir, config.ExcludeDirs, fileTypes)
-		fba.window.Canvas().Refresh(fba.fileList)
-		fba.app.SendNotification(&fyne.Notification{
-			Title:   "扫描完成",
-			Content: fmt.Sprintf("共找到 %d 个文件", len(files)),
-		})
-
-		fba.app.Driver().CanvasForObject(fba.window.Content()).Refresh(fba.fileList)
-		fba.window.Content().Refresh()
-
+		
 		if err != nil {
-			fba.app.Driver().CanvasForObject(fba.window.Content()).Refresh(nil)
 			dialog.ShowError(err, fba.window)
-			fba.statusLabel.SetText("扫描失败")
+			fba.statusLabel.SetText("Scan failed")
+			fba.progressBar.Hide()
 			return
 		}
 
 		fba.files = files
-		fba.app.Driver().CanvasForObject(fba.window.Content()).Refresh(fba.fileList)
 		fba.fileList.Refresh()
-		fba.statusLabel.SetText(fmt.Sprintf("扫描完成，共 %d 个文件", len(files)))
+		fba.statusLabel.SetText(fmt.Sprintf("Scan completed: %d files", len(files)))
 		fba.progressBar.Hide()
+		
+		// 发送通知
+		fba.app.SendNotification(&fyne.Notification{
+			Title:   "Scan Complete",
+			Content: fmt.Sprintf("Found %d files", len(files)),
+		})
 	}()
 }
 
+// updateSelectedFiles 更新选中文件列表
 func (fba *FileBatchApp) updateSelectedFiles() {
 	fba.selectedFiles = make([]*model.FileInfo, 0)
 	for _, f := range fba.files {
@@ -360,15 +390,18 @@ func (fba *FileBatchApp) updateSelectedFiles() {
 	}
 	count := len(fba.selectedFiles)
 	if count > 0 {
-		fba.statusLabel.SetText(fmt.Sprintf("已选择 %d 个文件", count))
+		fba.statusLabel.SetText(fmt.Sprintf("Selected %d files", count))
 	} else {
-		fba.statusLabel.SetText(fmt.Sprintf("共 %d 个文件", len(fba.files)))
+		fba.statusLabel.SetText(fmt.Sprintf("Total %d files", len(fba.files)))
 	}
 }
 
+// ==================== 批量操作 ====================
+
+// doRename 执行批量重命名
 func (fba *FileBatchApp) doRename() {
 	if len(fba.selectedFiles) == 0 {
-		dialog.ShowError(fmt.Errorf("请先选择要重命名的文件"), fba.window)
+		dialog.ShowError(fmt.Errorf("please select files to rename"), fba.window)
 		return
 	}
 
@@ -376,8 +409,8 @@ func (fba *FileBatchApp) doRename() {
 	startNum := 1
 	fmt.Sscanf(fba.renameStartNum.Text, "%d", &startNum)
 
-	dialog.ShowConfirm("确认操作",
-		fmt.Sprintf("确定要重命名 %d 个文件吗？\n格式: %s%d.xxx", len(fba.selectedFiles), prefix, startNum),
+	dialog.ShowConfirm("Confirm",
+		fmt.Sprintf("Are you sure to rename %d files?\nFormat: %s%d.xxx", len(fba.selectedFiles), prefix, startNum),
 		func(confirmed bool) {
 			if confirmed {
 				go func() {
@@ -395,8 +428,8 @@ func (fba *FileBatchApp) doRename() {
 					fba.progressBar.Hide()
 					fba.logList.Refresh()
 
-					dialog.ShowInformation("操作完成",
-						fmt.Sprintf("总文件数: %d\n成功: %d\n失败: %d\n耗时: %v",
+					dialog.ShowInformation("Complete",
+						fmt.Sprintf("Total: %d\nSuccess: %d\nFailed: %d\nTime: %v",
 							result.TotalFiles, result.SuccessCount, result.FailCount, result.Duration),
 						fba.window)
 				}()
@@ -404,14 +437,15 @@ func (fba *FileBatchApp) doRename() {
 		}, fba.window)
 }
 
+// doCopy 执行批量复制
 func (fba *FileBatchApp) doCopy(destDir string) {
 	if len(fba.selectedFiles) == 0 {
-		dialog.ShowError(fmt.Errorf("请先选择要复制的文件"), fba.window)
+		dialog.ShowError(fmt.Errorf("please select files to copy"), fba.window)
 		return
 	}
 
-	dialog.ShowConfirm("确认操作",
-		fmt.Sprintf("确定要复制 %d 个文件到 %s 吗？", len(fba.selectedFiles), destDir),
+	dialog.ShowConfirm("Confirm",
+		fmt.Sprintf("Are you sure to copy %d files to %s?", len(fba.selectedFiles), destDir),
 		func(confirmed bool) {
 			if confirmed {
 				go func() {
@@ -429,8 +463,8 @@ func (fba *FileBatchApp) doCopy(destDir string) {
 					fba.progressBar.Hide()
 					fba.logList.Refresh()
 
-					dialog.ShowInformation("操作完成",
-						fmt.Sprintf("总文件数: %d\n成功: %d\n失败: %d\n耗时: %v",
+					dialog.ShowInformation("Complete",
+						fmt.Sprintf("Total: %d\nSuccess: %d\nFailed: %d\nTime: %v",
 							result.TotalFiles, result.SuccessCount, result.FailCount, result.Duration),
 						fba.window)
 				}()
@@ -438,14 +472,15 @@ func (fba *FileBatchApp) doCopy(destDir string) {
 		}, fba.window)
 }
 
+// doMove 执行批量移动
 func (fba *FileBatchApp) doMove(destDir string) {
 	if len(fba.selectedFiles) == 0 {
-		dialog.ShowError(fmt.Errorf("请先选择要移动的文件"), fba.window)
+		dialog.ShowError(fmt.Errorf("please select files to move"), fba.window)
 		return
 	}
 
-	dialog.ShowConfirm("确认操作",
-		fmt.Sprintf("确定要移动 %d 个文件到 %s 吗？", len(fba.selectedFiles), destDir),
+	dialog.ShowConfirm("Confirm",
+		fmt.Sprintf("Are you sure to move %d files to %s?", len(fba.selectedFiles), destDir),
 		func(confirmed bool) {
 			if confirmed {
 				go func() {
@@ -463,8 +498,8 @@ func (fba *FileBatchApp) doMove(destDir string) {
 					fba.progressBar.Hide()
 					fba.logList.Refresh()
 
-					dialog.ShowInformation("操作完成",
-						fmt.Sprintf("总文件数: %d\n成功: %d\n失败: %d\n耗时: %v",
+					dialog.ShowInformation("Complete",
+						fmt.Sprintf("Total: %d\nSuccess: %d\nFailed: %d\nTime: %v",
 							result.TotalFiles, result.SuccessCount, result.FailCount, result.Duration),
 						fba.window)
 				}()
@@ -472,29 +507,33 @@ func (fba *FileBatchApp) doMove(destDir string) {
 		}, fba.window)
 }
 
+// detectDuplicates 检测重复文件
 func (fba *FileBatchApp) detectDuplicates() {
 	if len(fba.files) == 0 {
-		dialog.ShowError(fmt.Errorf("请先扫描文件"), fba.window)
+		dialog.ShowError(fmt.Errorf("please scan files first"), fba.window)
 		return
 	}
 
-	fba.statusLabel.SetText("正在检测重复文件...")
+	fba.statusLabel.SetText("Detecting duplicates...")
 	go func() {
 		duplicates := fba.fileService.FindDuplicates(fba.files)
 		fba.logList.Refresh()
-		fba.statusLabel.SetText("重复文件检测完成")
+		fba.statusLabel.SetText("Duplicate detection completed")
 
-		msg := fmt.Sprintf("发现 %d 组重复文件", len(duplicates))
+		msg := fmt.Sprintf("Found %d duplicate groups", len(duplicates))
 		for hash, files := range duplicates {
 			msg += fmt.Sprintf("\n\nHash: %s\n", hash[:16])
 			for _, f := range files {
 				msg += fmt.Sprintf("- %s\n", f.Path)
 			}
 		}
-		dialog.ShowInformation("重复文件检测结果", msg, fba.window)
+		dialog.ShowInformation("Duplicate Results", msg, fba.window)
 	}()
 }
 
+// ==================== 其他功能 ====================
+
+// saveConfig 保存配置
 func (fba *FileBatchApp) saveConfig() {
 	config := fba.configService.Get()
 	config.DefaultScanDir = fba.dirEntry.Text
@@ -510,33 +549,26 @@ func (fba *FileBatchApp) saveConfig() {
 		return
 	}
 
-	fba.logger.Info("配置已保存")
-	dialog.ShowInformation("保存成功", "配置已保存到 config/config.yaml", fba.window)
+	fba.logger.Info("Config saved")
+	dialog.ShowInformation("Success", "Configuration saved to config/config.yaml", fba.window)
 }
 
+// showAbout 显示关于
 func (fba *FileBatchApp) showAbout() {
-	dialog.ShowInformation("关于",
-		"本地文件批量处理工具 v1.0\n\n"+
-			"功能特性:\n"+
-			"- 文件夹扫描\n"+
-			"- 文件类型筛选\n"+
-			"- 批量重命名\n"+
-			"- 批量复制/移动\n"+
-			"- 重复文件检测\n"+
-			"- 操作日志记录\n\n"+
-			"技术栈: Go 1.22+ + Fyne",
+	dialog.ShowInformation("About",
+		"File Batch Tool v2.0 - Optimized\n\n"+
+			"Features:\n"+
+			"- Directory scanning (optimized)\n"+
+			"- File type filtering\n"+
+			"- Batch rename\n"+
+			"- Batch copy/move (parallel)\n"+
+			"- Duplicate file detection (parallel)\n"+
+			"- Operation log\n\n"+
+			"Optimizations:\n"+
+			"- Buffered IO for faster file operations\n"+
+			"- Worker pool for parallel processing\n"+
+			"- Interface-based architecture for extensibility\n"+
+			"- Better error handling\n\n"+
+			"Tech Stack: Go 1.22+ + Fyne",
 		fba.window)
-}
-
-func (fba *FileBatchApp) formatSize(size int64) string {
-	const unit = 1024
-	if size < unit {
-		return fmt.Sprintf("%d B", size)
-	}
-	div, exp := int64(unit), 0
-	for n := size / unit; n >= unit; n /= unit {
-		div *= unit
-		exp++
-	}
-	return fmt.Sprintf("%.1f %cB", float64(size)/float64(div), "KMGTPE"[exp])
 }

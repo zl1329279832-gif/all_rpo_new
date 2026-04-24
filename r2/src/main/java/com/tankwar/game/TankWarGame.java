@@ -77,7 +77,7 @@ public class TankWarGame extends JFrame {
             inputHandler.isPausePressed(),
             inputHandler.isRestartPressed()
         );
-        inputHandler.resetShotFlag();
+        inputHandler.resetFrameState();
     }
 
     private void render() {

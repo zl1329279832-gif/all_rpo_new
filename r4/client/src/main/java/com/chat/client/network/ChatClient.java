@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -25,10 +26,12 @@ public class ChatClient {
     private boolean connected;
     private MessageListener messageListener;
     private ScheduledExecutorService heartbeatExecutor;
+    private List<Message> pendingMessages; // 缓存未处理的消息
 
     private ChatClient() {
         this.serverHost = ChatConstants.DEFAULT_HOST;
         this.serverPort = ChatConstants.DEFAULT_PORT;
+        this.pendingMessages = new ArrayList<Message>();
     }
 
     public static synchronized ChatClient getInstance() {
@@ -40,6 +43,18 @@ public class ChatClient {
 
     public void setMessageListener(MessageListener listener) {
         this.messageListener = listener;
+        // 处理之前缓存的消息
+        processPendingMessages();
+    }
+
+    private void processPendingMessages() {
+        if (messageListener != null && !pendingMessages.isEmpty()) {
+            List<Message> messagesToProcess = new ArrayList<Message>(pendingMessages);
+            pendingMessages.clear();
+            for (Message message : messagesToProcess) {
+                handleMessage(message);
+            }
+        }
     }
 
     public boolean connect(String host, int port, String username) {
@@ -81,7 +96,13 @@ public class ChatClient {
         try {
             while (connected) {
                 Message message = (Message) in.readObject();
-                handleMessage(message);
+                
+                // 如果还没有设置监听器，就先缓存消息
+                if (messageListener == null) {
+                    pendingMessages.add(message);
+                } else {
+                    handleMessage(message);
+                }
             }
         } catch (IOException | ClassNotFoundException e) {
             if (connected) {
@@ -144,11 +165,14 @@ public class ChatClient {
 
     private void startHeartbeat() {
         heartbeatExecutor = Executors.newSingleThreadScheduledExecutor();
-        heartbeatExecutor.scheduleAtFixedRate(() -> {
-            if (connected) {
-                Message heartbeatMsg = new Message();
-                heartbeatMsg.setType(MessageType.HEARTBEAT);
-                sendMessage(heartbeatMsg);
+        heartbeatExecutor.scheduleAtFixedRate(new Runnable() {
+            @Override
+            public void run() {
+                if (connected) {
+                    Message heartbeatMsg = new Message();
+                    heartbeatMsg.setType(MessageType.HEARTBEAT);
+                    sendMessage(heartbeatMsg);
+                }
             }
         }, ChatConstants.HEARTBEAT_INTERVAL, ChatConstants.HEARTBEAT_INTERVAL, TimeUnit.MILLISECONDS);
     }

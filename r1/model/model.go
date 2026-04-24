@@ -30,7 +30,7 @@ func (j JSON) Value() (driver.Value, error) {
 type Rule struct {
 	ID          uint64    `gorm:"primaryKey;autoIncrement" json:"id"`
 	Name        string    `gorm:"size:255;not null" json:"name"`
-	Code        string    `gorm:"size:100;not null;uniqueIndex" json:"code"`
+	Code        string    `gorm:"size:100;not null" json:"code"`
 	Description string    `gorm:"type:text" json:"description"`
 	Expression  string    `gorm:"type:text;not null" json:"expression"`
 	RiskLevel   string    `gorm:"size:50;not null;default:'medium'" json:"risk_level"`
@@ -41,7 +41,7 @@ type Rule struct {
 
 type RuleVersion struct {
 	ID          uint64    `gorm:"primaryKey;autoIncrement" json:"id"`
-	RuleID      uint64    `gorm:"not null;index" json:"rule_id"`
+	RuleID      uint64    `gorm:"not null" json:"rule_id"`
 	Version     int       `gorm:"not null" json:"version"`
 	Name        string    `gorm:"size:255;not null" json:"name"`
 	Expression  string    `gorm:"type:text;not null" json:"expression"`
@@ -54,10 +54,10 @@ type RuleVersion struct {
 
 type Sample struct {
 	ID             uint64    `gorm:"primaryKey;autoIncrement" json:"id"`
-	BatchID        string    `gorm:"size:100;index" json:"batch_id"`
+	BatchID        string    `gorm:"size:100" json:"batch_id"`
 	Data           JSON      `gorm:"type:json;not null" json:"data"`
 	ExpectedResult string    `gorm:"size:50" json:"expected_result"`
-	Source         string    `gorm:"size:100;index" json:"source"`
+	Source         string    `gorm:"size:100" json:"source"`
 	CreatedAt      time.Time `json:"created_at"`
 }
 
@@ -68,7 +68,7 @@ type BacktestTask struct {
 	RuleVersionIDs  JSON       `gorm:"type:json;not null" json:"rule_version_ids"`
 	SampleBatchIDs  JSON       `gorm:"type:json" json:"sample_batch_ids"`
 	SampleCount     int        `gorm:"default:0" json:"sample_count"`
-	Status          string     `gorm:"size:50;not null;default:'pending';index" json:"status"`
+	Status          string     `gorm:"size:50;not null;default:'pending'" json:"status"`
 	Progress        int        `gorm:"default:0" json:"progress"`
 	ResultSummary   JSON       `gorm:"type:json" json:"result_summary"`
 	StartedAt       *time.Time `json:"started_at"`
@@ -79,9 +79,9 @@ type BacktestTask struct {
 
 type BacktestResult struct {
 	ID             uint64    `gorm:"primaryKey;autoIncrement" json:"id"`
-	TaskID         uint64    `gorm:"not null;index" json:"task_id"`
-	SampleID       uint64    `gorm:"not null;index" json:"sample_id"`
-	ActualResult   string    `gorm:"size:50;not null;index" json:"actual_result"`
+	TaskID         uint64    `gorm:"not null" json:"task_id"`
+	SampleID       uint64    `gorm:"not null" json:"sample_id"`
+	ActualResult   string    `gorm:"size:50;not null" json:"actual_result"`
 	ExpectedResult string    `gorm:"size:50" json:"expected_result"`
 	HitRuleCount   int       `gorm:"default:0" json:"hit_rule_count"`
 	IsCorrect      *bool     `json:"is_correct"`
@@ -90,10 +90,10 @@ type BacktestResult struct {
 
 type RuleHitDetail struct {
 	ID             uint64    `gorm:"primaryKey;autoIncrement" json:"id"`
-	TaskID         uint64    `gorm:"not null;index" json:"task_id"`
-	ResultID       uint64    `gorm:"not null;index" json:"result_id"`
-	SampleID       uint64    `gorm:"not null;index" json:"sample_id"`
-	RuleID         uint64    `gorm:"not null;index" json:"rule_id"`
+	TaskID         uint64    `gorm:"not null" json:"task_id"`
+	ResultID       uint64    `gorm:"not null" json:"result_id"`
+	SampleID       uint64    `gorm:"not null" json:"sample_id"`
+	RuleID         uint64    `gorm:"not null" json:"rule_id"`
 	RuleVersionID  uint64    `gorm:"not null" json:"rule_version_id"`
 	RuleCode       string    `gorm:"size:100;not null" json:"rule_code"`
 	RuleName       string    `gorm:"size:255;not null" json:"rule_name"`

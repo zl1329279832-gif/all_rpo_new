@@ -7,32 +7,24 @@ import java.util.Set;
 
 public class InputHandler implements KeyListener {
     private Set<Integer> pressedKeys;
-    private boolean shooting;
-    private boolean shotThisFrame;
+    private Set<Integer> pressedThisFrame;
 
     public InputHandler() {
         this.pressedKeys = new HashSet<>();
-        this.shooting = false;
-        this.shotThisFrame = false;
+        this.pressedThisFrame = new HashSet<>();
     }
 
     @Override
     public void keyPressed(KeyEvent e) {
-        pressedKeys.add(e.getKeyCode());
-        if (e.getKeyCode() == KeyEvent.VK_SPACE || e.getKeyCode() == KeyEvent.VK_CONTROL) {
-            if (!shooting) {
-                shooting = true;
-                shotThisFrame = true;
-            }
+        if (!pressedKeys.contains(e.getKeyCode())) {
+            pressedThisFrame.add(e.getKeyCode());
         }
+        pressedKeys.add(e.getKeyCode());
     }
 
     @Override
     public void keyReleased(KeyEvent e) {
         pressedKeys.remove(e.getKeyCode());
-        if (e.getKeyCode() == KeyEvent.VK_SPACE || e.getKeyCode() == KeyEvent.VK_CONTROL) {
-            shooting = false;
-        }
     }
 
     @Override
@@ -56,18 +48,20 @@ public class InputHandler implements KeyListener {
     }
 
     public boolean isShooting() {
-        return shotThisFrame;
-    }
-
-    public void resetShotFlag() {
-        shotThisFrame = false;
+        return pressedThisFrame.contains(KeyEvent.VK_SPACE) ||
+               pressedThisFrame.contains(KeyEvent.VK_CONTROL);
     }
 
     public boolean isPausePressed() {
-        return pressedKeys.contains(KeyEvent.VK_ESCAPE) || pressedKeys.contains(KeyEvent.VK_P);
+        return pressedThisFrame.contains(KeyEvent.VK_ESCAPE) ||
+               pressedThisFrame.contains(KeyEvent.VK_P);
     }
 
     public boolean isRestartPressed() {
-        return pressedKeys.contains(KeyEvent.VK_R);
+        return pressedThisFrame.contains(KeyEvent.VK_R);
+    }
+
+    public void resetFrameState() {
+        pressedThisFrame.clear();
     }
 }

@@ -232,9 +232,14 @@ func splitByTopLevel(expr string, sep string) []string {
 			current.WriteByte(expr[i])
 			i++
 		} else if parenCount == 0 && i+sepLen <= len(expr) && strings.EqualFold(expr[i:i+sepLen], sep) {
-			result = append(result, current.String())
-			current.Reset()
-			i += sepLen
+			if isWordBoundary(expr, i, sepLen) {
+				result = append(result, current.String())
+				current.Reset()
+				i += sepLen
+			} else {
+				current.WriteByte(expr[i])
+				i++
+			}
 		} else {
 			current.WriteByte(expr[i])
 			i++
@@ -244,6 +249,26 @@ func splitByTopLevel(expr string, sep string) []string {
 		result = append(result, current.String())
 	}
 	return result
+}
+
+func isWordBoundary(expr string, idx int, sepLen int) bool {
+	prevIsBoundary := true
+	if idx > 0 {
+		prevChar := expr[idx-1]
+		prevIsBoundary = isSeparator(prevChar)
+	}
+	
+	nextIsBoundary := true
+	if idx+sepLen < len(expr) {
+		nextChar := expr[idx+sepLen]
+		nextIsBoundary = isSeparator(nextChar)
+	}
+	
+	return prevIsBoundary && nextIsBoundary
+}
+
+func isSeparator(c byte) bool {
+	return c == ' ' || c == '\t' || c == '\n' || c == '(' || c == ')' || c == '=' || c == '>' || c == '<' || c == '!'
 }
 
 func (e *RuleEngine) EvaluateWithJSON(expression string, jsonData []byte) (bool, error) {

@@ -1,0 +1,186 @@
+{
+  "info": {
+    "name": "规则引擎风控回测系统 API 测试",
+    "description": "API 接口测试示例",
+    "version": "1.0.0"
+  },
+  "tests": [
+    {
+      "name": "健康检查",
+      "method": "GET",
+      "url": "http://localhost:8081/health",
+      "expected": {
+        "status": 200,
+        "body": {
+          "code": 200,
+          "message": "ok"
+        }
+      }
+    },
+    {
+      "name": "创建规则",
+      "method": "POST",
+      "url": "http://localhost:8081/api/v1/rules",
+      "body": {
+        "name": "大额交易规则",
+        "code": "RULE_AMOUNT",
+        "description": "金额超过10000元的交易",
+        "expression": "amount > 10000",
+        "risk_level": "high"
+      },
+      "expected": {
+        "status": 200,
+        "body": {
+          "code": 200
+        }
+      }
+    },
+    {
+      "name": "创建新用户规则",
+      "method": "POST",
+      "url": "http://localhost:8081/api/v1/rules",
+      "body": {
+        "name": "新用户规则",
+        "code": "RULE_NEW_USER",
+        "description": "新用户的交易",
+        "expression": "userLevel == \"new\"",
+        "risk_level": "medium"
+      },
+      "expected": {
+        "status": 200
+      }
+    },
+    {
+      "name": "查询规则列表",
+      "method": "GET",
+      "url": "http://localhost:8081/api/v1/rules?offset=0&limit=10",
+      "expected": {
+        "status": 200
+      }
+    },
+    {
+      "name": "测试规则引擎 - 命中",
+      "method": "POST",
+      "url": "http://localhost:8081/api/v1/test",
+      "body": {
+        "expression": "amount > 10000",
+        "data": {
+          "amount": 15000
+        }
+      },
+      "expected": {
+        "status": 200,
+        "body": {
+          "data": {
+            "hit": true
+          }
+        }
+      }
+    },
+    {
+      "name": "测试规则引擎 - 未命中",
+      "method": "POST",
+      "url": "http://localhost:8081/api/v1/test",
+      "body": {
+        "expression": "amount > 10000",
+        "data": {
+          "amount": 5000
+        }
+      },
+      "expected": {
+        "status": 200,
+        "body": {
+          "data": {
+            "hit": false
+          }
+        }
+      }
+    },
+    {
+      "name": "创建样本数据",
+      "method": "POST",
+      "url": "http://localhost:8081/api/v1/samples",
+      "body": {
+        "batch_id": "TEST_BATCH_001",
+        "data": {
+          "amount": 12000,
+          "userLevel": "new",
+          "ipRiskScore": 70
+        },
+        "expected_result": "reject",
+        "source": "test_data"
+      },
+      "expected": {
+        "status": 200
+      }
+    },
+    {
+      "name": "批量创建样本数据",
+      "method": "POST",
+      "url": "http://localhost:8081/api/v1/samples/batch",
+      "body": {
+        "batch_id": "TEST_BATCH_001",
+        "source": "batch_test",
+        "samples": [
+          {
+            "data": {
+              "amount": 15000,
+              "userLevel": "new",
+              "ipRiskScore": 85
+            },
+            "expected_result": "reject"
+          },
+          {
+            "data": {
+              "amount": 3000,
+              "userLevel": "vip",
+              "ipRiskScore": 20
+            },
+            "expected_result": "pass"
+          },
+          {
+            "data": {
+              "amount": 8000,
+              "userLevel": "new",
+              "ipRiskScore": 90
+            },
+            "expected_result": "reject"
+          }
+        ]
+      },
+      "expected": {
+        "status": 200
+      }
+    },
+    {
+      "name": "查询样本列表",
+      "method": "GET",
+      "url": "http://localhost:8081/api/v1/samples?offset=0&limit=10",
+      "expected": {
+        "status": 200
+      }
+    },
+    {
+      "name": "创建回测任务",
+      "method": "POST",
+      "url": "http://localhost:8081/api/v1/backtests",
+      "body": {
+        "name": "第一轮回测",
+        "description": "测试新规则的效果",
+        "rule_version_ids": [1, 2],
+        "sample_batch_ids": ["TEST_BATCH_001"]
+      },
+      "expected": {
+        "status": 200
+      }
+    },
+    {
+      "name": "查询回测任务列表",
+      "method": "GET",
+      "url": "http://localhost:8081/api/v1/backtests?offset=0&limit=10",
+      "expected": {
+        "status": 200
+      }
+    }
+  ]
+}

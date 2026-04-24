@@ -42,7 +42,7 @@ public class GameEngine {
 
     private void initGame() {
         this.gameMap = new GameMap(level);
-        this.player = new PlayerTank(304, 464);
+        this.player = new PlayerTank(304, 336);
         this.enemies = new ArrayList<>();
         this.bullets = new ArrayList<>();
         this.explosions = new ArrayList<>();
@@ -112,50 +112,29 @@ public class GameEngine {
     private void updatePlayer(boolean moveUp, boolean moveDown, boolean moveLeft, boolean moveRight, boolean shoot) {
         if (!player.isActive()) return;
 
-        // 先设置方向
-        if (moveUp) {
-            player.setDirection(Direction.UP);
-        } else if (moveDown) {
-            player.setDirection(Direction.DOWN);
-        } else if (moveLeft) {
-            player.setDirection(Direction.LEFT);
-        } else if (moveRight) {
-            player.setDirection(Direction.RIGHT);
-        }
-
-        // 尝试移动 - 先沿Y轴再沿X轴，这样可以更好地处理碰撞
-        boolean moved = false;
         int oldX = player.getX();
         int oldY = player.getY();
 
+        // 根据按键移动坦克 - 一次只朝一个方向移动（经典坦克大战风格）
         if (moveUp) {
             player.moveUp();
         } else if (moveDown) {
             player.moveDown();
-        }
-
-        // 检查Y轴移动碰撞
-        if (CollisionDetector.checkTankWallCollision(player, gameMap.getWalls()) ||
-            CollisionDetector.checkTankBoundaryCollision(player) ||
-            checkTankEnemyCollision(player)) {
-            player.setY(oldY);
-        } else {
-            moved = true;
-        }
-
-        // 尝试X轴移动
-        oldX = player.getX();
-        if (moveLeft) {
+        } else if (moveLeft) {
             player.moveLeft();
         } else if (moveRight) {
             player.moveRight();
         }
 
-        // 检查X轴移动碰撞
-        if (CollisionDetector.checkTankWallCollision(player, gameMap.getWalls()) ||
-            CollisionDetector.checkTankBoundaryCollision(player) ||
-            checkTankEnemyCollision(player)) {
+        // 检查碰撞：墙、边界、敌人
+        boolean collision = CollisionDetector.checkTankWallCollision(player, gameMap.getWalls()) ||
+                           CollisionDetector.checkTankBoundaryCollision(player) ||
+                           checkTankEnemyCollision(player);
+
+        if (collision) {
+            // 发生碰撞，回退到原始位置
             player.setX(oldX);
+            player.setY(oldY);
         }
 
         player.update();
@@ -172,7 +151,7 @@ public class GameEngine {
             applyPowerUp(collected);
         }
     }
-    
+
     private boolean checkTankEnemyCollision(Tank tank) {
         for (EnemyTank enemy : enemies) {
             if (enemy.isActive() && tank.getBounds().intersects(enemy.getBounds())) {

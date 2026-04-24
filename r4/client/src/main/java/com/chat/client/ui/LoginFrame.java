@@ -103,21 +103,27 @@ public class LoginFrame extends JFrame {
         }
 
         loginButton.setEnabled(false);
-        SwingUtilities.invokeLater(() -> {
-            boolean success = chatClient.connect(host, port, username);
-            if (success) {
-                openMainFrame();
-            } else {
-                loginButton.setEnabled(true);
+        SwingUtilities.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                boolean success = chatClient.connect(host, port, username);
+                if (success) {
+                    openMainFrame();
+                } else {
+                    loginButton.setEnabled(true);
+                }
             }
         });
     }
 
     private void openMainFrame() {
-        SwingUtilities.invokeLater(() -> {
-            MainFrame mainFrame = new MainFrame();
-            mainFrame.setVisible(true);
-            dispose();
+        SwingUtilities.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                MainFrame mainFrame = new MainFrame();
+                mainFrame.setVisible(true);
+                dispose();
+            }
         });
     }
 }
