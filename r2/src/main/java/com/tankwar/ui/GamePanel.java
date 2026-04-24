@@ -27,6 +27,7 @@ public class GamePanel extends JPanel {
     private int destroyedTargets;
     private int selectedMenuOption;
     private int selectedLevelOption;
+    private boolean hasSaveData;
 
     public GamePanel() {
         setPreferredSize(new Dimension(GameConstants.SCREEN_WIDTH, GameConstants.SCREEN_HEIGHT));
@@ -54,7 +55,7 @@ public class GamePanel extends JPanel {
                             List<Bullet> bullets, List<Explosion> explosions, List<PowerUp> powerUps,
                             int score, int lives, int enemiesLeft, int enemiesTotal, String gameState,
                             GameConstants.GameMode gameMode, int level, int totalTargets, int destroyedTargets,
-                            int selectedMenuOption, int selectedLevelOption) {
+                            int selectedMenuOption, int selectedLevelOption, boolean hasSaveData) {
         this.gameMap = map;
         this.player = player;
         this.enemies = enemies;
@@ -72,6 +73,7 @@ public class GamePanel extends JPanel {
         this.destroyedTargets = destroyedTargets;
         this.selectedMenuOption = selectedMenuOption;
         this.selectedLevelOption = selectedLevelOption;
+        this.hasSaveData = hasSaveData;
     }
 
     @Override
@@ -147,8 +149,16 @@ public class GamePanel extends JPanel {
         int x = (GameConstants.SCREEN_WIDTH - fm.stringWidth(title)) / 2;
         g.drawString(title, x, 150);
 
-        String[] options = {"练习模式", "对战模式", "继续游戏"};
-        String[] hints = {"按 1 或 回车选择", "按 2 或 回车选择", "按 3 或 回车选择"};
+        String[] options;
+        String[] hints;
+
+        if (hasSaveData) {
+            options = new String[]{"练习模式", "对战模式", "继续游戏"};
+            hints = new String[]{"按 1 或 回车选择", "按 2 或 回车选择", "按 3 或 回车选择"};
+        } else {
+            options = new String[]{"练习模式", "对战模式"};
+            hints = new String[]{"按 1 或 回车选择", "按 2 或 回车选择"};
+        }
 
         for (int i = 0; i < options.length; i++) {
             if (i == selectedMenuOption) {
