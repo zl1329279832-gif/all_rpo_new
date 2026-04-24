@@ -8,5 +8,5 @@ services:
     image: strategy-backtest-platform:latest
     container_name: strategy-backtest-app
     ports:
-      - "80:80"
+      - "3000:3000"
     restart: unless-stopped

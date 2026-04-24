@@ -1,6 +1,7 @@
-FROM node:20-alpine AS builder
+# 构建阶段 - 使用 Node.js Windows 镜像
+FROM node:20-windowsservercore-ltsc2022 AS builder
 
-WORKDIR /app
+WORKDIR C:/app
 
 COPY package*.json ./
 
@@ -12,12 +13,19 @@ COPY . .
 
 RUN npm run build
 
-FROM nginx:alpine
+# 运行阶段 - 使用轻量的 Node.js Windows 镜像运行静态文件服务器
+FROM node:20-windowsservercore-ltsc2022
 
-COPY --from=builder /app/dist /usr/share/nginx/html
+WORKDIR C:/app
 
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# 全局安装 serve 静态文件服务器
+RUN npm install -g serve --registry=https://registry.npmmirror.com
 
-EXPOSE 80
+# 从构建阶段复制构建产物
+COPY --from=builder C:/app/dist C:/app/dist
 
-CMD ["nginx", "-g", "daemon off;"]
+# 暴露端口
+EXPOSE 3000
+
+# 启动静态文件服务器
+CMD ["serve", "-s", "dist", "-l", "3000"]
