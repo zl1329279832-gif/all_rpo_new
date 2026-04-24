@@ -28,6 +28,7 @@ public class GamePanel extends JPanel {
     private int selectedMenuOption;
     private int selectedLevelOption;
     private boolean hasSaveData;
+    private boolean[] levelUnlocked;
 
     public GamePanel() {
         setPreferredSize(new Dimension(GameConstants.SCREEN_WIDTH, GameConstants.SCREEN_HEIGHT));
@@ -55,7 +56,8 @@ public class GamePanel extends JPanel {
                             List<Bullet> bullets, List<Explosion> explosions, List<PowerUp> powerUps,
                             int score, int lives, int enemiesLeft, int enemiesTotal, String gameState,
                             GameConstants.GameMode gameMode, int level, int totalTargets, int destroyedTargets,
-                            int selectedMenuOption, int selectedLevelOption, boolean hasSaveData) {
+                            int selectedMenuOption, int selectedLevelOption, boolean hasSaveData,
+                            boolean[] levelUnlocked) {
         this.gameMap = map;
         this.player = player;
         this.enemies = enemies;
@@ -74,6 +76,7 @@ public class GamePanel extends JPanel {
         this.selectedMenuOption = selectedMenuOption;
         this.selectedLevelOption = selectedLevelOption;
         this.hasSaveData = hasSaveData;
+        this.levelUnlocked = levelUnlocked;
     }
 
     @Override
@@ -209,11 +212,16 @@ public class GamePanel extends JPanel {
         int[] targetCounts = {8, 11, 14, 17, 20};
 
         for (int i = 0; i < levels.length; i++) {
-            if (i == selectedLevelOption) {
+            boolean unlocked = levelUnlocked != null && levelUnlocked[i];
+
+            if (unlocked && i == selectedLevelOption) {
                 g.setColor(new Color(100, 200, 255));
                 g.setFont(new Font("微软雅黑", Font.BOLD, 24));
-            } else {
+            } else if (unlocked) {
                 g.setColor(Color.LIGHT_GRAY);
+                g.setFont(new Font("微软雅黑", Font.PLAIN, 20));
+            } else {
+                g.setColor(Color.DARK_GRAY);
                 g.setFont(new Font("微软雅黑", Font.PLAIN, 20));
             }
 
@@ -221,21 +229,28 @@ public class GamePanel extends JPanel {
             int optX = (GameConstants.SCREEN_WIDTH - fmOpt.stringWidth(levels[i])) / 2;
             g.drawString(levels[i], optX, 170 + i * 55);
 
-            if (i == selectedLevelOption) {
+            if (unlocked && i == selectedLevelOption) {
                 g.setColor(new Color(100, 200, 255));
                 g.fillRect(optX - 40, 155 + i * 55, 10, 10);
                 g.fillRect(optX + fmOpt.stringWidth(levels[i]) + 30, 155 + i * 55, 10, 10);
             }
 
-            g.setColor(Color.GRAY);
-            g.setFont(new Font("微软雅黑", Font.PLAIN, 14));
-            String targetInfo = "目标数量: " + targetCounts[i];
-            g.drawString(targetInfo, optX + 5, 190 + i * 55);
+            if (unlocked) {
+                g.setColor(Color.GRAY);
+                g.setFont(new Font("微软雅黑", Font.PLAIN, 14));
+                String targetInfo = "目标数量: " + targetCounts[i];
+                g.drawString(targetInfo, optX + 5, 190 + i * 55);
+            } else {
+                g.setColor(Color.DARK_GRAY);
+                g.setFont(new Font("微软雅黑", Font.PLAIN, 14));
+                String lockInfo = "🔒 需要通过关卡 " + i + " 解锁";
+                g.drawString(lockInfo, optX + 5, 190 + i * 55);
+            }
         }
 
         g.setColor(Color.GRAY);
         g.setFont(new Font("微软雅黑", Font.PLAIN, 16));
-        String hint = "使用 ↑↓ 键选择，按 回车 或 数字键(1-5) 开始";
+        String hint = "使用 ↑↓ 键选择已解锁关卡，按 回车 或 数字键(1-5) 开始";
         FontMetrics fmh = g.getFontMetrics();
         g.drawString(hint, (GameConstants.SCREEN_WIDTH - fmh.stringWidth(hint)) / 2, 480);
 

@@ -16,9 +16,11 @@ public class GameSaveData implements Serializable {
     public int totalEnemies;
     public int totalTargets;
     public int destroyedTargets;
+    public String gameState;
 
     public GameSaveData(GameConstants.GameMode gameMode, int level, int score, int lives, int playerHealth,
-                        int enemiesKilled, int totalEnemies, int totalTargets, int destroyedTargets) {
+                        int enemiesKilled, int totalEnemies, int totalTargets, int destroyedTargets,
+                        String gameState) {
         this.gameMode = gameMode;
         this.level = level;
         this.score = score;
@@ -28,5 +30,6 @@ public class GameSaveData implements Serializable {
         this.totalEnemies = totalEnemies;
         this.totalTargets = totalTargets;
         this.destroyedTargets = destroyedTargets;
+        this.gameState = gameState;
     }
 }

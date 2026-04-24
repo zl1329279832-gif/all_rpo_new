@@ -103,6 +103,9 @@ public class GameEngine {
     }
 
     public void startBattleLevel(int levelNum) {
+        if (!LevelProgressManager.isLevelUnlocked(levelNum)) {
+            return;
+        }
         this.level = levelNum;
         this.gameMode = GameConstants.GameMode.BATTLE;
         this.gameStarted = true;
@@ -272,30 +275,46 @@ public class GameEngine {
         }
 
         if (upPressedOnce) {
-            selectedLevelOption = (selectedLevelOption - 1 + GameConstants.MAX_BATTLE_LEVELS) % GameConstants.MAX_BATTLE_LEVELS;
+            int newOption = (selectedLevelOption - 1 + GameConstants.MAX_BATTLE_LEVELS) % GameConstants.MAX_BATTLE_LEVELS;
+            int attempts = 0;
+            while (!LevelProgressManager.isLevelUnlocked(newOption + 1) && attempts < GameConstants.MAX_BATTLE_LEVELS) {
+                newOption = (newOption - 1 + GameConstants.MAX_BATTLE_LEVELS) % GameConstants.MAX_BATTLE_LEVELS;
+                attempts++;
+            }
+            if (LevelProgressManager.isLevelUnlocked(newOption + 1)) {
+                selectedLevelOption = newOption;
+            }
         }
         if (downPressedOnce) {
-            selectedLevelOption = (selectedLevelOption + 1) % GameConstants.MAX_BATTLE_LEVELS;
+            int newOption = (selectedLevelOption + 1) % GameConstants.MAX_BATTLE_LEVELS;
+            int attempts = 0;
+            while (!LevelProgressManager.isLevelUnlocked(newOption + 1) && attempts < GameConstants.MAX_BATTLE_LEVELS) {
+                newOption = (newOption + 1) % GameConstants.MAX_BATTLE_LEVELS;
+                attempts++;
+            }
+            if (LevelProgressManager.isLevelUnlocked(newOption + 1)) {
+                selectedLevelOption = newOption;
+            }
         }
 
-        if (num1Pressed) {
+        if (num1Pressed && LevelProgressManager.isLevelUnlocked(1)) {
             startBattleLevel(1);
             return;
-        } else if (num2Pressed) {
+        } else if (num2Pressed && LevelProgressManager.isLevelUnlocked(2)) {
             startBattleLevel(2);
             return;
-        } else if (num3Pressed) {
+        } else if (num3Pressed && LevelProgressManager.isLevelUnlocked(3)) {
             startBattleLevel(3);
             return;
-        } else if (num4Pressed) {
+        } else if (num4Pressed && LevelProgressManager.isLevelUnlocked(4)) {
             startBattleLevel(4);
             return;
-        } else if (num5Pressed) {
+        } else if (num5Pressed && LevelProgressManager.isLevelUnlocked(5)) {
             startBattleLevel(5);
             return;
         }
 
-        if (selectPressedOnce) {
+        if (selectPressedOnce && LevelProgressManager.isLevelUnlocked(selectedLevelOption + 1)) {
             startBattleLevel(selectedLevelOption + 1);
         }
     }
@@ -557,6 +576,7 @@ public class GameEngine {
         } else if (gameMode == GameConstants.GameMode.BATTLE) {
             if (gameMap.allTargetsDestroyed()) {
                 gameState = "VICTORY";
+                LevelProgressManager.completeLevel(level);
             }
         } else {
             if (enemiesKilled >= totalEnemies && enemies.isEmpty()) {
@@ -575,7 +595,8 @@ public class GameEngine {
             enemiesKilled,
             totalEnemies,
             totalTargets,
-            destroyedTargets
+            destroyedTargets,
+            gameState
         );
         GameSaveManager.saveGame(saveData);
         hasSaveData = true;
@@ -596,16 +617,25 @@ public class GameEngine {
             initGameForMode();
             this.score = saveData.score;
             this.lives = saveData.lives;
-            this.gameState = "PLAYING";
+
+            if ("PAUSED".equals(saveData.gameState)) {
+                this.gameState = "PAUSED";
+            } else {
+                this.gameState = "PLAYING";
+            }
             this.gameStarted = true;
         }
     }
 
     public void render(GamePanel panel) {
+        boolean[] levelUnlocked = new boolean[GameConstants.MAX_BATTLE_LEVELS];
+        for (int i = 0; i < GameConstants.MAX_BATTLE_LEVELS; i++) {
+            levelUnlocked[i] = LevelProgressManager.isLevelUnlocked(i + 1);
+        }
         panel.setGameData(gameMap, player, enemies, bullets, explosions, powerUps,
                           score, lives, totalEnemies - enemiesKilled, totalEnemies, gameState,
                           gameMode, level, totalTargets, destroyedTargets,
-                          selectedMenuOption, selectedLevelOption, hasSaveData);
+                          selectedMenuOption, selectedLevelOption, hasSaveData, levelUnlocked);
         panel.repaint();
     }
 
