@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  strategy-backtest:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: strategy-backtest-platform:latest
+    container_name: strategy-backtest-app
+    ports:
+      - "80:80"
+    restart: unless-stopped
