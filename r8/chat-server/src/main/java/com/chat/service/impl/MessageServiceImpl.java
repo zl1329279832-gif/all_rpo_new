@@ -19,8 +19,8 @@ import com.chat.service.UserService;
 import com.chat.vo.MessageVO;
 import com.chat.vo.UnreadCountVO;
 import com.chat.vo.UserVO;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,11 +33,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-@Slf4j
 @Service
-@RequiredArgsConstructor
 public class MessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessage> implements MessageService {
 
+    private static final Logger log = LoggerFactory.getLogger(MessageServiceImpl.class);
     private static final int CHAT_TYPE_PRIVATE = 1;
     private static final int CHAT_TYPE_GROUP = 2;
 
@@ -50,6 +49,18 @@ public class MessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessa
     private final UserService userService;
     private final FriendService friendService;
     private final GroupService groupService;
+
+    public MessageServiceImpl(OfflineMessageMapper offlineMessageMapper,
+                             GroupMemberMapper groupMemberMapper,
+                             UserService userService,
+                             FriendService friendService,
+                             GroupService groupService) {
+        this.offlineMessageMapper = offlineMessageMapper;
+        this.groupMemberMapper = groupMemberMapper;
+        this.userService = userService;
+        this.friendService = friendService;
+        this.groupService = groupService;
+    }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -232,7 +243,7 @@ public class MessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessa
                     .eq(ChatMessage::getGroupId, targetId);
         }
 
-        return this.count(wrapper).intValue();
+        return (int) this.count(wrapper);
     }
 
     @Override

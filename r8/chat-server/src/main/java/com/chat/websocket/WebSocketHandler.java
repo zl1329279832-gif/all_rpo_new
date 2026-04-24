@@ -7,8 +7,8 @@ import com.chat.service.UserService;
 import com.chat.utils.JwtUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
@@ -18,11 +18,10 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 import java.io.IOException;
 import java.util.List;
 
-@Slf4j
 @Component
-@RequiredArgsConstructor
 public class WebSocketHandler extends TextWebSocketHandler {
 
+    private static final Logger log = LoggerFactory.getLogger(WebSocketHandler.class);
     private static final int CHAT_TYPE_PRIVATE = 1;
     private static final int CHAT_TYPE_GROUP = 2;
 
@@ -35,6 +34,20 @@ public class WebSocketHandler extends TextWebSocketHandler {
 
     private final ObjectMapper objectMapper = new ObjectMapper()
             .registerModule(new JavaTimeModule());
+
+    public WebSocketHandler(WebSocketSessionManager sessionManager,
+                           JwtUtil jwtUtil,
+                           UserService userService,
+                           FriendService friendService,
+                           GroupService groupService,
+                           MessageService messageService) {
+        this.sessionManager = sessionManager;
+        this.jwtUtil = jwtUtil;
+        this.userService = userService;
+        this.friendService = friendService;
+        this.groupService = groupService;
+        this.messageService = messageService;
+    }
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {

@@ -1,14 +1,16 @@
 package com.chat.websocket;
 
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketSession;
 
 import java.util.concurrent.ConcurrentHashMap;
 
-@Slf4j
 @Component
 public class WebSocketSessionManager {
+
+    private static final Logger log = LoggerFactory.getLogger(WebSocketSessionManager.class);
 
     private final ConcurrentHashMap<Long, WebSocketSession> sessionMap = new ConcurrentHashMap<>();
 

@@ -7,7 +7,6 @@ import com.chat.service.UserService;
 import com.chat.vo.LoginVO;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -15,10 +14,13 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/auth")
-@RequiredArgsConstructor
 public class AuthController {
 
     private final UserService userService;
+
+    public AuthController(UserService userService) {
+        this.userService = userService;
+    }
 
     @PostMapping("/login")
     public Result<LoginVO> login(@Valid @RequestBody LoginDTO dto) {
@@ -27,13 +29,13 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public Result<Void> register(@Valid @RequestBody RegisterDTO dto) {
+    public Result<String> register(@Valid @RequestBody RegisterDTO dto) {
         userService.register(dto);
         return Result.success("注册成功");
     }
 
     @PostMapping("/logout")
-    public Result<Void> logout(HttpServletRequest request) {
+    public Result<String> logout(HttpServletRequest request) {
         Long userId = (Long) request.getAttribute("userId");
         userService.logout(userId);
         return Result.success("登出成功");

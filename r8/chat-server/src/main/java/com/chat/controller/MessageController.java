@@ -8,7 +8,6 @@ import com.chat.vo.MessageVO;
 import com.chat.vo.UnreadCountVO;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -20,10 +19,13 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/message")
-@RequiredArgsConstructor
 public class MessageController {
 
     private final MessageService messageService;
+
+    public MessageController(MessageService messageService) {
+        this.messageService = messageService;
+    }
 
     @PostMapping("/send")
     public Result<MessageVO> sendMessage(HttpServletRequest request, @Valid @RequestBody SendMessageDTO dto) {
@@ -62,7 +64,7 @@ public class MessageController {
     }
 
     @PostMapping("/read")
-    public Result<Void> markAsRead(
+    public Result<String> markAsRead(
             HttpServletRequest request,
             @RequestParam Long targetId,
             @RequestParam Integer chatType) {
@@ -79,7 +81,7 @@ public class MessageController {
     }
 
     @PostMapping("/offline/clear")
-    public Result<Void> clearOfflineMessages(HttpServletRequest request) {
+    public Result<String> clearOfflineMessages(HttpServletRequest request) {
         Long userId = (Long) request.getAttribute("userId");
         messageService.clearOfflineMessages(userId);
         return Result.success("已清除离线消息");

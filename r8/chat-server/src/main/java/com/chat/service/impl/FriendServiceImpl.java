@@ -11,8 +11,8 @@ import com.chat.service.FriendService;
 import com.chat.service.UserService;
 import com.chat.vo.FriendVO;
 import com.chat.vo.UserVO;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,12 +23,16 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-@Slf4j
 @Service
-@RequiredArgsConstructor
 public class FriendServiceImpl extends ServiceImpl<FriendMapper, Friend> implements FriendService {
 
+    private static final Logger log = LoggerFactory.getLogger(FriendServiceImpl.class);
+
     private final UserService userService;
+
+    public FriendServiceImpl(UserService userService) {
+        this.userService = userService;
+    }
 
     @Override
     @Transactional(rollbackFor = Exception.class)

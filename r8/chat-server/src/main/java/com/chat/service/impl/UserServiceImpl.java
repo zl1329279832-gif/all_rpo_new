@@ -12,8 +12,8 @@ import com.chat.service.UserService;
 import com.chat.utils.JwtUtil;
 import com.chat.vo.LoginVO;
 import com.chat.vo.UserVO;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
@@ -25,16 +25,20 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-@Slf4j
 @Service
-@RequiredArgsConstructor
 public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements UserService {
 
+    private static final Logger log = LoggerFactory.getLogger(UserServiceImpl.class);
     private static final String ONLINE_USERS_KEY = "chat:online:users";
     private static final String ONLINE_STATUS_KEY_PREFIX = "chat:online:user:";
 
     private final JwtUtil jwtUtil;
     private final RedisTemplate<String, Object> redisTemplate;
+
+    public UserServiceImpl(JwtUtil jwtUtil, RedisTemplate<String, Object> redisTemplate) {
+        this.jwtUtil = jwtUtil;
+        this.redisTemplate = redisTemplate;
+    }
 
     @Override
     public LoginVO login(LoginDTO dto) {

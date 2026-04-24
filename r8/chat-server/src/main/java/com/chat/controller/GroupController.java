@@ -7,7 +7,6 @@ import com.chat.vo.GroupMemberVO;
 import com.chat.vo.GroupVO;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -21,10 +20,13 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/group")
-@RequiredArgsConstructor
 public class GroupController {
 
     private final GroupService groupService;
+
+    public GroupController(GroupService groupService) {
+        this.groupService = groupService;
+    }
 
     @PostMapping("/create")
     public Result<GroupVO> createGroup(HttpServletRequest request, @Valid @RequestBody CreateGroupDTO dto) {
@@ -34,14 +36,14 @@ public class GroupController {
     }
 
     @DeleteMapping("/dissolve/{groupId}")
-    public Result<Void> dissolveGroup(HttpServletRequest request, @PathVariable Long groupId) {
+    public Result<String> dissolveGroup(HttpServletRequest request, @PathVariable Long groupId) {
         Long userId = (Long) request.getAttribute("userId");
         groupService.dissolveGroup(userId, groupId);
         return Result.success("群组已解散");
     }
 
     @PostMapping("/add-members")
-    public Result<Void> addMembers(HttpServletRequest request, 
+    public Result<String> addMembers(HttpServletRequest request, 
                                     @RequestParam Long groupId,
                                     @RequestParam List<Long> userIds) {
         Long userId = (Long) request.getAttribute("userId");
@@ -50,7 +52,7 @@ public class GroupController {
     }
 
     @PostMapping("/remove-member")
-    public Result<Void> removeMember(HttpServletRequest request,
+    public Result<String> removeMember(HttpServletRequest request,
                                       @RequestParam Long groupId,
                                       @RequestParam Long memberId) {
         Long userId = (Long) request.getAttribute("userId");
@@ -59,7 +61,7 @@ public class GroupController {
     }
 
     @PostMapping("/quit/{groupId}")
-    public Result<Void> quitGroup(HttpServletRequest request, @PathVariable Long groupId) {
+    public Result<String> quitGroup(HttpServletRequest request, @PathVariable Long groupId) {
         Long userId = (Long) request.getAttribute("userId");
         groupService.quitGroup(userId, groupId);
         return Result.success("已退出群组");

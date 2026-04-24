@@ -14,8 +14,8 @@ import com.chat.service.UserService;
 import com.chat.vo.GroupMemberVO;
 import com.chat.vo.GroupVO;
 import com.chat.vo.UserVO;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,13 +28,18 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-@Slf4j
 @Service
-@RequiredArgsConstructor
 public class GroupServiceImpl extends ServiceImpl<ChatGroupMapper, ChatGroup> implements GroupService {
+
+    private static final Logger log = LoggerFactory.getLogger(GroupServiceImpl.class);
 
     private final GroupMemberMapper groupMemberMapper;
     private final UserService userService;
+
+    public GroupServiceImpl(GroupMemberMapper groupMemberMapper, UserService userService) {
+        this.groupMemberMapper = groupMemberMapper;
+        this.userService = userService;
+    }
 
     @Override
     @Transactional(rollbackFor = Exception.class)

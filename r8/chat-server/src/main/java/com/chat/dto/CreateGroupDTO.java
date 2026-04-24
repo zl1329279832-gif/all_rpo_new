@@ -2,11 +2,9 @@ package com.chat.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
-import lombok.Data;
 
 import java.util.List;
 
-@Data
 public class CreateGroupDTO {
 
     @NotBlank(message = "群组名称不能为空")
@@ -17,4 +15,28 @@ public class CreateGroupDTO {
     private String groupNotice;
 
     private List<Long> memberIds;
+
+    public String getGroupName() {
+        return groupName;
+    }
+
+    public void setGroupName(String groupName) {
+        this.groupName = groupName;
+    }
+
+    public String getGroupNotice() {
+        return groupNotice;
+    }
+
+    public void setGroupNotice(String groupNotice) {
+        this.groupNotice = groupNotice;
+    }
+
+    public List<Long> getMemberIds() {
+        return memberIds;
+    }
+
+    public void setMemberIds(List<Long> memberIds) {
+        this.memberIds = memberIds;
+    }
 }
