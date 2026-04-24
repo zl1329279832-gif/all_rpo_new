@@ -23,10 +23,10 @@ public class CollisionDetector {
 
     public static boolean checkTankBoundaryCollision(Tank tank) {
         Rectangle bounds = tank.getBounds();
-        return bounds.x < GameConstants.TILE_SIZE ||
-               bounds.x + bounds.width > GameConstants.SCREEN_WIDTH - GameConstants.TILE_SIZE ||
-               bounds.y < GameConstants.TILE_SIZE ||
-               bounds.y + bounds.height > GameConstants.GAME_HEIGHT - GameConstants.TILE_SIZE;
+        return bounds.x < 0 ||
+               bounds.x + bounds.width > GameConstants.SCREEN_WIDTH ||
+               bounds.y < 0 ||
+               bounds.y + bounds.height > GameConstants.GAME_HEIGHT;
     }
 
     public static Bullet checkBulletWallCollision(Bullet bullet, List<Wall> walls) {

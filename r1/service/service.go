@@ -5,7 +5,6 @@ import (
 	"r1/engine"
 	"r1/model"
 	"r1/repository"
-	"sync"
 	"time"
 
 	"gorm.io/gorm"

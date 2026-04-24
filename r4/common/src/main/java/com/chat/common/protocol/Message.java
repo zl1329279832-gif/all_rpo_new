@@ -1,7 +1,7 @@
 package com.chat.common.protocol;
 
 import java.io.Serializable;
-import java.time.LocalDateTime;
+import java.util.Date;
 import java.util.List;
 
 public class Message implements Serializable {
@@ -11,13 +11,13 @@ public class Message implements Serializable {
     private String sender;
     private String receiver;
     private String content;
-    private LocalDateTime timestamp;
+    private Date timestamp;
     private List<String> userList;
     private boolean success;
     private String errorMessage;
 
     public Message() {
-        this.timestamp = LocalDateTime.now();
+        this.timestamp = new Date();
     }
 
     public MessageType getType() {
@@ -52,11 +52,11 @@ public class Message implements Serializable {
         this.content = content;
     }
 
-    public LocalDateTime getTimestamp() {
+    public Date getTimestamp() {
         return timestamp;
     }
 
-    public void setTimestamp(LocalDateTime timestamp) {
+    public void setTimestamp(Date timestamp) {
         this.timestamp = timestamp;
     }
 

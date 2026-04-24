@@ -25,7 +25,7 @@ func LoadConfig() *Config {
 		DBUser:     getEnv("DB_USER", "root"),
 		DBPassword: getEnv("DB_PASSWORD", "123456"),
 		DBName:     getEnv("DB_NAME", "risk_engine"),
-		ServerPort: getEnv("SERVER_PORT", "8080"),
+		ServerPort: getEnv("SERVER_PORT", "8081"),
 	}
 }
 

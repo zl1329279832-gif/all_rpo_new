@@ -24,7 +24,6 @@ func NewFileService(logger *utils.Logger) *FileService {
 func (fs *FileService) ScanDirectory(dir string, excludeDirs []string, fileTypes []string) ([]*model.FileInfo, error) {
 	fs.logger.Info(fmt.Sprintf("开始扫描目录: %s", dir))
 	var files []*model.FileInfo
-	seen := make(map[string]bool)
 
 	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {

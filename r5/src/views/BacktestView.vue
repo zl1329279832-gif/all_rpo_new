@@ -15,12 +15,11 @@
             :disabled="isBacktestComplete"
           >
             <el-icon><VideoPlay /></el-icon>
-            {{ backtest.isRunning ? (backtest.isPaused ? '继续' : '暂停') : '开始' }}
+            {{ backtest.value.isRunning ? (backtest.value.isPaused ? '继续' : '暂停') : '开始' }}
           </el-button>
           <el-button
             size="large"
             @click="handleStop"
-            :disabled="!backtest.isRunning && backtest.currentIndex === 0"
           >
             <el-icon><VideoPause /></el-icon>
             重置
@@ -50,7 +49,7 @@
         
         <div class="progress-info">
           <span class="progress-text">
-            进度：{{ backtest.currentIndex }} / {{ marketData.length }}
+            进度：{{ backtest.value.currentIndex }} / {{ marketData.value.length }}
           </span>
           <el-progress
             :percentage="progressPercentage"
@@ -64,41 +63,41 @@
     <div class="stats-row">
       <StatCard
         label="总资产"
-        :value="portfolio.totalValue.toFixed(2)"
+        :value="portfolio.value.totalValue.toFixed(2)"
         unit="元"
         icon="💰"
         color="#409EFF"
       />
       <StatCard
         label="总收益率"
-        :value="portfolio.totalReturn.toFixed(2)"
+        :value="portfolio.value.totalReturn.toFixed(2)"
         unit="%"
         icon="📈"
-        :color="portfolio.totalReturn >= 0 ? '#67C23A' : '#F56C6C'"
+        :color="portfolio.value.totalReturn >= 0 ? '#67C23A' : '#F56C6C'"
       />
       <StatCard
         label="最大回撤"
-        :value="portfolio.maxDrawdown.toFixed(2)"
+        :value="portfolio.value.maxDrawdown.toFixed(2)"
         unit="%"
         icon="📉"
         color="#E6A23C"
       />
       <StatCard
         label="胜率"
-        :value="portfolio.winRate.toFixed(2)"
+        :value="portfolio.value.winRate.toFixed(2)"
         unit="%"
         icon="🎯"
         color="#909399"
       />
       <StatCard
         label="持仓"
-        :value="portfolio.position"
+        :value="portfolio.value.position"
         icon="📦"
         color="#667EEA"
       />
       <StatCard
         label="交易次数"
-        :value="portfolio.totalTrades"
+        :value="portfolio.value.totalTrades"
         icon="💱"
         color="#764BA2"
       />
@@ -125,25 +124,25 @@
           <div class="portfolio-info">
             <div class="info-item">
               <span class="info-label">可用资金</span>
-              <span class="info-value">¥{{ portfolio.cash.toFixed(2) }}</span>
+              <span class="info-value">¥{{ portfolio.value.cash.toFixed(2) }}</span>
             </div>
             <div class="info-item">
               <span class="info-label">持仓数量</span>
-              <span class="info-value">{{ portfolio.position }} 股</span>
+              <span class="info-value">{{ portfolio.value.position }} 股</span>
             </div>
             <div class="info-item">
               <span class="info-label">持仓市值</span>
-              <span class="info-value">¥{{ (portfolio.position * currentPrice).toFixed(2) }}</span>
+              <span class="info-value">¥{{ (portfolio.value.position * currentPrice).toFixed(2) }}</span>
             </div>
             <div class="info-divider"></div>
             <div class="info-item">
               <span class="info-label">总资产</span>
-              <span class="info-value highlight">¥{{ portfolio.totalValue.toFixed(2) }}</span>
+              <span class="info-value highlight">¥{{ portfolio.value.totalValue.toFixed(2) }}</span>
             </div>
             <div class="info-item">
               <span class="info-label">今日收益</span>
-              <span class="info-value" :style="{ color: portfolio.dailyReturn >= 0 ? '#67c23a' : '#f56c6c' }">
-                {{ portfolio.dailyReturn >= 0 ? '+' : '' }}{{ portfolio.dailyReturn.toFixed(2) }}%
+              <span class="info-value" :style="{ color: portfolio.value.dailyReturn >= 0 ? '#67c23a' : '#f56c6c' }">
+                {{ portfolio.value.dailyReturn >= 0 ? '+' : '' }}{{ portfolio.value.dailyReturn.toFixed(2) }}%
               </span>
             </div>
           </div>
@@ -195,6 +194,7 @@
 <script setup lang="ts">
 import { ref, computed, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
+import { storeToRefs } from 'pinia';
 import VChart from 'vue-echarts';
 import { use } from 'echarts/core';
 import { CanvasRenderer } from 'echarts/renderers';
@@ -222,31 +222,27 @@ use([
 const router = useRouter();
 const strategyStore = useStrategyStore();
 
-const currentStrategy = strategyStore.currentStrategy;
-const marketData = strategyStore.marketData;
-const portfolio = strategyStore.portfolio;
-const backtest = strategyStore.backtest;
-const trades = computed(() => [...backtest.trades].reverse());
-const isBacktestComplete = strategyStore.isBacktestComplete;
+const { currentStrategy, marketData, portfolio, backtest, isBacktestComplete } = storeToRefs(strategyStore);
+const trades = computed(() => [...backtest.value.trades].reverse());
 
 const speedValue = ref(100);
 
 const progressPercentage = computed(() => {
-  if (marketData.length === 0) return 0;
-  return Math.round((backtest.currentIndex / marketData.length) * 100);
+  if (marketData.value.length === 0) return 0;
+  return Math.round((backtest.value.currentIndex / marketData.value.length) * 100);
 });
 
 const currentPrice = computed(() => {
-  if (backtest.currentIndex === 0) return marketData[0]?.close || 0;
-  return marketData[backtest.currentIndex - 1]?.close || 0;
+  if (backtest.value.currentIndex === 0) return marketData.value[0]?.close || 0;
+  return marketData.value[backtest.value.currentIndex - 1]?.close || 0;
 });
 
 const returnChartOption = computed<EChartsOption>(() => {
-  const dates = marketData.slice(0, backtest.currentIndex).map(item => item.date);
-  const returns = backtest.history.map(item => item.totalReturn);
-  const benchmarkReturns = backtest.history.map((item, index) => {
+  const dates = marketData.value.slice(0, backtest.value.currentIndex).map(item => item.date);
+  const returns = backtest.value.history.map(item => item.totalReturn);
+  const benchmarkReturns = backtest.value.history.map((item, index) => {
     if (index === 0) return 0;
-    const priceChange = (marketData[index].close - marketData[0].close) / marketData[0].close * 100;
+    const priceChange = (marketData.value[index].close - marketData.value[0].close) / marketData.value[0].close * 100;
     return priceChange;
   });
   
@@ -320,7 +316,7 @@ const returnChartOption = computed<EChartsOption>(() => {
 });
 
 function handleStart() {
-  if (backtest.isRunning) {
+  if (backtest.value.isRunning) {
     strategyStore.pauseBacktest();
   } else {
     strategyStore.startBacktest();

@@ -1,45 +1,45 @@
-# Windows PowerShell 构建脚本
+# Windows PowerShell Build Script
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "  本地文件批量处理工具 - 构建脚本" -ForegroundColor Cyan
+Write-Host "  File Batch Tool - Build Script" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
-# 创建 bin 目录
+# Create bin directory
 if (-not (Test-Path "bin")) {
     New-Item -ItemType Directory -Path "bin" | Out-Null
-    Write-Host "✅ 创建 bin 目录" -ForegroundColor Green
+    Write-Host "[OK] Created bin directory" -ForegroundColor Green
 }
 
-# 检查 Go 环境
-Write-Host "📦 检查 Go 环境..." -ForegroundColor Yellow
+# Check Go environment
+Write-Host "[1/3] Checking Go environment..." -ForegroundColor Yellow
 $goVersion = go version
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "❌ 未找到 Go，请先安装 Go 1.22+" -ForegroundColor Red
+    Write-Host "[ERROR] Go not found, please install Go 1.22+" -ForegroundColor Red
     exit 1
 }
-Write-Host "✅ $goVersion" -ForegroundColor Green
+Write-Host "[OK] $goVersion" -ForegroundColor Green
 
-# 下载依赖
+# Download dependencies
 Write-Host ""
-Write-Host "📥 下载依赖..." -ForegroundColor Yellow
+Write-Host "[2/3] Downloading dependencies..." -ForegroundColor Yellow
 go mod tidy
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "❌ 依赖下载失败" -ForegroundColor Red
+    Write-Host "[ERROR] Failed to download dependencies" -ForegroundColor Red
     exit 1
 }
-Write-Host "✅ 依赖下载完成" -ForegroundColor Green
+Write-Host "[OK] Dependencies downloaded" -ForegroundColor Green
 
-# 编译
+# Build
 Write-Host ""
-Write-Host "🔨 编译 EXE 文件..." -ForegroundColor Yellow
+Write-Host "[3/3] Building EXE..." -ForegroundColor Yellow
 go build -ldflags "-s -w" -o "bin/file-batch-tool.exe" "cmd/main.go"
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "❌ 编译失败" -ForegroundColor Red
+    Write-Host "[ERROR] Build failed" -ForegroundColor Red
     exit 1
 }
 
 Write-Host ""
-Write-Host "🎉 构建完成！" -ForegroundColor Green
-Write-Host "📦 EXE 文件位置: bin/file-batch-tool.exe" -ForegroundColor Cyan
+Write-Host "[SUCCESS] Build complete!" -ForegroundColor Green
+Write-Host "EXE location: bin/file-batch-tool.exe" -ForegroundColor Cyan
 Write-Host ""
-Write-Host "运行程序: .\bin\file-batch-tool.exe" -ForegroundColor Yellow
+Write-Host "Run: .\bin\file-batch-tool.exe" -ForegroundColor Yellow

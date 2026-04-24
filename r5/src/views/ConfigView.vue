@@ -49,6 +49,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useRouter } from 'vue-router';
+import { storeToRefs } from 'pinia';
 import { useStrategyStore } from '@/stores/strategy';
 import StrategyCard from '@/components/StrategyCard.vue';
 import type { StrategyCard as StrategyCardType } from '@/types';
@@ -56,9 +57,7 @@ import type { StrategyCard as StrategyCardType } from '@/types';
 const router = useRouter();
 const strategyStore = useStrategyStore();
 
-const strategies = strategyStore.strategies;
-const selectedStrategy = strategyStore.selectedStrategy;
-const currentStrategy = strategyStore.currentStrategy;
+const { strategies, selectedStrategy, currentStrategy } = storeToRefs(strategyStore);
 
 const riskLabel = computed(() => {
   if (!currentStrategy.value) return '中';

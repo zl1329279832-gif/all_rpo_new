@@ -3,21 +3,21 @@ package com.chat.server.model;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
-import java.time.LocalDateTime;
+import java.util.Date;
 
 public class ClientInfo {
     private String username;
     private Socket socket;
     private ObjectInputStream in;
     private ObjectOutputStream out;
-    private LocalDateTime lastHeartbeat;
+    private Date lastHeartbeat;
 
     public ClientInfo(String username, Socket socket, ObjectInputStream in, ObjectOutputStream out) {
         this.username = username;
         this.socket = socket;
         this.in = in;
         this.out = out;
-        this.lastHeartbeat = LocalDateTime.now();
+        this.lastHeartbeat = new Date();
     }
 
     public String getUsername() {
@@ -36,11 +36,11 @@ public class ClientInfo {
         return out;
     }
 
-    public LocalDateTime getLastHeartbeat() {
+    public Date getLastHeartbeat() {
         return lastHeartbeat;
     }
 
-    public void setLastHeartbeat(LocalDateTime lastHeartbeat) {
+    public void setLastHeartbeat(Date lastHeartbeat) {
         this.lastHeartbeat = lastHeartbeat;
     }
 }

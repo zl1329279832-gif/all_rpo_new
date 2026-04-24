@@ -5,16 +5,12 @@ import (
 	"file-batch-tool/internal/service"
 	"file-batch-tool/internal/utils"
 	"fmt"
-	"path/filepath"
-	"sort"
 	"strings"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/container"
-	"fyne.io/fyne/v2/data/binding"
 	"fyne.io/fyne/v2/dialog"
-	"fyne.io/fyne/v2/storage"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 )
@@ -307,7 +303,6 @@ func (fba *FileBatchApp) selectFiles() {
 			fba.logger.Info("选择文件: " + uri.URI().Path())
 		}
 	}, fba.window)
-	fd.SetMultiple(true)
 	fd.Show()
 }
 

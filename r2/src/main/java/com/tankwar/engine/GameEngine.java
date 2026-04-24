@@ -112,26 +112,50 @@ public class GameEngine {
     private void updatePlayer(boolean moveUp, boolean moveDown, boolean moveLeft, boolean moveRight, boolean shoot) {
         if (!player.isActive()) return;
 
+        // 先设置方向
+        if (moveUp) {
+            player.setDirection(Direction.UP);
+        } else if (moveDown) {
+            player.setDirection(Direction.DOWN);
+        } else if (moveLeft) {
+            player.setDirection(Direction.LEFT);
+        } else if (moveRight) {
+            player.setDirection(Direction.RIGHT);
+        }
+
+        // 尝试移动 - 先沿Y轴再沿X轴，这样可以更好地处理碰撞
+        boolean moved = false;
         int oldX = player.getX();
         int oldY = player.getY();
 
-        if (moveUp) player.moveUp();
-        else if (moveDown) player.moveDown();
-        else if (moveLeft) player.moveLeft();
-        else if (moveRight) player.moveRight();
-
-        if (CollisionDetector.checkTankWallCollision(player, gameMap.getWalls()) ||
-            CollisionDetector.checkTankBoundaryCollision(player)) {
-            player.setX(oldX);
-            player.setY(oldY);
+        if (moveUp) {
+            player.moveUp();
+        } else if (moveDown) {
+            player.moveDown();
         }
 
-        for (EnemyTank enemy : enemies) {
-            if (enemy.isActive() && player.getBounds().intersects(enemy.getBounds())) {
-                player.setX(oldX);
-                player.setY(oldY);
-                break;
-            }
+        // 检查Y轴移动碰撞
+        if (CollisionDetector.checkTankWallCollision(player, gameMap.getWalls()) ||
+            CollisionDetector.checkTankBoundaryCollision(player) ||
+            checkTankEnemyCollision(player)) {
+            player.setY(oldY);
+        } else {
+            moved = true;
+        }
+
+        // 尝试X轴移动
+        oldX = player.getX();
+        if (moveLeft) {
+            player.moveLeft();
+        } else if (moveRight) {
+            player.moveRight();
+        }
+
+        // 检查X轴移动碰撞
+        if (CollisionDetector.checkTankWallCollision(player, gameMap.getWalls()) ||
+            CollisionDetector.checkTankBoundaryCollision(player) ||
+            checkTankEnemyCollision(player)) {
+            player.setX(oldX);
         }
 
         player.update();
@@ -147,6 +171,15 @@ public class GameEngine {
         if (collected != null) {
             applyPowerUp(collected);
         }
+    }
+    
+    private boolean checkTankEnemyCollision(Tank tank) {
+        for (EnemyTank enemy : enemies) {
+            if (enemy.isActive() && tank.getBounds().intersects(enemy.getBounds())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void applyPowerUp(PowerUp powerUp) {
@@ -176,21 +209,23 @@ public class GameEngine {
 
             enemy.update();
 
-            if (CollisionDetector.checkTankWallCollision(enemy, gameMap.getWalls()) ||
-                CollisionDetector.checkTankBoundaryCollision(enemy)) {
+            boolean collision = CollisionDetector.checkTankWallCollision(enemy, gameMap.getWalls()) ||
+                               CollisionDetector.checkTankBoundaryCollision(enemy);
+            
+            if (!collision) {
+                for (EnemyTank other : enemies) {
+                    if (other != enemy && other.isActive() &&
+                        enemy.getBounds().intersects(other.getBounds())) {
+                        collision = true;
+                        break;
+                    }
+                }
+            }
+
+            if (collision) {
                 enemy.setX(oldX);
                 enemy.setY(oldY);
                 enemy.getAI().onCollision();
-            }
-
-            for (EnemyTank other : enemies) {
-                if (other != enemy && other.isActive() &&
-                    enemy.getBounds().intersects(other.getBounds())) {
-                    enemy.setX(oldX);
-                    enemy.setY(oldY);
-                    enemy.getAI().onCollision();
-                    break;
-                }
             }
 
             Bullet bullet = enemy.shoot();

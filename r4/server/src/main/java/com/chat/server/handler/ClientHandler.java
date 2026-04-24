@@ -10,7 +10,7 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
-import java.time.LocalDateTime;
+import java.util.Date;
 
 public class ClientHandler implements Runnable {
     private final Socket socket;
@@ -87,19 +87,35 @@ public class ClientHandler implements Runnable {
         out.writeObject(response);
         out.flush();
 
-        System.out.println("[" + LocalDateTime.now() + "] 用户 " + username + " 上线了");
+        System.out.println("[" + new Date() + "] 用户 " + username + " 上线了");
 
+        // 先向新登录的用户发送当前的在线用户列表
+        Message userListMsg = new Message();
+        userListMsg.setType(MessageType.USER_LIST);
+        userListMsg.setUserList(clientManager.getOnlineUsers());
+        out.writeObject(userListMsg);
+        out.flush();
+
+        // 向新登录的用户发送欢迎消息
+        Message welcomeMsg = new Message();
+        welcomeMsg.setType(MessageType.SYSTEM_NOTICE);
+        welcomeMsg.setContent("欢迎 " + username + " 加入聊天室！");
+        out.writeObject(welcomeMsg);
+        out.flush();
+
+        // 然后向所有用户广播新用户上线的通知
         Message notice = new Message();
         notice.setType(MessageType.SYSTEM_NOTICE);
         notice.setContent("用户 " + username + " 上线了");
         clientManager.broadcastMessage(notice);
 
+        // 最后向所有用户广播更新后的在线用户列表
         clientManager.broadcastUserList();
     }
 
     private void handleLogout() throws IOException {
         if (username != null) {
-            System.out.println("[" + LocalDateTime.now() + "] 用户 " + username + " 下线了");
+            System.out.println("[" + new Date() + "] 用户 " + username + " 下线了");
             clientManager.removeClient(username);
 
             Message notice = new Message();
@@ -115,7 +131,7 @@ public class ClientHandler implements Runnable {
     private void handleGroupChat(Message message) throws IOException {
         message.setType(MessageType.CHAT_GROUP);
         clientManager.broadcastMessage(message);
-        System.out.println("[" + LocalDateTime.now() + "] " + message.getSender() + " 群聊: " + message.getContent());
+        System.out.println("[" + new Date() + "] " + message.getSender() + " 群聊: " + message.getContent());
     }
 
     private void handlePrivateChat(Message message) throws IOException {
@@ -123,7 +139,7 @@ public class ClientHandler implements Runnable {
         if (clientManager.isUserOnline(receiver)) {
             clientManager.sendMessageToUser(receiver, message);
             clientManager.sendMessageToUser(username, message);
-            System.out.println("[" + LocalDateTime.now() + "] " + username + " 私聊 " + receiver + ": " + message.getContent());
+            System.out.println("[" + new Date() + "] " + username + " 私聊 " + receiver + ": " + message.getContent());
         } else {
             Message errorMsg = new Message();
             errorMsg.setType(MessageType.SYSTEM_NOTICE);
@@ -135,7 +151,7 @@ public class ClientHandler implements Runnable {
     private void handleHeartbeat() throws IOException {
         ClientInfo client = clientManager.getClient(username);
         if (client != null) {
-            client.setLastHeartbeat(LocalDateTime.now());
+            client.setLastHeartbeat(new Date());
         }
         Message response = new Message();
         response.setType(MessageType.HEARTBEAT_RESPONSE);
@@ -152,7 +168,7 @@ public class ClientHandler implements Runnable {
                 notice.setContent("用户 " + username + " 断开连接");
                 clientManager.broadcastMessage(notice);
                 clientManager.broadcastUserList();
-                System.out.println("[" + LocalDateTime.now() + "] 用户 " + username + " 连接关闭");
+                System.out.println("[" + new Date() + "] 用户 " + username + " 连接关闭");
             }
             if (in != null) in.close();
             if (out != null) out.close();

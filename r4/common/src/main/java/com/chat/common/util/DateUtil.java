@@ -1,22 +1,23 @@
 package com.chat.common.util;
 
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 public class DateUtil {
-    private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    private static final SimpleDateFormat FORMATTER = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+    private static final SimpleDateFormat TIME_FORMATTER = new SimpleDateFormat("HH:mm:ss");
 
-    public static String format(LocalDateTime dateTime) {
+    public static String format(Date dateTime) {
         if (dateTime == null) {
             return "";
         }
-        return dateTime.format(FORMATTER);
+        return FORMATTER.format(dateTime);
     }
 
-    public static String formatTime(LocalDateTime dateTime) {
+    public static String formatTime(Date dateTime) {
         if (dateTime == null) {
             return "";
         }
-        return dateTime.format(DateTimeFormatter.ofPattern("HH:mm:ss"));
+        return TIME_FORMATTER.format(dateTime);
     }
 }
