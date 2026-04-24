@@ -4,58 +4,55 @@ import type { User } from '@/types'
 import { storage } from '@/utils/storage'
 import { userApi } from '@/api/user'
 import { authApi } from '@/api/auth'
-import router from '@/router'
 
 export const useUserStore = defineStore('user', () => {
-  const currentUser = ref<User | null>(storage.getUser())
+  const userInfo = ref<User | null>(storage.getUser())
   const token = ref<string | null>(storage.getToken())
 
   const isLoggedIn = computed(() => !!token.value)
-  const userId = computed(() => currentUser.value?.id || 0)
-  const nickname = computed(() => currentUser.value?.nickname || currentUser.value?.username || '')
 
-  const setUser = (user: User) => {
-    currentUser.value = user
-    storage.setUser(user)
-  }
-
-  const setToken = (newToken: string) => {
+  function setUser(user: User, newToken: string) {
+    userInfo.value = user
     token.value = newToken
+    storage.setUser(user)
     storage.setToken(newToken)
   }
 
-  const logout = async () => {
-    try {
-      await authApi.logout()
-    } catch (e) {
-      console.error('Logout error:', e)
-    }
-    currentUser.value = null
+  function clearUser() {
+    userInfo.value = null
     token.value = null
     storage.clear()
-    router.push('/login')
   }
 
-  const fetchUserInfo = async () => {
+  async function fetchUserInfo() {
     if (!token.value) return
     try {
       const res = await userApi.getInfo()
-      setUser(res.data)
-    } catch (e) {
-      console.error('Fetch user info error:', e)
-      logout()
+      if (res.data) {
+        userInfo.value = res.data
+        storage.setUser(res.data)
+      }
+    } catch (error) {
+      console.error('获取用户信息失败:', error)
     }
   }
 
+  async function logout() {
+    try {
+      await authApi.logout()
+    } catch (error) {
+      console.error('登出失败:', error)
+    }
+    clearUser()
+  }
+
   return {
-    currentUser,
+    userInfo,
     token,
     isLoggedIn,
-    userId,
-    nickname,
     setUser,
-    setToken,
-    logout,
-    fetchUserInfo
+    clearUser,
+    fetchUserInfo,
+    logout
   }
 })

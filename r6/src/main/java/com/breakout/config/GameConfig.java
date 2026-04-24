@@ -79,11 +79,37 @@ public final class GameConfig {
     }
 
     public static final class Fonts {
-        public static final Font TITLE = new Font("Arial", Font.BOLD, 48);
-        public static final Font MENU = new Font("Arial", Font.PLAIN, 24);
-        public static final Font HUD = new Font("Arial", Font.BOLD, 18);
-        public static final Font GAME_OVER = new Font("Arial", Font.BOLD, 36);
-        public static final Font SMALL = new Font("Arial", Font.PLAIN, 14);
+        private static Font getChineseFont(int style, int size) {
+            Font font;
+            
+            font = new Font("Microsoft YaHei", style, size);
+            if (font.canDisplay('中')) {
+                return font;
+            }
+            
+            font = new Font("SimHei", style, size);
+            if (font.canDisplay('中')) {
+                return font;
+            }
+            
+            font = new Font("SimSun", style, size);
+            if (font.canDisplay('中')) {
+                return font;
+            }
+            
+            font = new Font("Dialog", style, size);
+            if (font.canDisplay('中')) {
+                return font;
+            }
+            
+            return new Font("SansSerif", style, size);
+        }
+        
+        public static final Font TITLE = getChineseFont(Font.BOLD, 48);
+        public static final Font MENU = getChineseFont(Font.PLAIN, 24);
+        public static final Font HUD = getChineseFont(Font.BOLD, 18);
+        public static final Font GAME_OVER = getChineseFont(Font.BOLD, 36);
+        public static final Font SMALL = getChineseFont(Font.PLAIN, 14);
         
         private Fonts() {
         }

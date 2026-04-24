@@ -192,17 +192,23 @@ public class GameEngine implements PowerupManager.PowerupEffectListener {
     }
     
     private void checkWallCollision(Ball ball) {
-        if (ball.getLeft() <= 0) {
+        if (ball.getLeft() < 0) {
             ball.setX(0);
-            ball.invertVelocityX();
+            if (ball.getVelocityX() < 0) {
+                ball.invertVelocityX();
+            }
         }
-        if (ball.getRight() >= GameConfig.WINDOW_WIDTH) {
+        if (ball.getRight() > GameConfig.WINDOW_WIDTH) {
             ball.setX(GameConfig.WINDOW_WIDTH - ball.getWidth());
-            ball.invertVelocityX();
+            if (ball.getVelocityX() > 0) {
+                ball.invertVelocityX();
+            }
         }
-        if (ball.getTop() <= 0) {
+        if (ball.getTop() < 0) {
             ball.setY(0);
-            ball.invertVelocityY();
+            if (ball.getVelocityY() < 0) {
+                ball.invertVelocityY();
+            }
         }
     }
     

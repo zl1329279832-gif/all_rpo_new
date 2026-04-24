@@ -38,17 +38,50 @@ public class Ball extends Entity {
     @Override
     public void render(Graphics2D g2d) {
         Ellipse2D.Double ballShape = new Ellipse2D.Double(x, y, width, height);
+        double radius = width / 2;
+        double centerX = x + radius;
+        double centerY = y + radius;
+        
+        int maxGlowLayers = 4;
+        int maxGlowSize = maxGlowLayers * 2;
+        
+        int glowStartX = (int) (centerX - radius - maxGlowSize);
+        int glowStartY = (int) (centerY - radius - maxGlowSize);
+        int glowSize = (int) (width + maxGlowSize * 2);
+        
+        int clampedGlowX = Math.max(0, glowStartX);
+        int clampedGlowY = Math.max(0, glowStartY);
+        int clampedGlowWidth = Math.min(glowSize, GameConfig.WINDOW_WIDTH - clampedGlowX);
+        int clampedGlowHeight = Math.min(glowSize, GameConfig.WINDOW_HEIGHT - clampedGlowY);
         
         if (glowing || pierceMode) {
             Color glowColor = pierceMode ? GameConfig.Colors.POWERUP_PIERCE : GameConfig.Colors.BALL_GLOW;
-            for (int i = 3; i > 0; i--) {
-                g2d.setColor(new Color(glowColor.getRed(), glowColor.getGreen(), glowColor.getBlue(), 30));
-                g2d.fillOval((int) x - i * 2, (int) y - i * 2, (int) width + i * 4, (int) height + i * 4);
+            
+            for (int i = maxGlowLayers; i > 0; i--) {
+                int layerX = (int) (centerX - radius - i * 2);
+                int layerY = (int) (centerY - radius - i * 2);
+                int layerSize = (int) (width + i * 4);
+                
+                int clampedX = Math.max(0, layerX);
+                int clampedY = Math.max(0, layerY);
+                int clampedSizeW = Math.min(layerSize, GameConfig.WINDOW_WIDTH - clampedX);
+                int clampedSizeH = Math.min(layerSize, GameConfig.WINDOW_HEIGHT - clampedY);
+                
+                if (clampedSizeW > 0 && clampedSizeH > 0) {
+                    g2d.setColor(new Color(glowColor.getRed(), glowColor.getGreen(), glowColor.getBlue(), 15 + i * 5));
+                    g2d.fillOval(clampedX, clampedY, clampedSizeW, clampedSizeH);
+                }
             }
         }
 
         g2d.setColor(GameConfig.Colors.BALL_GLOW);
-        g2d.fillOval((int) x - 2, (int) y - 2, (int) width + 4, (int) height + 4);
+        int baseGlowX = (int) Math.max(0, x - 2);
+        int baseGlowY = (int) Math.max(0, y - 2);
+        int baseGlowW = (int) Math.min(width + 4, GameConfig.WINDOW_WIDTH - baseGlowX);
+        int baseGlowH = (int) Math.min(height + 4, GameConfig.WINDOW_HEIGHT - baseGlowY);
+        if (baseGlowW > 0 && baseGlowH > 0) {
+            g2d.fillOval(baseGlowX, baseGlowY, baseGlowW, baseGlowH);
+        }
 
         Color ballColor = pierceMode ? GameConfig.Colors.POWERUP_PIERCE : GameConfig.Colors.BALL;
         g2d.setColor(ballColor);

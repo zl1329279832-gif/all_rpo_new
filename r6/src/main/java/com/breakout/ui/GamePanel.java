@@ -252,29 +252,47 @@ public class GamePanel extends JPanel implements Runnable, GameEngine.GameStateL
     }
 
     private void renderHUD(Graphics2D g2d) {
-        g2d.setColor(new Color(30, 30, 50, 200));
-        g2d.fillRect(0, 0, getWidth(), 35);
+        g2d.setColor(new Color(30, 30, 50, 220));
+        g2d.fillRect(0, 0, getWidth(), 40);
         
         g2d.setColor(GameConfig.Colors.TEXT);
         g2d.setFont(GameConfig.Fonts.HUD);
         FontMetrics fm = g2d.getFontMetrics();
         
         String scoreText = "分数: " + gameEngine.getScore();
-        int scoreX = 20;
-        int scoreY = 25;
+        int scoreX = 15;
+        int scoreY = 28;
         g2d.drawString(scoreText, scoreX, scoreY);
         
         String levelText = "关卡: " + gameEngine.getLevelManager().getCurrentLevelNumber();
         int levelX = (getWidth() - fm.stringWidth(levelText)) / 2;
         g2d.drawString(levelText, levelX, scoreY);
         
-        g2d.drawString("生命: ", getWidth() - 120, scoreY);
-        int startX = getWidth() - 60;
-        for (int i = 0; i < gameEngine.getLives(); i++) {
-            g2d.setColor(new Color(255, 100, 100));
-            g2d.fillOval(startX + i * 25, 8, 18, 18);
-            g2d.setColor(new Color(255, 50, 50, 150));
-            g2d.fillOval(startX + i * 25 + 3, 11, 12, 12);
+        int lives = gameEngine.getLives();
+        int lifeIconSize = 16;
+        int lifeIconSpacing = 20;
+        int totalLivesWidth = lives * lifeIconSpacing;
+        
+        int livesTextWidth = fm.stringWidth("生命: ");
+        int livesSectionWidth = livesTextWidth + totalLivesWidth + 10;
+        
+        int startX = getWidth() - livesSectionWidth - 10;
+        
+        g2d.setColor(GameConfig.Colors.TEXT);
+        g2d.drawString("生命: ", startX, scoreY);
+        
+        int iconStartX = startX + livesTextWidth + 5;
+        int iconY = 12;
+        
+        for (int i = 0; i < lives; i++) {
+            int iconX = iconStartX + i * lifeIconSpacing;
+            
+            if (iconX + lifeIconSize < getWidth() - 5) {
+                g2d.setColor(new Color(255, 80, 80));
+                g2d.fillOval(iconX, iconY, lifeIconSize, lifeIconSize);
+                g2d.setColor(new Color(255, 150, 150, 150));
+                g2d.fillOval(iconX + 3, iconY + 3, lifeIconSize - 6, lifeIconSize - 6);
+            }
         }
     }
 
