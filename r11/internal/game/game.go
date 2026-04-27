@@ -13,13 +13,23 @@ import (
 	"airwar/internal/storage"
 	"fmt"
 	"image/color"
+	"math"
 	"math/rand"
 	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
+	"github.com/hajimehoshi/ebiten/v2/text"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
+	"golang.org/x/image/font"
+	"golang.org/x/image/font/basicfont"
 )
+
+type Star struct {
+	X, Y   float64
+	Speed  float64
+	Size   float64
+	Bright uint8
+}
 
 type Game struct {
 	Settings        *config.Settings
@@ -36,10 +46,16 @@ type Game struct {
 	enemyBullets    []*bullet.Bullet
 	powerUps        []*powerup.PowerUp
 	explosions      []*entity.Explosion
+	stars           []*Star
 
 	score           int
 	lives           int
 	level           int
+	gameTime        float64
+
+	smallFont       font.Face
+	normalFont      font.Face
+	largeFont       font.Face
 }
 
 func NewGame() (*Game, error) {
@@ -64,12 +80,44 @@ func NewGame() (*Game, error) {
 		CurrentState:   config.GameStateMenu,
 		PlayerNickname: settings.DefaultNickname,
 		HighScore:      highScore,
+		smallFont:      basicfont.Face7x13,
+		normalFont:     basicfont.Face7x13,
+		largeFont:      basicfont.Face7x13,
 	}
 
 	bullet.InitBulletPool()
+	g.initStars()
 	g.resetGame()
 
 	return g, nil
+}
+
+func (g *Game) initStars() {
+	g.stars = make([]*Star, 50)
+	for i := range g.stars {
+		g.stars[i] = &Star{
+			X:      rand.Float64() * float64(g.Settings.WindowWidth),
+			Y:      rand.Float64() * float64(g.Settings.WindowHeight),
+			Speed:  1 + rand.Float64()*3,
+			Size:   1 + rand.Float64()*2,
+			Bright: uint8(100 + rand.Intn(155)),
+		}
+	}
+}
+
+func (g *Game) updateStars() {
+	g.gameTime += 1.0 / 60.0
+
+	for _, star := range g.stars {
+		star.Y += star.Speed
+		if star.Y > float64(g.Settings.WindowHeight) {
+			star.Y = -star.Size
+			star.X = rand.Float64() * float64(g.Settings.WindowWidth)
+			star.Speed = 1 + rand.Float64()*3
+			star.Size = 1 + rand.Float64()*2
+			star.Bright = uint8(100 + rand.Intn(155))
+		}
+	}
 }
 
 func (g *Game) resetGame() {
@@ -87,9 +135,12 @@ func (g *Game) resetGame() {
 	g.score = 0
 	g.lives = 3
 	g.level = 1
+	g.gameTime = 0
 }
 
 func (g *Game) Update() error {
+	g.updateStars()
+
 	switch g.CurrentState {
 	case config.GameStateMenu:
 		g.updateMenu()
@@ -398,7 +449,8 @@ func (g *Game) gameOver() {
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
-	screen.Fill(color.RGBA{20, 20, 40, 255})
+	screen.Fill(color.RGBA{10, 10, 30, 255})
+	g.drawStars(screen)
 
 	switch g.CurrentState {
 	case config.GameStateMenu:
@@ -415,23 +467,53 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	}
 }
 
+func (g *Game) drawStars(screen *ebiten.Image) {
+	for _, star := range g.stars {
+		starColor := color.RGBA{
+			R: star.Bright,
+			G: star.Bright,
+			B: uint8(min(255, int(star.Bright)+50)),
+			A: 255,
+		}
+
+		size := int(math.Max(1, star.Size))
+		starImg := ebiten.NewImage(size, size)
+		starImg.Fill(starColor)
+
+		op := &ebiten.DrawImageOptions{}
+		op.GeoM.Translate(star.X, star.Y)
+		screen.DrawImage(starImg, op)
+	}
+}
+
 func (g *Game) drawMenu(screen *ebiten.Image) {
 	title := "飞机大战"
-	subtitle := "Air War"
-	instruction1 := "按 Enter 或 空格 开始游戏"
-	instruction2 := "按 L 查看排行榜"
-	instruction3 := fmt.Sprintf("按 M 切换音效 (当前: %s)", g.getSoundStatus())
-	instruction4 := "控制: 方向键/WASD 移动, 空格 射击, P 暂停"
+	instruction1 := "按 Enter 或 空格键 开始游戏"
+	instruction2 := "按 L 键 查看排行榜"
+	instruction3 := fmt.Sprintf("按 M 键 切换音效 (当前: %s)", g.getSoundStatus())
+	instruction4 := "控制说明:"
+	instruction5 := "  方向键/WASD - 移动飞机"
+	instruction6 := "  空格键 - 射击 (自动射击默认开启)"
+	instruction7 := "  P键/ESC - 暂停游戏"
 
-	ebitenutil.DebugPrintAt(screen, title, g.Settings.WindowWidth/2-60, 150)
-	ebitenutil.DebugPrintAt(screen, subtitle, g.Settings.WindowWidth/2-40, 180)
-	ebitenutil.DebugPrintAt(screen, instruction1, g.Settings.WindowWidth/2-120, 300)
-	ebitenutil.DebugPrintAt(screen, instruction2, g.Settings.WindowWidth/2-70, 330)
-	ebitenutil.DebugPrintAt(screen, instruction3, g.Settings.WindowWidth/2-100, 360)
-	ebitenutil.DebugPrintAt(screen, instruction4, g.Settings.WindowWidth/2-150, 420)
+	centerX := g.Settings.WindowWidth / 2
 
-	highScoreText := fmt.Sprintf("最高分: %d", g.HighScore)
-	ebitenutil.DebugPrintAt(screen, highScoreText, g.Settings.WindowWidth/2-50, 500)
+	g.drawTextWithShadow(screen, title, centerX, 120, color.RGBA{0, 255, 255, 255}, 2.0, true)
+
+	g.drawText(screen, instruction1, centerX, 280, color.RGBA{200, 200, 200, 255}, 1.0, true)
+	g.drawText(screen, instruction2, centerX, 310, color.RGBA{200, 200, 200, 255}, 1.0, true)
+	g.drawText(screen, instruction3, centerX, 340, color.RGBA{200, 200, 200, 255}, 1.0, true)
+
+	g.drawText(screen, instruction4, centerX, 400, color.RGBA{150, 255, 150, 255}, 1.0, true)
+	g.drawText(screen, instruction5, centerX, 430, color.RGBA{150, 150, 150, 255}, 1.0, true)
+	g.drawText(screen, instruction6, centerX, 455, color.RGBA{150, 150, 150, 255}, 1.0, true)
+	g.drawText(screen, instruction7, centerX, 480, color.RGBA{150, 150, 150, 255}, 1.0, true)
+
+	highScoreText := fmt.Sprintf("历史最高分: %d", g.HighScore)
+	g.drawText(screen, highScoreText, centerX, 550, color.RGBA{255, 215, 0, 255}, 1.0, true)
+
+	versionText := "版本 1.0"
+	g.drawText(screen, versionText, g.Settings.WindowWidth-60, g.Settings.WindowHeight-20, color.RGBA{100, 100, 100, 255}, 0.8, false)
 }
 
 func (g *Game) getSoundStatus() string {
@@ -476,76 +558,177 @@ func (g *Game) drawHUD(screen *ebiten.Image) {
 	levelText := fmt.Sprintf("关卡: %d", g.LevelManager.GetLevel())
 	highScoreText := fmt.Sprintf("最高: %d", g.HighScore)
 
-	ebitenutil.DebugPrintAt(screen, scoreText, 10, 10)
-	ebitenutil.DebugPrintAt(screen, livesText, 10, 30)
-	ebitenutil.DebugPrintAt(screen, levelText, g.Settings.WindowWidth-80, 10)
-	ebitenutil.DebugPrintAt(screen, highScoreText, g.Settings.WindowWidth-80, 30)
+	panelImg := ebiten.NewImage(g.Settings.WindowWidth, 60)
+	panelImg.Fill(color.RGBA{0, 0, 0, 180})
+	panelOp := &ebiten.DrawImageOptions{}
+	panelOp.GeoM.Translate(0, 0)
+	screen.DrawImage(panelImg, panelOp)
+
+	g.drawText(screen, scoreText, 20, 25, color.RGBA{255, 255, 0, 255}, 1.0, false)
+	g.drawText(screen, livesText, 20, 48, color.RGBA{255, 100, 100, 255}, 1.0, false)
+	g.drawText(screen, levelText, g.Settings.WindowWidth-100, 25, color.RGBA{100, 255, 100, 255}, 1.0, false)
+	g.drawText(screen, highScoreText, g.Settings.WindowWidth-100, 48, color.RGBA{255, 215, 0, 255}, 1.0, false)
 
 	if g.LevelManager.IsBossStage() && g.bossEntity == nil {
-		warningText := "BOSS即将出现!"
-		ebitenutil.DebugPrintAt(screen, warningText, g.Settings.WindowWidth/2-80, g.Settings.WindowHeight/2)
+		flash := (int(g.gameTime*60) / 30) % 2
+		if flash == 0 {
+			warningText := "⚠ 警告: BOSS即将出现! ⚠"
+			g.drawTextWithShadow(screen, warningText, g.Settings.WindowWidth/2, g.Settings.WindowHeight/2, color.RGBA{255, 50, 50, 255}, 1.5, true)
+		}
+	}
+
+	if g.Player.Shield {
+		shieldText := "🛡 护盾已激活"
+		g.drawText(screen, shieldText, g.Settings.WindowWidth/2, 80, color.RGBA{0, 200, 255, 255}, 0.9, true)
+	}
+	if g.Player.DoubleFire {
+		doubleText := "⚡ 双倍火力"
+		g.drawText(screen, doubleText, g.Settings.WindowWidth/2, 100, color.RGBA{255, 200, 0, 255}, 0.9, true)
+	}
+	if g.Player.MultiBall {
+		multiText := "🌟 多弹道射击"
+		g.drawText(screen, multiText, g.Settings.WindowWidth/2, 120, color.RGBA{200, 0, 255, 255}, 0.9, true)
 	}
 }
 
 func (g *Game) drawPauseOverlay(screen *ebiten.Image) {
 	overlay := ebiten.NewImage(g.Settings.WindowWidth, g.Settings.WindowHeight)
-	overlay.Fill(color.RGBA{0, 0, 0, 150})
+	overlay.Fill(color.RGBA{0, 0, 0, 180})
 	screen.DrawImage(overlay, nil)
 
-	pauseText := "游戏暂停"
-	resumeText := "按 P 或 ESC 继续"
-	restartText := "按 R 返回主菜单"
+	centerX := g.Settings.WindowWidth / 2
+	centerY := g.Settings.WindowHeight / 2
 
-	ebitenutil.DebugPrintAt(screen, pauseText, g.Settings.WindowWidth/2-40, g.Settings.WindowHeight/2-50)
-	ebitenutil.DebugPrintAt(screen, resumeText, g.Settings.WindowWidth/2-90, g.Settings.WindowHeight/2)
-	ebitenutil.DebugPrintAt(screen, restartText, g.Settings.WindowWidth/2-80, g.Settings.WindowHeight/2+30)
+	pauseText := "游戏暂停"
+	resumeText := "按 P 键 或 ESC 键 继续游戏"
+	restartText := "按 R 键 返回主菜单"
+
+	g.drawTextWithShadow(screen, pauseText, centerX, centerY-60, color.RGBA{255, 255, 255, 255}, 1.8, true)
+	g.drawText(screen, resumeText, centerX, centerY, color.RGBA{200, 200, 200, 255}, 1.0, true)
+	g.drawText(screen, restartText, centerX, centerY+40, color.RGBA{200, 200, 200, 255}, 1.0, true)
 }
 
 func (g *Game) drawGameOver(screen *ebiten.Image) {
-	screen.Fill(color.RGBA{40, 20, 20, 255})
+	centerX := g.Settings.WindowWidth / 2
 
 	gameOverText := "游戏结束"
 	scoreText := fmt.Sprintf("最终分数: %d", g.Player.Score)
-	levelText := fmt.Sprintf("到达关卡: %d", g.LevelManager.GetLevel())
+	levelText := fmt.Sprintf("到达关卡: 第 %d 关", g.LevelManager.GetLevel())
 	newHighScore := ""
 
-	if g.Player.Score >= g.HighScore && g.Player.Score > 0 {
-		newHighScore = "新纪录!"
+	isNewHighScore := g.Player.Score >= g.HighScore && g.Player.Score > 0
+	if isNewHighScore {
+		newHighScore = "🎉 新纪录! 🎉"
 	}
 
-	restartText := "按 R 重新开始"
-	menuText := "按 ESC 返回主菜单"
+	restartText := "按 R 键 重新开始"
+	menuText := "按 ESC 键 返回主菜单"
 
-	ebitenutil.DebugPrintAt(screen, gameOverText, g.Settings.WindowWidth/2-50, 200)
-	ebitenutil.DebugPrintAt(screen, scoreText, g.Settings.WindowWidth/2-70, 280)
-	ebitenutil.DebugPrintAt(screen, levelText, g.Settings.WindowWidth/2-60, 310)
-	if newHighScore != "" {
-		ebitenutil.DebugPrintAt(screen, newHighScore, g.Settings.WindowWidth/2-40, 340)
+	g.drawTextWithShadow(screen, gameOverText, centerX, 150, color.RGBA{255, 50, 50, 255}, 2.0, true)
+
+	if isNewHighScore {
+		g.drawTextWithShadow(screen, newHighScore, centerX, 220, color.RGBA{255, 215, 0, 255}, 1.5, true)
 	}
-	ebitenutil.DebugPrintAt(screen, restartText, g.Settings.WindowWidth/2-70, 400)
-	ebitenutil.DebugPrintAt(screen, menuText, g.Settings.WindowWidth/2-80, 430)
+
+	g.drawText(screen, scoreText, centerX, 280, color.RGBA{255, 255, 0, 255}, 1.2, true)
+	g.drawText(screen, levelText, centerX, 320, color.RGBA{100, 255, 100, 255}, 1.2, true)
+
+	g.drawText(screen, restartText, centerX, 420, color.RGBA{200, 200, 200, 255}, 1.0, true)
+	g.drawText(screen, menuText, centerX, 460, color.RGBA{200, 200, 200, 255}, 1.0, true)
 }
 
 func (g *Game) drawLeaderboard(screen *ebiten.Image) {
-	screen.Fill(color.RGBA{30, 30, 60, 255})
+	title := "🏆 排行榜 🏆"
+	centerX := g.Settings.WindowWidth / 2
 
-	title := "排行榜"
-	ebitenutil.DebugPrintAt(screen, title, g.Settings.WindowWidth/2-40, 50)
+	g.drawTextWithShadow(screen, title, centerX, 60, color.RGBA{255, 215, 0, 255}, 1.8, true)
 
 	if len(g.Rankings) == 0 {
-		ebitenutil.DebugPrintAt(screen, "暂无记录", g.Settings.WindowWidth/2-40, 150)
+		emptyText := "暂无游戏记录"
+		g.drawText(screen, emptyText, centerX, 180, color.RGBA{150, 150, 150, 255}, 1.0, true)
 	} else {
+		headers := []string{"排名", "玩家", "分数", "关卡"}
+		headerColors := []color.RGBA{
+			{255, 100, 100, 255},
+			{100, 255, 100, 255},
+			{255, 255, 100, 255},
+			{100, 200, 255, 255},
+		}
+
+		colX := []int{60, 140, 280, 400}
+		for i, header := range headers {
+			g.drawText(screen, header, colX[i], 110, headerColors[i], 1.0, false)
+		}
+
+		sepImg := ebiten.NewImage(g.Settings.WindowWidth-40, 2)
+		sepImg.Fill(color.RGBA{100, 100, 100, 255})
+		sepOp := &ebiten.DrawImageOptions{}
+		sepOp.GeoM.Translate(20, 125)
+		screen.DrawImage(sepImg, sepOp)
+
 		for i, entry := range g.Rankings {
 			if i >= 10 {
 				break
 			}
-			rankText := fmt.Sprintf("%d. %s - %d分 (关卡%d)", i+1, entry.Nickname, entry.Score, entry.Level)
-			ebitenutil.DebugPrintAt(screen, rankText, 50, 120+i*30)
+
+			y := 150 + i*35
+			rankText := fmt.Sprintf("%d", i+1)
+			nameText := entry.Nickname
+			scoreText := fmt.Sprintf("%d", entry.Score)
+			levelText := fmt.Sprintf("第%d关", entry.Level)
+
+			var rankColor color.RGBA
+			switch i {
+			case 0:
+				rankColor = color.RGBA{255, 215, 0, 255}
+			case 1:
+				rankColor = color.RGBA{192, 192, 192, 255}
+			case 2:
+				rankColor = color.RGBA{205, 127, 50, 255}
+			default:
+				rankColor = color.RGBA{200, 200, 200, 255}
+			}
+
+			g.drawText(screen, rankText, colX[0], y, rankColor, 1.0, false)
+			g.drawText(screen, nameText, colX[1], y, color.RGBA{200, 255, 200, 255}, 1.0, false)
+			g.drawText(screen, scoreText, colX[2], y, color.RGBA{255, 255, 150, 255}, 1.0, false)
+			g.drawText(screen, levelText, colX[3], y, color.RGBA{150, 200, 255, 255}, 1.0, false)
 		}
 	}
 
-	instruction := "按 ESC 或 M 返回主菜单"
-	ebitenutil.DebugPrintAt(screen, instruction, g.Settings.WindowWidth/2-100, g.Settings.WindowHeight-50)
+	instruction := "按 ESC 键 或 M 键 返回主菜单"
+	g.drawText(screen, instruction, centerX, g.Settings.WindowHeight-30, color.RGBA{150, 150, 150, 255}, 1.0, true)
+}
+
+func (g *Game) drawText(screen *ebiten.Image, textStr string, x, y int, textColor color.Color, scale float64, centered bool) {
+	face := g.smallFont
+	if scale >= 1.5 {
+		face = g.largeFont
+	} else if scale >= 1.2 {
+		face = g.normalFont
+	}
+
+	bounds, _ := font.BoundString(face, textStr)
+	textWidth := (bounds.Max.X - bounds.Min.X).Ceil()
+	textHeight := (bounds.Max.Y - bounds.Min.Y).Ceil()
+
+	drawX := x
+	drawY := y
+
+	if centered {
+		drawX = x - textWidth/2
+	}
+
+	drawY = y + textHeight/2
+
+	text.Draw(screen, textStr, face, drawX, drawY, textColor)
+}
+
+func (g *Game) drawTextWithShadow(screen *ebiten.Image, textStr string, x, y int, textColor color.Color, scale float64, centered bool) {
+	shadowColor := color.RGBA{0, 0, 0, 180}
+
+	g.drawText(screen, textStr, x+2, y+2, shadowColor, scale, centered)
+	g.drawText(screen, textStr, x, y, textColor, scale, centered)
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
@@ -554,6 +737,14 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
 
 func (g *Game) Run() error {
 	ebiten.SetWindowSize(g.Settings.WindowWidth, g.Settings.WindowHeight)
-	ebiten.SetWindowTitle("飞机大战 - Air War")
+	ebiten.SetWindowTitle("飞机大战 - 经典射击游戏")
+	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeDisabled)
 	return ebiten.RunGame(g)
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }

@@ -57,14 +57,18 @@ func (e *Explosion) Update() {
 
 	e.Frame = int(progress * float64(e.TotalFrames))
 
+	var targetSize float64
 	if progress < 0.3 {
-		e.Width = e.MaxSize * (progress / 0.3)
-		e.Height = e.MaxSize * (progress / 0.3)
+		targetSize = e.MaxSize * (progress / 0.3)
 	} else if progress > 0.7 {
 		fadeProgress := (progress - 0.7) / 0.3
-		e.Width = e.MaxSize * (1 - fadeProgress*0.5)
-		e.Height = e.MaxSize * (1 - fadeProgress*0.5)
+		targetSize = e.MaxSize * (1 - fadeProgress*0.5)
+	} else {
+		targetSize = e.MaxSize
 	}
+
+	e.Width = max(1.0, targetSize)
+	e.Height = max(1.0, targetSize)
 }
 
 func (e *Explosion) Draw(screen *ebiten.Image) {
@@ -84,13 +88,22 @@ func (e *Explosion) Draw(screen *ebiten.Image) {
 		size  float64
 		color color.Color
 	}{
-		{e.Width * 0.3, color.RGBA{255, 255, 200, uint8(alpha)}},
-		{e.Width * 0.6, color.RGBA{255, 200, 50, uint8(alpha * 3 / 4)}},
-		{e.Width, color.RGBA{255, 100, 0, uint8(alpha / 2)}},
+		{max(2.0, e.Width*0.3), color.RGBA{255, 255, 200, uint8(alpha)}},
+		{max(3.0, e.Width*0.6), color.RGBA{255, 200, 50, uint8(alpha * 3 / 4)}},
+		{max(4.0, e.Width), color.RGBA{255, 100, 0, uint8(alpha / 2)}},
 	}
 
 	for _, layer := range layers {
-		img := ebiten.NewImage(int(layer.size), int(layer.size))
+		width := int(layer.size)
+		height := int(layer.size)
+		if width <= 0 {
+			width = 1
+		}
+		if height <= 0 {
+			height = 1
+		}
+
+		img := ebiten.NewImage(width, height)
 		img.Fill(layer.color)
 
 		op := &ebiten.DrawImageOptions{}
@@ -98,4 +111,11 @@ func (e *Explosion) Draw(screen *ebiten.Image) {
 		op.GeoM.Translate(e.X, e.Y)
 		screen.DrawImage(img, op)
 	}
+}
+
+func max(a, b float64) float64 {
+	if a > b {
+		return a
+	}
+	return b
 }
