@@ -7,6 +7,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.awt.event.WindowFocusListener;
 
 /**
  * 游戏窗口类
@@ -31,6 +32,8 @@ public class GameWindow {
         
         gamePanel = new GamePanel(gameController);
         gamePanel.setPreferredSize(new Dimension(PlaneWarGame.WINDOW_WIDTH, PlaneWarGame.WINDOW_HEIGHT));
+        gamePanel.setFocusable(true);
+        gamePanel.setFocusTraversalKeysEnabled(false);
         frame.add(gamePanel, BorderLayout.CENTER);
         
         frame.pack();
@@ -51,8 +54,20 @@ public class GameWindow {
             }
         });
         
-        gamePanel.setFocusable(true);
-        gamePanel.requestFocusInWindow();
+        frame.addWindowFocusListener(new WindowFocusListener() {
+            @Override
+            public void windowGainedFocus(WindowEvent e) {
+                SwingUtilities.invokeLater(() -> {
+                    if (gamePanel != null) {
+                        gamePanel.requestFocusInWindow();
+                    }
+                });
+            }
+            
+            @Override
+            public void windowLostFocus(WindowEvent e) {
+            }
+        });
     }
     
     /**
@@ -60,7 +75,10 @@ public class GameWindow {
      */
     public void showWindow() {
         frame.setVisible(true);
-        gamePanel.requestFocusInWindow();
+        gamePanel.startRepaint();
+        SwingUtilities.invokeLater(() -> {
+            gamePanel.requestFocusInWindow();
+        });
     }
     
     /**

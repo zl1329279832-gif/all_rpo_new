@@ -5,6 +5,7 @@ com\game\planewar\model\items\ShieldItem.class
 com\game\planewar\ui\renderer\GameRenderer$1.class
 com\game\planewar\ui\GameWindow.class
 com\game\planewar\model\effects\ExplosionManager.class
+com\game\planewar\ui\GameWindow$2.class
 com\game\planewar\model\GameObject.class
 com\game\planewar\data\GameDataManager$ScoreEntry.class
 com\game\planewar\model\enemies\EliteEnemy.class

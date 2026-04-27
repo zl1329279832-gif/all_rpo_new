@@ -643,25 +643,25 @@ func (g *Game) Draw(screen *ebiten.Image) {
 }
 
 func (g *Game) DrawMenu(screen *ebiten.Image) {
-	title := "打砖块 BREAKOUT"
+	title := "BREAKOUT"
 	titleX := ScreenWidth/2 - len(title)*6
 	text.Draw(screen, title, basicfont.Face7x13, titleX, 200, color.White)
 
-	subtitle := "方向键或 A/D 控制挡板"
+	subtitle := "Arrow Keys or A/D to move"
 	subtitleX := ScreenWidth/2 - len(subtitle)*6
 	text.Draw(screen, subtitle, basicfont.Face7x13, subtitleX, 260, color.RGBA{180, 180, 180, 255})
 
-	startText := "按 Enter 或 Space 开始游戏"
+	startText := "Press Enter or Space to start"
 	startX := ScreenWidth/2 - len(startText)*6
 	text.Draw(screen, startText, basicfont.Face7x13, startX, 320, color.RGBA{0, 255, 128, 255})
 
 	instructions := []string{
-		"游戏说明：",
-		"  - 消除所有可破坏砖块进入下一关",
-		"  - 灰色砖块不可破坏",
-		"  - 橙色砖块有多条生命",
-		"  - 收集掉落的道具获得特殊能力",
-		"  - ESC 键暂停游戏",
+		"How to play:",
+		"  - Clear all breakable bricks to advance",
+		"  - Gray bricks are unbreakable",
+		"  - Orange bricks have multiple HP",
+		"  - Collect power-ups for special abilities",
+		"  - Press ESC to pause",
 	}
 	for i, line := range instructions {
 		text.Draw(screen, line, basicfont.Face7x13, 50, 400+i*25, color.RGBA{200, 200, 200, 255})
@@ -825,27 +825,27 @@ func (g *Game) DrawPowerUps(screen *ebiten.Image) {
 }
 
 func (g *Game) DrawUI(screen *ebiten.Image) {
-	scoreText := fmt.Sprintf("得分: %d", g.Score)
+	scoreText := fmt.Sprintf("Score: %d", g.Score)
 	text.Draw(screen, scoreText, basicfont.Face7x13, 20, 30, color.White)
 	
-	livesText := fmt.Sprintf("生命: %d", g.Lives)
+	livesText := fmt.Sprintf("Lives: %d", g.Lives)
 	text.Draw(screen, livesText, basicfont.Face7x13, ScreenWidth-90, 30, color.White)
 	
-	levelText := fmt.Sprintf("关卡: %d", g.Level)
+	levelText := fmt.Sprintf("Level: %d", g.Level)
 	text.Draw(screen, levelText, basicfont.Face7x13, ScreenWidth/2-40, 30, color.White)
 	
 	powerUpTexts := []string{}
 	if g.PowerUpActive[PowerUpPaddleLong] {
-		powerUpTexts = append(powerUpTexts, fmt.Sprintf("长挡板: %.1fs", g.PowerUpTimer[PowerUpPaddleLong]))
+		powerUpTexts = append(powerUpTexts, fmt.Sprintf("Long Paddle: %.1fs", g.PowerUpTimer[PowerUpPaddleLong]))
 	}
 	if g.PowerUpActive[PowerUpPaddleShort] {
-		powerUpTexts = append(powerUpTexts, fmt.Sprintf("短挡板: %.1fs", g.PowerUpTimer[PowerUpPaddleShort]))
+		powerUpTexts = append(powerUpTexts, fmt.Sprintf("Short Paddle: %.1fs", g.PowerUpTimer[PowerUpPaddleShort]))
 	}
 	if g.PowerUpActive[PowerUpBallSpeedUp] {
-		powerUpTexts = append(powerUpTexts, fmt.Sprintf("加速: %.1fs", g.PowerUpTimer[PowerUpBallSpeedUp]))
+		powerUpTexts = append(powerUpTexts, fmt.Sprintf("Speed Up: %.1fs", g.PowerUpTimer[PowerUpBallSpeedUp]))
 	}
 	if g.PowerUpActive[PowerUpPenetrate] {
-		powerUpTexts = append(powerUpTexts, fmt.Sprintf("穿透: %.1fs", g.PowerUpTimer[PowerUpPenetrate]))
+		powerUpTexts = append(powerUpTexts, fmt.Sprintf("Penetrate: %.1fs", g.PowerUpTimer[PowerUpPenetrate]))
 	}
 	
 	for i, txt := range powerUpTexts {
@@ -863,11 +863,11 @@ func (g *Game) DrawPausedOverlay(screen *ebiten.Image) {
 		false,
 	)
 	
-	title := "游戏暂停"
+	title := "PAUSED"
 	titleX := ScreenWidth/2 - len(title)*6
 	text.Draw(screen, title, basicfont.Face7x13, titleX, ScreenHeight/2-40, color.White)
 	
-	subtitle := "按 ESC 或 Space 继续"
+	subtitle := "Press ESC or Space to resume"
 	subtitleX := ScreenWidth/2 - len(subtitle)*6
 	text.Draw(screen, subtitle, basicfont.Face7x13, subtitleX, ScreenHeight/2+20, color.RGBA{0, 255, 128, 255})
 }
@@ -882,19 +882,19 @@ func (g *Game) DrawGameOver(screen *ebiten.Image) {
 		false,
 	)
 	
-	title := "游戏结束"
+	title := "GAME OVER"
 	titleX := ScreenWidth/2 - len(title)*6
 	text.Draw(screen, title, basicfont.Face7x13, titleX, ScreenHeight/2-60, color.RGBA{255, 100, 100, 255})
 	
-	scoreText := fmt.Sprintf("最终得分: %d", g.Score)
+	scoreText := fmt.Sprintf("Final Score: %d", g.Score)
 	scoreX := ScreenWidth/2 - len(scoreText)*6
 	text.Draw(screen, scoreText, basicfont.Face7x13, scoreX, ScreenHeight/2, color.White)
 	
-	levelText := fmt.Sprintf("到达关卡: %d", g.Level)
+	levelText := fmt.Sprintf("Reached Level: %d", g.Level)
 	levelX := ScreenWidth/2 - len(levelText)*6
 	text.Draw(screen, levelText, basicfont.Face7x13, levelX, ScreenHeight/2+30, color.White)
 	
-	subtitle := "按 Enter 返回菜单"
+	subtitle := "Press Enter for menu"
 	subtitleX := ScreenWidth/2 - len(subtitle)*6
 	text.Draw(screen, subtitle, basicfont.Face7x13, subtitleX, ScreenHeight/2+80, color.RGBA{0, 255, 128, 255})
 }
@@ -909,25 +909,25 @@ func (g *Game) DrawVictory(screen *ebiten.Image) {
 		false,
 	)
 	
-	title := "恭喜通关!"
+	title := "VICTORY!"
 	titleX := ScreenWidth/2 - len(title)*6
 	text.Draw(screen, title, basicfont.Face7x13, titleX, ScreenHeight/2-80, color.RGBA{255, 215, 0, 255})
 	
-	scoreText := fmt.Sprintf("最终得分: %d", g.Score)
+	scoreText := fmt.Sprintf("Final Score: %d", g.Score)
 	scoreX := ScreenWidth/2 - len(scoreText)*6
 	text.Draw(screen, scoreText, basicfont.Face7x13, scoreX, ScreenHeight/2-30, color.White)
 	
-	lifeText := fmt.Sprintf("剩余生命: %d", g.Lives)
+	lifeText := fmt.Sprintf("Remaining Lives: %d", g.Lives)
 	lifeX := ScreenWidth/2 - len(lifeText)*6
 	text.Draw(screen, lifeText, basicfont.Face7x13, lifeX, ScreenHeight/2+10, color.White)
 	
 	bonus := g.Lives * 500
 	g.Score += bonus
-	bonusText := fmt.Sprintf("生命奖励: +%d", bonus)
+	bonusText := fmt.Sprintf("Life Bonus: +%d", bonus)
 	bonusX := ScreenWidth/2 - len(bonusText)*6
 	text.Draw(screen, bonusText, basicfont.Face7x13, bonusX, ScreenHeight/2+50, color.RGBA{0, 255, 128, 255})
 	
-	subtitle := "按 Enter 返回菜单"
+	subtitle := "Press Enter for menu"
 	subtitleX := ScreenWidth/2 - len(subtitle)*6
 	text.Draw(screen, subtitle, basicfont.Face7x13, subtitleX, ScreenHeight/2+100, color.RGBA{0, 255, 128, 255})
 }
@@ -942,15 +942,15 @@ func (g *Game) DrawLevelComplete(screen *ebiten.Image) {
 		false,
 	)
 	
-	title := fmt.Sprintf("关卡 %d 完成!", g.Level-1)
+	title := fmt.Sprintf("Level %d Complete!", g.Level-1)
 	titleX := ScreenWidth/2 - len(title)*6
 	text.Draw(screen, title, basicfont.Face7x13, titleX, ScreenHeight/2-40, color.RGBA{0, 255, 128, 255})
 	
-	nextText := fmt.Sprintf("准备进入关卡 %d", g.Level)
+	nextText := fmt.Sprintf("Get ready for Level %d", g.Level)
 	nextX := ScreenWidth/2 - len(nextText)*6
 	text.Draw(screen, nextText, basicfont.Face7x13, nextX, ScreenHeight/2+10, color.White)
 	
-	subtitle := "按 Enter 继续"
+	subtitle := "Press Enter to continue"
 	subtitleX := ScreenWidth/2 - len(subtitle)*6
 	text.Draw(screen, subtitle, basicfont.Face7x13, subtitleX, ScreenHeight/2+60, color.RGBA{0, 255, 128, 255})
 }
@@ -963,12 +963,12 @@ func main() {
 	rand.Seed(time.Now().UnixNano())
 	
 	ebiten.SetWindowSize(ScreenWidth, ScreenHeight)
-	ebiten.SetWindowTitle("打砖块 Breakout")
+	ebiten.SetWindowTitle("Breakout")
 	ebiten.SetWindowResizable(false)
 	
 	game := NewGame()
 	
 	if err := ebiten.RunGame(game); err != nil {
-		fmt.Println("游戏运行错误:", err)
+		fmt.Println("Game error:", err)
 	}
 }
