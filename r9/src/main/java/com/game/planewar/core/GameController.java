@@ -73,7 +73,6 @@ public class GameController {
     }
     
     public void update() {
-        inputHandler.update();
         gameTime++;
         
         if (currentState == GameState.MENU) {
@@ -91,6 +90,8 @@ public class GameController {
         } else if (currentState == GameState.SETTINGS) {
             updateSettings();
         }
+        
+        inputHandler.update();
     }
     
     private void updateMenu() {
