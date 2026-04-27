@@ -702,32 +702,38 @@ func (g *Game) drawLeaderboard(screen *ebiten.Image) {
 }
 
 func (g *Game) drawText(screen *ebiten.Image, textStr string, x, y int, textColor color.Color, scale float64, centered bool) {
-	face := g.smallFont
-	if scale >= 1.5 {
-		face = g.largeFont
-	} else if scale >= 1.2 {
-		face = g.normalFont
-	}
+	face := bitmapfont.Face
 
 	drawX := x
-	drawY := y
+	drawY := y + 16
 
 	if centered {
-		runeCount := utf8.RuneCountInString(textStr)
-		approxWidth := runeCount * 12
+		approxWidth := measureTextWidth(textStr)
 		drawX = x - approxWidth/2
 	}
-
-	drawY = y + 12
 
 	text.Draw(screen, textStr, face, drawX, drawY, textColor)
 }
 
 func (g *Game) drawTextWithShadow(screen *ebiten.Image, textStr string, x, y int, textColor color.Color, scale float64, centered bool) {
-	shadowColor := color.RGBA{0, 0, 0, 180}
+	face := bitmapfont.Face
 
-	g.drawText(screen, textStr, x+1, y+1, shadowColor, scale, centered)
-	g.drawText(screen, textStr, x, y, textColor, scale, centered)
+	drawX := x
+	drawY := y + 16
+
+	if centered {
+		approxWidth := measureTextWidth(textStr)
+		drawX = x - approxWidth/2
+	}
+
+	shadowColor := color.RGBA{0, 0, 0, 180}
+	text.Draw(screen, textStr, face, drawX+1, drawY+1, shadowColor)
+	text.Draw(screen, textStr, face, drawX, drawY, textColor)
+}
+
+func measureTextWidth(textStr string) int {
+	runeCount := utf8.RuneCountInString(textStr)
+	return runeCount * 16
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
