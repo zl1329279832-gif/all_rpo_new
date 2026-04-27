@@ -17,11 +17,11 @@ import (
 	"math/rand"
 	"time"
 
+	"github.com/hajimehoshi/bitmapfont/v3"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/text"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"golang.org/x/image/font"
-	"golang.org/x/image/font/basicfont"
 )
 
 type Star struct {
@@ -80,9 +80,9 @@ func NewGame() (*Game, error) {
 		CurrentState:   config.GameStateMenu,
 		PlayerNickname: settings.DefaultNickname,
 		HighScore:      highScore,
-		smallFont:      basicfont.Face7x13,
-		normalFont:     basicfont.Face7x13,
-		largeFont:      basicfont.Face7x13,
+		smallFont:      bitmapfont.Face,
+		normalFont:     bitmapfont.Face,
+		largeFont:      bitmapfont.Face,
 	}
 
 	bullet.InitBulletPool()
