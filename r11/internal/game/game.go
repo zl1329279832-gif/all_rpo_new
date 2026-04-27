@@ -16,6 +16,7 @@ import (
 	"math"
 	"math/rand"
 	"time"
+	"unicode/utf8"
 
 	"github.com/hajimehoshi/bitmapfont/v3"
 	"github.com/hajimehoshi/ebiten/v2"
@@ -708,18 +709,16 @@ func (g *Game) drawText(screen *ebiten.Image, textStr string, x, y int, textColo
 		face = g.normalFont
 	}
 
-	bounds, _ := font.BoundString(face, textStr)
-	textWidth := (bounds.Max.X - bounds.Min.X).Ceil()
-	textHeight := (bounds.Max.Y - bounds.Min.Y).Ceil()
-
 	drawX := x
 	drawY := y
 
 	if centered {
-		drawX = x - textWidth/2
+		runeCount := utf8.RuneCountInString(textStr)
+		approxWidth := runeCount * 12
+		drawX = x - approxWidth/2
 	}
 
-	drawY = y + textHeight/2
+	drawY = y + 12
 
 	text.Draw(screen, textStr, face, drawX, drawY, textColor)
 }
@@ -727,7 +726,7 @@ func (g *Game) drawText(screen *ebiten.Image, textStr string, x, y int, textColo
 func (g *Game) drawTextWithShadow(screen *ebiten.Image, textStr string, x, y int, textColor color.Color, scale float64, centered bool) {
 	shadowColor := color.RGBA{0, 0, 0, 180}
 
-	g.drawText(screen, textStr, x+2, y+2, shadowColor, scale, centered)
+	g.drawText(screen, textStr, x+1, y+1, shadowColor, scale, centered)
 	g.drawText(screen, textStr, x, y, textColor, scale, centered)
 }
 
