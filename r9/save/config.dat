@@ -1,4 +1,4 @@
-autoShoot=false
+autoShoot=true
 soundEnabled=true
 lastPlayerName=Player
 windowWidth=480

@@ -95,7 +95,7 @@ public class GameDataManager {
             StringBuilder content = new StringBuilder();
             String line;
             while ((line = reader.readLine()) != null) {
-                content.append(line);
+                content.append(line).append("\n");
             }
             
             this.config = GameConfig.fromString(content.toString());
@@ -182,7 +182,7 @@ public class GameDataManager {
             StringBuilder content = new StringBuilder();
             String line;
             while ((line = reader.readLine()) != null) {
-                content.append(line);
+                content.append(line).append("\n");
             }
             
             this.saveGame = SaveGame.fromString(content.toString());

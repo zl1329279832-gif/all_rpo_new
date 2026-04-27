@@ -146,8 +146,7 @@ public class GameController {
     }
     
     private void updateLeaderboard() {
-        if (inputHandler.isKeyJustPressed(KeyEvent.VK_ESCAPE) || 
-            inputHandler.isKeyJustPressed(KeyEvent.VK_ENTER)) {
+        if (inputHandler.isKeyJustPressed(KeyEvent.VK_ESCAPE)) {
             changeState(GameState.MENU);
         }
     }
