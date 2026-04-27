@@ -25,7 +25,8 @@ public class GameMap {
     public GameMap(int level, GameConstants.GameMode mode) {
         this.level = level;
         this.gameMode = mode;
-        this.random = new Random();
+        long seed = 12345L + level * 1000;
+        this.random = new Random(seed);
         this.walls = new ArrayList<>();
         this.totalTargets = 0;
         generateLevel(level);

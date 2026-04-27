@@ -596,8 +596,21 @@ public class GameEngine {
             totalEnemies,
             totalTargets,
             destroyedTargets,
-            gameState
+            gameState,
+            player.getX(),
+            player.getY()
         );
+
+        for (com.tankwar.map.Wall wall : gameMap.getWalls()) {
+            if (!wall.isActive()) {
+                saveData.destroyedWalls.add(new GameSaveData.WallState(
+                    wall.getX(),
+                    wall.getY(),
+                    wall.getType().name()
+                ));
+            }
+        }
+
         GameSaveManager.saveGame(saveData);
         hasSaveData = true;
     }
@@ -615,8 +628,28 @@ public class GameEngine {
             this.destroyedTargets = saveData.destroyedTargets;
 
             initGameForMode();
+
+            if (saveData.destroyedWalls != null && !saveData.destroyedWalls.isEmpty()) {
+                for (GameSaveData.WallState destroyed : saveData.destroyedWalls) {
+                    for (com.tankwar.map.Wall wall : gameMap.getWalls()) {
+                        if (wall.getX() == destroyed.x && wall.getY() == destroyed.y) {
+                            wall.setActive(false);
+                        }
+                    }
+                }
+            }
+
             this.score = saveData.score;
             this.lives = saveData.lives;
+
+            if (saveData.playerX > 0 && saveData.playerY > 0) {
+                player.setX(saveData.playerX);
+                player.setY(saveData.playerY);
+            }
+
+            if (gameMode == GameConstants.GameMode.PRACTICE) {
+                player.activateShield(Long.MAX_VALUE);
+            }
 
             if ("PAUSED".equals(saveData.gameState)) {
                 this.gameState = "PAUSED";

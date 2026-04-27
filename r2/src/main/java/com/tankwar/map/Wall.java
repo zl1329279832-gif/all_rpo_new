@@ -148,4 +148,16 @@ public class Wall {
     public int getY() {
         return y;
     }
+
+    public void setActive(boolean active) {
+        this.active = active;
+    }
+
+    public void setX(int x) {
+        this.x = x;
+    }
+
+    public void setY(int y) {
+        this.y = y;
+    }
 }
