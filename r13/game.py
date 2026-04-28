@@ -63,19 +63,59 @@ class Game:
         self._init_menu_items()
     
     def _init_fonts(self):
-        """初始化字体"""
+        """初始化字体，优先使用支持中文的系统字体"""
+        # 按优先级排列的中文字体列表（Windows系统常见字体）
+        chinese_fonts = [
+            "Microsoft YaHei",    # 微软雅黑（Windows 7+ 默认）
+            "SimHei",              # 黑体
+            "SimSun",              # 宋体
+            "KaiTi",               # 楷体
+            "FangSong",            # 仿宋
+            "NSimSun",             # 新宋体
+            "PMingLiU",            # 细明体
+            "MingLiU",             # 细明体
+            "Arial Unicode MS",    # Arial Unicode（包含中文）
+        ]
+        
+        # 尝试加载支持中文的字体
+        self.title_font = self._try_load_fonts(chinese_fonts, 64)
+        self.large_font = self._try_load_fonts(chinese_fonts, 48)
+        self.medium_font = self._try_load_fonts(chinese_fonts, 36)
+        self.small_font = self._try_load_fonts(chinese_fonts, 24)
+    
+    def _try_load_fonts(self, font_list, size):
+        """
+        尝试加载字体列表中的字体，如果都失败则使用默认字体
+        
+        Args:
+            font_list: 字体名称列表
+            size: 字体大小
+        
+        Returns:
+            pygame.font.Font 对象
+        """
+        for font_name in font_list:
+            try:
+                # 尝试使用 SysFont 加载系统字体
+                font = pygame.font.SysFont(font_name, size)
+                # 验证字体是否能正确渲染中文（简单测试）
+                test_surface = font.render("测试", True, (255, 255, 255))
+                return font
+            except:
+                continue
+        
+        # 如果所有中文字体都失败了，尝试使用 match_font 查找
         try:
-            # 尝试使用系统字体
-            self.title_font = pygame.font.Font(None, 64)
-            self.large_font = pygame.font.Font(None, 48)
-            self.medium_font = pygame.font.Font(None, 36)
-            self.small_font = pygame.font.Font(None, 24)
+            # 尝试查找一个通用的无衬线字体
+            font_path = pygame.font.match_font("sans-serif")
+            if font_path:
+                return pygame.font.Font(font_path, size)
         except:
-            # 如果失败，使用默认字体
-            self.title_font = pygame.font.Font(None, 64)
-            self.large_font = pygame.font.Font(None, 48)
-            self.medium_font = pygame.font.Font(None, 36)
-            self.small_font = pygame.font.Font(None, 24)
+            pass
+        
+        # 最后使用默认字体
+        print("警告：无法加载支持中文的字体，中文可能显示乱码")
+        return pygame.font.Font(None, size)
     
     def _init_menu_items(self):
         """初始化菜单项"""

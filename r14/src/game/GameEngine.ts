@@ -9,7 +9,8 @@ import {
   BrickType,
   PowerUpType
 } from '@/types'
-import { getLevelConfig, getBrickColor, getPowerUpColor, CANVAS_WIDTH, CANVAS_HEIGHT } from './levels'
+import { getLevelConfig, getBrickColor, getPowerUpColor, getThemeColors, CANVAS_WIDTH, CANVAS_HEIGHT } from './levels'
+import type { ThemeColors } from './levels'
 import { getSettings, addLeaderboardEntry, saveSettings as saveSettingsToStorage } from '@/utils/storage'
 
 export class GameEngine {
@@ -34,6 +35,8 @@ export class GameEngine {
   private activePowerUps: Map<string, { endTime: number; value: number }> = new Map()
   
   private playerName: string = '玩家'
+  private isEditingName: boolean = false
+  private tempName: string = ''
   
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas
@@ -459,11 +462,18 @@ export class GameEngine {
     this.gameState = GameState.LEVEL_COMPLETE
   }
   
+  private getCurrentTheme(): ThemeColors {
+    const settings = getSettings()
+    return getThemeColors(settings.theme)
+  }
+  
   private render(): void {
-    this.ctx.fillStyle = '#1a1a2e'
+    const theme = this.getCurrentTheme()
+    
+    this.ctx.fillStyle = theme.background
     this.ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT)
     
-    this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)'
+    this.ctx.strokeStyle = theme.gridLine
     this.ctx.lineWidth = 1
     for (let x = 0; x < CANVAS_WIDTH; x += 40) {
       this.ctx.beginPath()
@@ -670,14 +680,16 @@ export class GameEngine {
   }
   
   private renderMenu(): void {
-    this.ctx.fillStyle = '#ffffff'
+    const theme = this.getCurrentTheme()
+    
+    this.ctx.fillStyle = theme.text
     this.ctx.font = 'bold 56px Arial'
     this.ctx.textAlign = 'center'
     this.ctx.textBaseline = 'middle'
     this.ctx.fillText('打砖块', CANVAS_WIDTH / 2, 150)
     
     this.ctx.font = '24px Arial'
-    this.ctx.fillStyle = '#aaaaaa'
+    this.ctx.fillStyle = theme.textSecondary
     this.ctx.fillText('BREAKOUT', CANVAS_WIDTH / 2, 200)
     
     const menuItems = [
@@ -691,13 +703,13 @@ export class GameEngine {
     
     menuItems.forEach((item, index) => {
       const y = startY + index * 60
-      this.ctx.fillStyle = '#ffffff'
+      this.ctx.fillStyle = theme.text
       this.ctx.textAlign = 'center'
       this.ctx.fillText(`${item.key}. ${item.text}`, CANVAS_WIDTH / 2, y)
     })
     
     this.ctx.font = '16px Arial'
-    this.ctx.fillStyle = '#888888'
+    this.ctx.fillStyle = theme.textSecondary
     this.ctx.textAlign = 'center'
     this.ctx.fillText('按数字键选择或点击对应区域', CANVAS_WIDTH / 2, CANVAS_HEIGHT - 80)
     
@@ -707,7 +719,9 @@ export class GameEngine {
   }
   
   private renderGameOver(): void {
-    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.8)'
+    const theme = this.getCurrentTheme()
+    
+    this.ctx.fillStyle = theme.menuOverlay
     this.ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT)
     
     this.ctx.fillStyle = '#e74c3c'
@@ -716,7 +730,7 @@ export class GameEngine {
     this.ctx.textBaseline = 'middle'
     this.ctx.fillText('游戏结束', CANVAS_WIDTH / 2, 180)
     
-    this.ctx.fillStyle = '#ffffff'
+    this.ctx.fillStyle = theme.text
     this.ctx.font = '28px Arial'
     this.ctx.fillText(`最终得分: ${this.score}`, CANVAS_WIDTH / 2, 280)
     this.ctx.fillText(`到达关卡: 第 ${this.level} 关`, CANVAS_WIDTH / 2, 330)
@@ -727,13 +741,15 @@ export class GameEngine {
       this.ctx.fillText('🎉 新纪录！', CANVAS_WIDTH / 2, 400)
     }
     
-    this.ctx.fillStyle = '#aaaaaa'
+    this.ctx.fillStyle = theme.textSecondary
     this.ctx.font = '20px Arial'
     this.ctx.fillText('按 R 重新开始 | 按 M 返回主菜单', CANVAS_WIDTH / 2, CANVAS_HEIGHT - 80)
   }
   
   private renderLevelComplete(): void {
-    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.8)'
+    const theme = this.getCurrentTheme()
+    
+    this.ctx.fillStyle = theme.menuOverlay
     this.ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT)
     
     this.ctx.fillStyle = '#2ecc71'
@@ -742,7 +758,7 @@ export class GameEngine {
     this.ctx.textBaseline = 'middle'
     this.ctx.fillText('关卡完成！', CANVAS_WIDTH / 2, 200)
     
-    this.ctx.fillStyle = '#ffffff'
+    this.ctx.fillStyle = theme.text
     this.ctx.font = '28px Arial'
     this.ctx.fillText(`当前得分: ${this.score}`, CANVAS_WIDTH / 2, 280)
     this.ctx.fillText(`即将进入: 第 ${this.level + 1} 关`, CANVAS_WIDTH / 2, 330)
@@ -753,7 +769,9 @@ export class GameEngine {
   }
   
   private renderVictory(): void {
-    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.8)'
+    const theme = this.getCurrentTheme()
+    
+    this.ctx.fillStyle = theme.menuOverlay
     this.ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT)
     
     this.ctx.fillStyle = '#f39c12'
@@ -762,7 +780,7 @@ export class GameEngine {
     this.ctx.textBaseline = 'middle'
     this.ctx.fillText('🎉 恭喜通关！', CANVAS_WIDTH / 2, 180)
     
-    this.ctx.fillStyle = '#ffffff'
+    this.ctx.fillStyle = theme.text
     this.ctx.font = '28px Arial'
     this.ctx.fillText(`最终得分: ${this.score}`, CANVAS_WIDTH / 2, 280)
     this.ctx.fillText('你完成了所有 10 个关卡！', CANVAS_WIDTH / 2, 330)
@@ -773,13 +791,15 @@ export class GameEngine {
       this.ctx.fillText('🏆 新纪录！', CANVAS_WIDTH / 2, 400)
     }
     
-    this.ctx.fillStyle = '#aaaaaa'
+    this.ctx.fillStyle = theme.textSecondary
     this.ctx.font = '20px Arial'
     this.ctx.fillText('按 R 重新开始 | 按 M 返回主菜单', CANVAS_WIDTH / 2, CANVAS_HEIGHT - 80)
   }
   
   private renderLeaderboard(): void {
-    this.ctx.fillStyle = '#ffffff'
+    const theme = this.getCurrentTheme()
+    
+    this.ctx.fillStyle = theme.text
     this.ctx.font = 'bold 40px Arial'
     this.ctx.textAlign = 'center'
     this.ctx.textBaseline = 'middle'
@@ -789,14 +809,14 @@ export class GameEngine {
     
     if (leaderboard.length === 0) {
       this.ctx.font = '24px Arial'
-      this.ctx.fillStyle = '#888888'
+      this.ctx.fillStyle = theme.textSecondary
       this.ctx.fillText('暂无记录', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2)
     } else {
       const startY = 140
       const rowHeight = 45
       
       this.ctx.font = 'bold 18px Arial'
-      this.ctx.fillStyle = '#aaaaaa'
+      this.ctx.fillStyle = theme.textSecondary
       this.ctx.textAlign = 'left'
       this.ctx.fillText('排名', 60, startY)
       this.ctx.textAlign = 'center'
@@ -804,7 +824,7 @@ export class GameEngine {
       this.ctx.textAlign = 'right'
       this.ctx.fillText('分数  关卡', CANVAS_WIDTH - 60, startY)
       
-      this.ctx.strokeStyle = '#444444'
+      this.ctx.strokeStyle = theme.border
       this.ctx.lineWidth = 1
       this.ctx.beginPath()
       this.ctx.moveTo(40, startY + 20)
@@ -827,11 +847,11 @@ export class GameEngine {
           this.ctx.fillStyle = '#d35400'
           this.ctx.fillText('🥉', 40, y)
         } else {
-          this.ctx.fillStyle = '#888888'
+          this.ctx.fillStyle = theme.textSecondary
           this.ctx.fillText((index + 1).toString(), 60, y)
         }
         
-        this.ctx.fillStyle = '#ffffff'
+        this.ctx.fillStyle = theme.text
         this.ctx.textAlign = 'center'
         this.ctx.fillText(entry.name, CANVAS_WIDTH / 2, y)
         
@@ -839,42 +859,57 @@ export class GameEngine {
         this.ctx.fillText(`${entry.score}  第${entry.level}关`, CANVAS_WIDTH - 60, y)
         
         this.ctx.font = '14px Arial'
-        this.ctx.fillStyle = '#666666'
+        this.ctx.fillStyle = theme.textSecondary
         this.ctx.fillText(entry.date, CANVAS_WIDTH - 60, y + 18)
       })
     }
     
-    this.ctx.fillStyle = '#aaaaaa'
+    this.ctx.fillStyle = theme.textSecondary
     this.ctx.font = '20px Arial'
     this.ctx.textAlign = 'center'
     this.ctx.fillText('按 M 返回主菜单', CANVAS_WIDTH / 2, CANVAS_HEIGHT - 50)
   }
   
   private renderSettings(): void {
-    this.ctx.fillStyle = '#ffffff'
+    const theme = this.getCurrentTheme()
+    const settings = getSettings()
+    
+    this.ctx.fillStyle = theme.text
     this.ctx.font = 'bold 40px Arial'
     this.ctx.textAlign = 'center'
     this.ctx.textBaseline = 'middle'
     this.ctx.fillText('设置', CANVAS_WIDTH / 2, 80)
-    
-    const settings = getSettings()
     
     const startY = 160
     const rowHeight = 60
     
     this.ctx.font = '22px Arial'
     this.ctx.textAlign = 'left'
-    this.ctx.fillStyle = '#ffffff'
+    this.ctx.fillStyle = theme.text
     
     this.ctx.fillText(`1. 音效: ${settings.soundEnabled ? '开启' : '关闭'}`, 150, startY)
     this.ctx.fillText(`2. 主题: ${settings.theme === 'dark' ? '深色' : '浅色'}`, 150, startY + rowHeight)
-    this.ctx.fillText(`3. 默认昵称: ${settings.defaultName}`, 150, startY + rowHeight * 2)
+    
+    if (this.isEditingName) {
+      this.ctx.fillStyle = '#3498db'
+      this.ctx.fillText(`3. 默认昵称: ${this.tempName}_`, 150, startY + rowHeight * 2)
+    } else {
+      this.ctx.fillStyle = theme.text
+      this.ctx.fillText(`3. 默认昵称: ${settings.defaultName}`, 150, startY + rowHeight * 2)
+    }
+    
+    this.ctx.fillStyle = theme.text
     this.ctx.fillText(`4. 最高分: ${settings.highScore}`, 150, startY + rowHeight * 3)
     
-    this.ctx.fillStyle = '#888888'
+    this.ctx.fillStyle = theme.textSecondary
     this.ctx.font = '18px Arial'
     this.ctx.textAlign = 'center'
-    this.ctx.fillText('按 1/2 切换设置 | 按 M 返回主菜单', CANVAS_WIDTH / 2, CANVAS_HEIGHT - 80)
+    
+    if (this.isEditingName) {
+      this.ctx.fillText('输入昵称 (最多10个字符) | 按 Enter 确认 | 按 ESC 取消', CANVAS_WIDTH / 2, CANVAS_HEIGHT - 80)
+    } else {
+      this.ctx.fillText('按 1/2 切换设置 | 按 3 编辑昵称 | 按 M 返回主菜单', CANVAS_WIDTH / 2, CANVAS_HEIGHT - 80)
+    }
   }
   
   private getLeaderboardData() {
@@ -968,15 +1003,39 @@ export class GameEngine {
         
       case GameState.LEADERBOARD:
       case GameState.SETTINGS:
-        if (lowerKey === 'm') {
-          this.gameState = GameState.MENU
-        } else if (this.gameState === GameState.SETTINGS) {
-          if (key === '1') {
-            const settings = getSettings()
-            saveSettingsToStorage({ soundEnabled: !settings.soundEnabled })
-          } else if (key === '2') {
-            const settings = getSettings()
-            saveSettingsToStorage({ theme: settings.theme === 'dark' ? 'light' : 'dark' })
+        if (this.isEditingName) {
+          if (key === 'Enter') {
+            if (this.tempName.trim().length > 0) {
+              saveSettingsToStorage({ defaultName: this.tempName.trim() })
+              this.playerName = this.tempName.trim()
+            }
+            this.isEditingName = false
+            this.tempName = ''
+          } else if (key === 'Escape') {
+            this.isEditingName = false
+            this.tempName = ''
+          } else if (key === 'Backspace') {
+            this.tempName = this.tempName.slice(0, -1)
+          } else if (key.length === 1 && this.tempName.length < 10) {
+            if (/^[a-zA-Z0-9\u4e00-\u9fa5]$/.test(key)) {
+              this.tempName += key
+            }
+          }
+        } else {
+          if (lowerKey === 'm') {
+            this.gameState = GameState.MENU
+          } else if (this.gameState === GameState.SETTINGS) {
+            if (key === '1') {
+              const settings = getSettings()
+              saveSettingsToStorage({ soundEnabled: !settings.soundEnabled })
+            } else if (key === '2') {
+              const settings = getSettings()
+              saveSettingsToStorage({ theme: settings.theme === 'dark' ? 'light' : 'dark' })
+            } else if (key === '3') {
+              const settings = getSettings()
+              this.isEditingName = true
+              this.tempName = settings.defaultName
+            }
           }
         }
         break

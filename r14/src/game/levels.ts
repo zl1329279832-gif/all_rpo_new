@@ -3,6 +3,43 @@ import type { LevelConfig } from '@/types'
 export const CANVAS_WIDTH = 800
 export const CANVAS_HEIGHT = 600
 
+export interface ThemeColors {
+  background: string
+  gridLine: string
+  text: string
+  textSecondary: string
+  paddle: string
+  ball: string
+  menuOverlay: string
+  border: string
+}
+
+export const darkTheme: ThemeColors = {
+  background: '#1a1a2e',
+  gridLine: 'rgba(255, 255, 255, 0.05)',
+  text: '#ffffff',
+  textSecondary: '#aaaaaa',
+  paddle: '#3498db',
+  ball: '#ffffff',
+  menuOverlay: 'rgba(0, 0, 0, 0.8)',
+  border: 'rgba(255, 255, 255, 0.3)'
+}
+
+export const lightTheme: ThemeColors = {
+  background: '#f5f5f5',
+  gridLine: 'rgba(0, 0, 0, 0.05)',
+  text: '#333333',
+  textSecondary: '#666666',
+  paddle: '#2980b9',
+  ball: '#2c3e50',
+  menuOverlay: 'rgba(255, 255, 255, 0.95)',
+  border: 'rgba(0, 0, 0, 0.2)'
+}
+
+export function getThemeColors(theme: string): ThemeColors {
+  return theme === 'light' ? lightTheme : darkTheme
+}
+
 export function getLevelConfig(level: number): LevelConfig {
   const baseConfig: LevelConfig = {
     rows: 4,
