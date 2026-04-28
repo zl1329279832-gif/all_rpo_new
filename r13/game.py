@@ -289,16 +289,16 @@ class Game:
     
     def _handle_paused_keydown(self, event):
         """处理暂停状态下的键盘事件"""
-        if event.key == pygame.K_p or event.key == pygame.K_P or event.key == pygame.K_ESCAPE or event.key == pygame.K_SPACE:
-            # 继续游戏（支持大小写 P，以及 ESC 和空格键）
+        if event.key == pygame.K_p or event.key == pygame.K_ESCAPE or event.key == pygame.K_SPACE:
+            # 继续游戏（P键、ESC键或空格键）
             self.state = GameState.PLAYING
             self.show_message("继续游戏", 1)
-        elif event.key == pygame.K_r or event.key == pygame.K_R:
-            # 重新开始当前关卡（支持大小写 R）
+        elif event.key == pygame.K_r:
+            # 重新开始当前关卡（R键）
             self._restart_level()
             self.show_message("重新开始当前关卡", 2)
-        elif event.key == pygame.K_m or event.key == pygame.K_M:
-            # 返回主菜单（支持大小写 M）
+        elif event.key == pygame.K_m:
+            # 返回主菜单（M键）
             self.state = GameState.MENU
             self.show_message("返回主菜单", 1)
     
@@ -308,8 +308,8 @@ class Game:
             # 返回主菜单
             self.state = GameState.MENU
             self.show_message("返回主菜单", 1)
-        elif event.key == pygame.K_r or event.key == pygame.K_R:
-            # 重新开始游戏（支持大小写 R）
+        elif event.key == pygame.K_r:
+            # 重新开始游戏（R键）
             self._restart_game()
             self.show_message("重新开始游戏", 2)
     
@@ -326,14 +326,14 @@ class Game:
             Config.save_settings(self.settings)
             self.state = GameState.MENU
             self.show_message("设置已保存", 2)
-        elif event.key == pygame.K_s or event.key == pygame.K_S:
-            # 切换音效开关（支持大小写）
+        elif event.key == pygame.K_s:
+            # 切换音效开关（S键，不区分大小写）
             self.settings['sound_enabled'] = not self.settings.get('sound_enabled', True)
             # 显示反馈消息
             status = "开启" if self.settings['sound_enabled'] else "关闭"
             self.show_message(f"音效已{status}", 2)
-        elif event.key == pygame.K_n or event.key == pygame.K_N:
-            # 修改昵称（支持大小写）
+        elif event.key == pygame.K_n:
+            # 修改昵称（N键，不区分大小写）
             self.input_active = not self.input_active
             if self.input_active:
                 self.show_message("输入框已激活，请输入昵称", 2)
@@ -344,19 +344,22 @@ class Game:
                 self.input_active = False
                 self.settings['default_nickname'] = self.input_text
                 self.show_message(f"昵称已设置为: {self.input_text}", 2)
-            elif event.unicode:
+            elif event.unicode and len(event.unicode) > 0:
                 # 支持中文输入和其他可打印字符
-                # 检查是否为可打印的 Unicode 字符（包括中文、字母、数字、下划线等）
+                # 使用 string.printable 来检测可打印字符，或者简单检查
+                # 允许：字母、数字、中文、下划线、空格和常见符号
+                char = event.unicode
                 is_printable = (
-                    event.unicode.isalnum() or 
-                    event.unicode == '_' or 
+                    char.isalnum() or 
+                    char == '_' or 
+                    char == ' ' or
                     # 检查是否为中文字符范围
-                    ('\u4e00' <= event.unicode <= '\u9fff') or
+                    ('\u4e00' <= char <= '\u9fff') or
                     # 检查是否为其他常见可打印字符
-                    event.unicode in ' -_+=[]{}|\\;:\"\'<>,.?/`~!@#$%^&*()'
+                    char in '-_+=[]{}|\\;:\"\'<>,.?/`~!@#$%^&*()'
                 )
                 if is_printable and len(self.input_text) < 10:
-                    self.input_text += event.unicode
+                    self.input_text += char
     
     def _select_menu_item(self):
         """选择菜单项"""
