@@ -1,0 +1,47 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+
+# Virtual Environment
+.venv/
+venv/
+ENV/
+env/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+logs/
+*.log
+logs-*/
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+.temp/
+*.bak
+
+# Reports
+reports/
+*.report.json
+*.report.md
+quality_report*
+scan_report*
+
+# OS
+Thumbs.db
