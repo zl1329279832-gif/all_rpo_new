@@ -2,7 +2,7 @@ import json
 import os
 from pathlib import Path
 from typing import Optional
-from models.config import AppConfig
+from config.app_settings import AppSettings
 
 
 class ConfigStorage:
@@ -14,17 +14,17 @@ class ConfigStorage:
     def _ensure_config_dir(self):
         self.config_dir.mkdir(parents=True, exist_ok=True)
 
-    def load(self) -> AppConfig:
+    def load(self) -> AppSettings:
         if not self.file_path.exists():
-            return AppConfig()
+            return AppSettings()
         try:
             with open(self.file_path, 'r', encoding='utf-8') as f:
                 data = json.load(f)
-                return AppConfig.from_dict(data)
+                return AppSettings.from_dict(data)
         except (json.JSONDecodeError, IOError):
-            return AppConfig()
+            return AppSettings()
 
-    def save(self, config: AppConfig) -> bool:
+    def save(self, config: AppSettings) -> bool:
         self._ensure_config_dir()
         try:
             with open(self.file_path, 'w', encoding='utf-8') as f:
@@ -34,5 +34,5 @@ class ConfigStorage:
             return False
 
     def reset(self) -> bool:
-        default_config = AppConfig()
+        default_config = AppSettings()
         return self.save(default_config)

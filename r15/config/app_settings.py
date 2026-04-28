@@ -1,6 +1,7 @@
 from enum import Enum
-from dataclasses import dataclass
-from typing import Dict
+from dataclasses import dataclass, field
+from typing import Dict, Optional
+from datetime import datetime
 
 
 class Theme(Enum):
@@ -85,6 +86,7 @@ class AppSettings:
     sort_order: str = "asc"
     max_logs_count: int = 1000
     reminder_check_interval: int = 60
+    last_reminder_check: Optional[datetime] = None
 
     def to_dict(self) -> dict:
         return {
@@ -100,13 +102,17 @@ class AppSettings:
             "sort_order": self.sort_order,
             "max_logs_count": self.max_logs_count,
             "reminder_check_interval": self.reminder_check_interval,
+            "last_reminder_check": self.last_reminder_check.isoformat() if self.last_reminder_check else None,
         }
 
     @classmethod
     def from_dict(cls, data: dict) -> "AppSettings":
         settings = cls()
         if "theme" in data:
-            settings.theme = Theme(data["theme"])
+            try:
+                settings.theme = Theme(data["theme"])
+            except (ValueError, KeyError):
+                settings.theme = Theme.LIGHT
         if "language" in data:
             settings.language = data["language"]
         if "auto_save_interval" in data:
@@ -129,6 +135,11 @@ class AppSettings:
             settings.max_logs_count = data["max_logs_count"]
         if "reminder_check_interval" in data:
             settings.reminder_check_interval = data["reminder_check_interval"]
+        if "last_reminder_check" in data and data["last_reminder_check"]:
+            try:
+                settings.last_reminder_check = datetime.fromisoformat(data["last_reminder_check"])
+            except (ValueError, TypeError):
+                settings.last_reminder_check = None
         return settings
 
     def get_theme_colors(self) -> ThemeColors:
