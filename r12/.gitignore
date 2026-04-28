@@ -1,0 +1,59 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.pyc
+
+# Virtual environment
+.venv/
+venv/
+ENV/
+env/
+
+# PyInstaller build output
+dist/
+build/
+*.spec
+
+# IDE configuration
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+
+# Runtime data
+data/
+*.json
+
+# Logs and temporary files
+logs/
+tmp/
+temp/
+*.log
+*.tmp
+
+# Debug screenshots
+*.png
+*.jpg
+*.jpeg
+*.bmp
+
+# Compiled executables
+*.exe
+*.dll
+*.pyd
+
+# OS files
+Thumbs.db
+.DS_Store
+*.lnk
+
+# Resource cache
+.cache/
+*.cache
