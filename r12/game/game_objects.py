@@ -97,7 +97,7 @@ class BulletPool:
                 bullet.reset(x, y, vx, vy)
                 return bullet
         
-        if len(self.pool) < self.max_pool * 2:
+        if len(self.pool) < self.max_pool * 3:
             new_bullet = Bullet(
                 x=x, y=y,
                 width=self.width, height=self.height,
@@ -109,6 +109,11 @@ class BulletPool:
             new_bullet.in_use = True
             self.pool.append(new_bullet)
             return new_bullet
+        
+        for bullet in self.pool:
+            if bullet.in_use:
+                bullet.reset(x, y, vx, vy)
+                return bullet
         
         return None
 

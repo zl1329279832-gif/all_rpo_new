@@ -190,5 +190,6 @@ class Player(GameObject):
         self.has_shield = False
         self.has_multi_shot = False
         self.bombs = 2
+        self.last_shot = 0
         self.bullet_pool.clear_all()
         self.alive = True

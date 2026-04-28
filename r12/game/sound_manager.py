@@ -1,11 +1,14 @@
 import pygame
-import os
 from .utils import load_settings, save_settings
 from .constants import DEFAULT_SETTINGS
 
 class SoundManager:
     def __init__(self):
-        pygame.mixer.init()
+        try:
+            pygame.mixer.init()
+            self.mixer_available = True
+        except:
+            self.mixer_available = False
         
         self.settings = load_settings()
         
@@ -18,65 +21,27 @@ class SoundManager:
         self._load_sounds()
 
     def _load_sounds(self):
-        sound_effects = {
-            'shoot': self._create_beep(800, 100),
-            'explosion': self._create_noise(200),
-            'powerup': self._create_beep(1200, 150),
-            'hit': self._create_beep(300, 100),
-            'game_over': self._create_beep(200, 500),
-            'level_up': self._create_beep(600, 300),
-            'bomb': self._create_noise(500),
-        }
-        
-        self.sounds = sound_effects
-
-    def _create_beep(self, frequency, duration):
-        import numpy as np
-        
-        sample_rate = 44100
-        n_samples = int(sample_rate * duration / 1000)
-        
-        t = np.linspace(0, duration / 1000, n_samples, False)
-        wave = np.sin(2 * np.pi * frequency * t)
-        
-        envelope = np.linspace(1, 0, n_samples)
-        wave = wave * envelope
-        
-        wave = (wave * 32767).astype(np.int16)
-        
-        stereo_wave = np.column_stack((wave, wave))
-        
-        sound = pygame.sndarray.make_sound(stereo_wave)
-        return sound
-
-    def _create_noise(self, duration):
-        import numpy as np
-        
-        sample_rate = 44100
-        n_samples = int(sample_rate * duration / 1000)
-        
-        wave = np.random.uniform(-1, 1, n_samples)
-        
-        envelope = np.linspace(1, 0, n_samples)
-        wave = wave * envelope
-        
-        wave = (wave * 32767).astype(np.int16)
-        
-        stereo_wave = np.column_stack((wave, wave))
-        
-        sound = pygame.sndarray.make_sound(stereo_wave)
-        return sound
-
-    def play_sound(self, sound_name):
-        if not self.sound_enabled:
+        if not self.mixer_available:
             return
         
-        if sound_name in self.sounds:
-            self.sounds[sound_name].set_volume(self.sound_volume)
-            self.sounds[sound_name].play()
+        self.sounds = {
+            'shoot': None,
+            'explosion': None,
+            'powerup': None,
+            'hit': None,
+            'game_over': None,
+            'level_up': None,
+            'bomb': None,
+        }
+
+    def play_sound(self, sound_name):
+        if not self.sound_enabled or not self.mixer_available:
+            return
+        
+        pass
 
     def play_music(self):
-        if not self.music_enabled:
+        if not self.music_enabled or not self.mixer_available:
             return
         
         try:
@@ -85,10 +50,11 @@ class SoundManager:
             pass
 
     def stop_music(self):
-        try:
-            pygame.mixer.music.stop()
-        except:
-            pass
+        if not self.mixer_available:
+            try:
+                pygame.mixer.music.stop()
+            except:
+                pass
 
     def toggle_sound(self):
         self.sound_enabled = not self.sound_enabled
@@ -110,10 +76,11 @@ class SoundManager:
 
     def set_music_volume(self, volume):
         self.music_volume = max(0, min(1, volume))
-        try:
-            pygame.mixer.music.set_volume(self.music_volume)
-        except:
-            pass
+        if self.mixer_available:
+            try:
+                pygame.mixer.music.set_volume(self.music_volume)
+            except:
+                pass
         self._save_settings()
 
     def _save_settings(self):
