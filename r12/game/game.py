@@ -48,17 +48,25 @@ class Game:
 
     def run(self):
         while self.running:
-            dt = self.clock.tick(FPS)
-            
-            self._handle_events()
-            
-            self._update(dt)
-            
-            self._draw()
-            
-            pygame.display.flip()
+            try:
+                dt = self.clock.tick(FPS)
+                
+                self._handle_events()
+                
+                self._update(dt)
+                
+                self._draw()
+                
+                pygame.display.flip()
+            except Exception as e:
+                print(f'Error: {e}')
+                import traceback
+                traceback.print_exc()
         
-        pygame.quit()
+        try:
+            pygame.quit()
+        except:
+            pass
         sys.exit()
 
     def _handle_events(self):
@@ -170,18 +178,31 @@ class Game:
         if not buttons:
             return
         
-        for name, rect in buttons:
-            if rect.collidepoint(pos):
-                if name == 'sound':
-                    self.settings_manager.toggle_sound()
-                elif name == 'auto_shoot':
-                    self.settings_manager.toggle_auto_shoot()
-                elif name == 'nickname':
-                    self.nickname_input = self.nickname
-                    self.state = GameState.ENTER_NICKNAME
-                elif name == 'back':
-                    self._go_to_menu()
-                break
+        try:
+            for item in buttons:
+                if isinstance(item, tuple) and len(item) == 2:
+                    name, rect = item
+                    if rect.collidepoint(pos):
+                        if name == 'sound':
+                            try:
+                                self.settings_manager.toggle_sound()
+                            except Exception as e:
+                                print(f'Sound toggle error: {e}')
+                        elif name == 'auto_shoot':
+                            try:
+                                self.settings_manager.toggle_auto_shoot()
+                            except Exception as e:
+                                print(f'Auto shoot toggle error: {e}')
+                        elif name == 'nickname':
+                            self.nickname_input = self.nickname
+                            self.state = GameState.ENTER_NICKNAME
+                        elif name == 'back':
+                            self._go_to_menu()
+                        break
+        except Exception as e:
+            print(f'Settings click error: {e}')
+            import traceback
+            traceback.print_exc()
 
     def _handle_nickname_click(self, pos):
         buttons, _ = self._get_nickname_buttons()

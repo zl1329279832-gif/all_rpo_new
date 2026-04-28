@@ -1,33 +1,100 @@
 import pygame
+import sys
+import os
 from .constants import (
     SCREEN_WIDTH, SCREEN_HEIGHT, WHITE, BLACK, RED, GREEN, YELLOW, BLUE, GRAY, LIGHT_BLUE, DARK_GRAY, PINK
 )
+
+CHINESE_FONTS = [
+    'simhei',
+    'microsoftyahei',
+    'msyh',
+    'simsun',
+    'simkai',
+    'simli',
+    'stkaiti',
+    'stsong',
+    'wqy-microhei',
+    'wqy-zenhei',
+    'NotoSansCJKSC',
+    'SourceHanSansCN',
+]
 
 class UI:
     def __init__(self):
         self.font_large = None
         self.font_medium = None
         self.font_small = None
+        self.use_chinese = True
         self._init_fonts()
 
     def _init_fonts(self):
         pygame.font.init()
+        
+        self.font_large = self._try_load_chinese_font(48)
+        if not self.font_large:
+            self.use_chinese = False
+            self.font_large = self._load_default_font(48)
+        
+        self.font_medium = self._try_load_chinese_font(36)
+        if not self.font_medium:
+            self.font_medium = self._load_default_font(36)
+        
+        self.font_small = self._try_load_chinese_font(24)
+        if not self.font_small:
+            self.font_small = self._load_default_font(24)
+
+    def _try_load_chinese_font(self, size):
+        for font_name in CHINESE_FONTS:
+            try:
+                font = pygame.font.SysFont(font_name, size)
+                test = font.render('测试', True, WHITE)
+                if test.get_width() > 0:
+                    return font
+            except:
+                continue
+        
         try:
-            self.font_large = pygame.font.Font(None, 48)
-            self.font_medium = pygame.font.Font(None, 36)
-            self.font_small = pygame.font.Font(None, 24)
+            if sys.platform == 'win32':
+                font_paths = [
+                    'C:\\Windows\\Fonts\\simhei.ttf',
+                    'C:\\Windows\\Fonts\\msyh.ttc',
+                    'C:\\Windows\\Fonts\\simsun.ttc',
+                    'C:\\Windows\\Fonts\\simkai.ttf',
+                ]
+                for font_path in font_paths:
+                    if os.path.exists(font_path):
+                        font = pygame.font.Font(font_path, size)
+                        return font
         except:
-            self.font_large = pygame.font.Font(pygame.font.get_default_font(), 48)
-            self.font_medium = pygame.font.Font(pygame.font.get_default_font(), 36)
-            self.font_small = pygame.font.Font(pygame.font.get_default_font(), 24)
+            pass
+        
+        return None
+
+    def _load_default_font(self, size):
+        try:
+            return pygame.font.Font(None, size)
+        except:
+            return pygame.font.Font(pygame.font.get_default_font(), size)
 
     def draw_text(self, surface, text, x, y, color=WHITE, font='medium', center=False):
-        if font == 'large':
-            text_surface = self.font_large.render(text, True, color)
-        elif font == 'medium':
-            text_surface = self.font_medium.render(text, True, color)
-        else:
-            text_surface = self.font_small.render(text, True, color)
+        if not self.use_chinese:
+            text = self._convert_to_pinyin(text)
+        
+        try:
+            if font == 'large':
+                text_surface = self.font_large.render(text, True, color)
+            elif font == 'medium':
+                text_surface = self.font_medium.render(text, True, color)
+            else:
+                text_surface = self.font_small.render(text, True, color)
+        except:
+            try:
+                temp_font = pygame.font.Font(pygame.font.get_default_font(), 
+                    48 if font == 'large' else (36 if font == 'medium' else 24))
+                text_surface = temp_font.render(self._convert_to_pinyin(text), True, color)
+            except:
+                return pygame.Rect(x, y, 0, 0)
         
         text_rect = text_surface.get_rect()
         if center:
@@ -39,6 +106,65 @@ class UI:
         
         surface.blit(text_surface, text_rect)
         return text_rect
+
+    def _convert_to_pinyin(self, text):
+        mapping = {
+            '飞机大战': 'Plane War',
+            '最高分': 'High Score',
+            '开始游戏': 'Start Game',
+            '排行榜': 'High Scores',
+            '设置': 'Settings',
+            '退出': 'Quit',
+            '得分': 'Score',
+            '关卡': 'Level',
+            '生命': 'Lives',
+            '炸弹': 'Bombs',
+            '双倍火力': 'Double Fire',
+            '护盾': 'Shield',
+            '散射': 'Multi Shot',
+            '游戏暂停': 'PAUSED',
+            '继续游戏': 'Resume',
+            '重新开始': 'Restart',
+            '返回主菜单': 'Main Menu',
+            '游戏结束': 'GAME OVER',
+            '最终得分': 'Final Score',
+            '到达关卡': 'Level Reached',
+            '新纪录': 'NEW RECORD',
+            '再来一局': 'Play Again',
+            '主菜单': 'Main Menu',
+            '暂无记录': 'No scores yet',
+            '排名': 'Rank',
+            '玩家名': 'Name',
+            '返回': 'Back',
+            '游戏设置': 'SETTINGS',
+            '音效': 'Sound',
+            '开启': 'ON',
+            '关闭': 'OFF',
+            '自动射击': 'Auto Shoot',
+            '修改': 'Change',
+            '操作说明': 'Controls',
+            '使用': 'Use',
+            '或': 'or',
+            '方向键': 'Arrows',
+            '移动': 'to move',
+            '空格键': 'Space',
+            '射击': 'to shoot',
+            '键': 'Key',
+            '暂停': 'Pause',
+            '使用炸弹': 'Use Bomb',
+            '切换自动射击': 'Toggle Auto',
+            '输入玩家名': 'Enter Name',
+            '输入后按回车确认': 'Press Enter to confirm',
+            '支持字母、数字和下划线': 'Letters, numbers, _ only',
+            '确定': 'OK',
+            '准备好了': 'Get Ready',
+        }
+        
+        for cn, en in mapping.items():
+            if cn in text:
+                text = text.replace(cn, en)
+        
+        return text
 
     def draw_button(self, surface, text, x, y, width, height, color=BLUE, hover_color=LIGHT_BLUE, text_color=WHITE):
         mouse_pos = pygame.mouse.get_pos()
