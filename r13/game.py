@@ -289,21 +289,29 @@ class Game:
     
     def _handle_paused_keydown(self, event):
         """处理暂停状态下的键盘事件"""
-        if event.key == pygame.K_p or event.key == pygame.K_ESCAPE or event.key == pygame.K_SPACE:
-            # 继续游戏
+        if event.key == pygame.K_p or event.key == pygame.K_P or event.key == pygame.K_ESCAPE or event.key == pygame.K_SPACE:
+            # 继续游戏（支持大小写 P，以及 ESC 和空格键）
             self.state = GameState.PLAYING
-        elif event.key == pygame.K_r:
-            # 重新开始当前关卡
+            self.show_message("继续游戏", 1)
+        elif event.key == pygame.K_r or event.key == pygame.K_R:
+            # 重新开始当前关卡（支持大小写 R）
             self._restart_level()
+            self.show_message("重新开始当前关卡", 2)
+        elif event.key == pygame.K_m or event.key == pygame.K_M:
+            # 返回主菜单（支持大小写 M）
+            self.state = GameState.MENU
+            self.show_message("返回主菜单", 1)
     
     def _handle_game_over_keydown(self, event):
         """处理游戏结束状态下的键盘事件"""
         if event.key == pygame.K_RETURN or event.key == pygame.K_KP_ENTER:
             # 返回主菜单
             self.state = GameState.MENU
-        elif event.key == pygame.K_r:
-            # 重新开始游戏
+            self.show_message("返回主菜单", 1)
+        elif event.key == pygame.K_r or event.key == pygame.K_R:
+            # 重新开始游戏（支持大小写 R）
             self._restart_game()
+            self.show_message("重新开始游戏", 2)
     
     def _handle_rankings_keydown(self, event):
         """处理排行榜状态下的键盘事件"""
@@ -317,20 +325,37 @@ class Game:
             # 保存设置并返回主菜单
             Config.save_settings(self.settings)
             self.state = GameState.MENU
-        elif event.key == pygame.K_s:
-            # 切换音效开关
+            self.show_message("设置已保存", 2)
+        elif event.key == pygame.K_s or event.key == pygame.K_S:
+            # 切换音效开关（支持大小写）
             self.settings['sound_enabled'] = not self.settings.get('sound_enabled', True)
-        elif event.key == pygame.K_n:
-            # 修改昵称
+            # 显示反馈消息
+            status = "开启" if self.settings['sound_enabled'] else "关闭"
+            self.show_message(f"音效已{status}", 2)
+        elif event.key == pygame.K_n or event.key == pygame.K_N:
+            # 修改昵称（支持大小写）
             self.input_active = not self.input_active
+            if self.input_active:
+                self.show_message("输入框已激活，请输入昵称", 2)
         elif self.input_active:
             if event.key == pygame.K_BACKSPACE:
                 self.input_text = self.input_text[:-1]
-            elif event.key == pygame.K_RETURN:
+            elif event.key == pygame.K_RETURN or event.key == pygame.K_KP_ENTER:
                 self.input_active = False
                 self.settings['default_nickname'] = self.input_text
-            elif event.unicode.isalnum() or event.unicode == '_':
-                if len(self.input_text) < 10:
+                self.show_message(f"昵称已设置为: {self.input_text}", 2)
+            elif event.unicode:
+                # 支持中文输入和其他可打印字符
+                # 检查是否为可打印的 Unicode 字符（包括中文、字母、数字、下划线等）
+                is_printable = (
+                    event.unicode.isalnum() or 
+                    event.unicode == '_' or 
+                    # 检查是否为中文字符范围
+                    ('\u4e00' <= event.unicode <= '\u9fff') or
+                    # 检查是否为其他常见可打印字符
+                    event.unicode in ' -_+=[]{}|\\;:\"\'<>,.?/`~!@#$%^&*()'
+                )
+                if is_printable and len(self.input_text) < 10:
                     self.input_text += event.unicode
     
     def _select_menu_item(self):
@@ -608,13 +633,17 @@ class Game:
         self.screen.blit(pause_text, pause_rect)
         
         # 绘制操作提示
-        hint1_text = self.small_font.render("按 P 或 ESC 继续游戏", True, Config.WHITE)
+        hint1_text = self.small_font.render("按 P / ESC / 空格 继续游戏", True, Config.WHITE)
         hint1_rect = hint1_text.get_rect(center=(Config.SCREEN_WIDTH // 2, Config.SCREEN_HEIGHT // 2 + 20))
         self.screen.blit(hint1_text, hint1_rect)
         
         hint2_text = self.small_font.render("按 R 重新开始当前关卡", True, Config.WHITE)
         hint2_rect = hint2_text.get_rect(center=(Config.SCREEN_WIDTH // 2, Config.SCREEN_HEIGHT // 2 + 50))
         self.screen.blit(hint2_text, hint2_rect)
+        
+        hint3_text = self.small_font.render("按 M 返回主菜单", True, Config.WHITE)
+        hint3_rect = hint3_text.get_rect(center=(Config.SCREEN_WIDTH // 2, Config.SCREEN_HEIGHT // 2 + 80))
+        self.screen.blit(hint3_text, hint3_rect)
     
     def _draw_game_over(self):
         """绘制游戏结束界面"""
