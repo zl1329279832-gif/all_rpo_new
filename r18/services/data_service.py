@@ -78,38 +78,38 @@ class DataService:
             (是否成功, 消息)
         """
         try:
-            sample_data = self._generate_sample_data()
-            
-            with tempfile.NamedTemporaryFile(delete=False, suffix='.csv') as tmp_file:
-                sample_data.to_csv(tmp_file.name, index=False, encoding='utf-8-sig')
-                temp_path = tmp_file.name
+            self.raw_data = self._generate_sample_data()
+            self.filtered_data = self.raw_data.copy()
 
-            try:
-                self.data_processor = DataProcessor(self.config)
-                self.raw_data, self.data_info = self.data_processor.load_data(
-                    temp_path, 'csv'
-                )
-                self.filtered_data = self.raw_data.copy()
+            self.data_processor = DataProcessor(self.config)
+            self.data_processor.data = self.raw_data
+            self.data_processor.field_mapping = self.data_processor._detect_fields()
+            self.data_processor.data_info = {
+                'row_count': len(self.raw_data),
+                'column_count': len(self.raw_data.columns),
+                'columns': list(self.raw_data.columns),
+                'dtypes': {col: str(dtype) for col, dtype in self.raw_data.dtypes.items()},
+                'memory_usage': self.raw_data.memory_usage(deep=True).sum() / 1024 / 1024,
+                'load_time': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            }
 
-                self.analyzer = SalesAnalyzer(self.data_processor, self.config)
-                self.visualizer = Visualizer(self.config)
-                self.report_generator = ReportGenerator(
-                    self.data_processor, 
-                    self.analyzer, 
-                    self.visualizer,
-                    self.config
-                )
+            self.analyzer = SalesAnalyzer(self.data_processor, self.config)
+            self.visualizer = Visualizer(self.config)
+            self.report_generator = ReportGenerator(
+                self.data_processor, 
+                self.analyzer, 
+                self.visualizer,
+                self.config
+            )
 
-                self.validation_report = self.data_processor.validate_data()
-
-            finally:
-                if os.path.exists(temp_path):
-                    os.unlink(temp_path)
+            self.validation_report = self.data_processor.validate_data()
 
             return True, f"示例数据加载成功！共 {len(self.raw_data)} 行，{len(self.raw_data.columns)} 列"
 
         except Exception as e:
-            return False, f"示例数据加载失败: {str(e)}"
+            import traceback
+            error_msg = f"{str(e)}\n{traceback.format_exc()}"
+            return False, f"示例数据加载失败: {error_msg}"
 
     def _generate_sample_data(self, num_records: int = 5000) -> pd.DataFrame:
         """
@@ -127,16 +127,13 @@ class DataService:
         end_date = datetime(2024, 12, 31)
         date_range = pd.date_range(start=start_date, end=end_date, freq='D')
 
-        dates = np.random.choice(date_range, size=num_records)
-
         products = [
             '智能手机 Pro Max', '笔记本电脑 Air', '平板电脑 Mini', 
             '智能手表 Series', '无线耳机 Pro', '蓝牙音箱',
             '游戏手柄', '移动电源', '充电器套装', '数据线',
-            '保护壳', '屏幕保护膜', '键盘', '鼠标', '显示器'
+            '保护壳', '屏幕保护膜', '机械键盘', '无线鼠标', '4K显示器'
         ]
 
-        categories = ['电子产品', '配件', '外设', '服务']
         category_map = {
             '智能手机 Pro Max': '电子产品',
             '笔记本电脑 Air': '电子产品',
@@ -150,9 +147,9 @@ class DataService:
             '数据线': '配件',
             '保护壳': '配件',
             '屏幕保护膜': '配件',
-            '键盘': '外设',
-            '鼠标': '外设',
-            '显示器': '外设'
+            '机械键盘': '外设',
+            '无线鼠标': '外设',
+            '4K显示器': '外设'
         }
 
         prices = {
@@ -168,44 +165,79 @@ class DataService:
             '数据线': 49,
             '保护壳': 69,
             '屏幕保护膜': 39,
-            '键盘': 199,
-            '鼠标': 129,
-            '显示器': 1599
+            '机械键盘': 399,
+            '无线鼠标': 159,
+            '4K显示器': 1999
         }
 
         regions = ['华东', '华北', '华南', '西南', '西北', '东北', '华中']
         cities = {
-            '华东': ['上海', '杭州', '南京', '苏州', '宁波'],
+            '华东': ['上海', '杭州', '南京', '苏州', '宁波', '合肥'],
             '华北': ['北京', '天津', '石家庄', '太原', '济南'],
-            '华南': ['广州', '深圳', '东莞', '佛山', '厦门'],
-            '西南': ['成都', '重庆', '昆明', '贵阳', '南宁'],
+            '华南': ['广州', '深圳', '东莞', '佛山', '南宁', '厦门'],
+            '西南': ['成都', '重庆', '昆明', '贵阳'],
             '西北': ['西安', '兰州', '银川', '西宁', '乌鲁木齐'],
             '东北': ['沈阳', '大连', '哈尔滨', '长春', '大庆'],
-            '华中': ['武汉', '郑州', '长沙', '合肥', '南昌']
+            '华中': ['武汉', '郑州', '长沙', '南昌']
         }
 
-        channels = ['线上商城', '线下门店', '第三方平台', '直播带货', '团购']
+        channels = ['线上商城', '线下门店', '第三方平台', '直播带货', '企业团购']
         payment_methods = ['微信支付', '支付宝', '银行卡', '信用卡', '货到付款']
 
+        dates_list = []
+        for _ in range(num_records):
+            base_date = np.random.choice(date_range)
+            hour = np.random.randint(8, 22)
+            minute = np.random.randint(0, 60)
+            second = np.random.randint(0, 60)
+            full_date = datetime(
+                base_date.year, base_date.month, base_date.day,
+                hour, minute, second
+            )
+            dates_list.append(full_date)
+
         product_list = np.random.choice(products, size=num_records)
-        quantities = np.random.randint(1, 5, size=num_records)
+        
+        quantities_list = []
+        for p in product_list:
+            if prices[p] > 3000:
+                q = np.random.randint(1, 3)
+            elif prices[p] > 1000:
+                q = np.random.randint(1, 4)
+            else:
+                q = np.random.randint(1, 6)
+            quantities_list.append(q)
+
         regions_list = np.random.choice(regions, size=num_records)
         cities_list = [np.random.choice(cities[r]) for r in regions_list]
 
-        unit_prices = [prices[p] for p in product_list]
-        quantities = np.array(quantities)
-        unit_prices = np.array(unit_prices)
+        unit_prices_list = [prices[p] for p in product_list]
+        quantities = np.array(quantities_list)
+        unit_prices = np.array(unit_prices_list)
 
         revenues = quantities * unit_prices
-        cost_ratios = np.random.uniform(0.4, 0.7, size=num_records)
+        
+        cost_ratios_list = []
+        for p in product_list:
+            if prices[p] > 3000:
+                ratio = np.random.uniform(0.55, 0.75)
+            elif prices[p] > 1000:
+                ratio = np.random.uniform(0.50, 0.70)
+            else:
+                ratio = np.random.uniform(0.40, 0.65)
+            cost_ratios_list.append(ratio)
+        
+        cost_ratios = np.array(cost_ratios_list)
         costs = revenues * cost_ratios
         profits = revenues - costs
 
         customer_ids = [f'C{str(i).zfill(6)}' for i in np.random.randint(1, 2000, size=num_records)]
         order_ids = [f'O{str(i).zfill(8)}' for i in np.random.randint(1, 3000, size=num_records)]
+        channels_list = np.random.choice(channels, size=num_records)
+        payment_list = np.random.choice(payment_methods, size=num_records)
 
         data = {
-            '订单日期': dates,
+            '订单日期': pd.to_datetime(dates_list),
             '订单编号': order_ids,
             '客户编号': customer_ids,
             '商品名称': product_list,
@@ -213,22 +245,15 @@ class DataService:
             '销售数量': quantities,
             '销售单价': unit_prices,
             '销售金额': revenues,
-            '销售成本': costs,
-            '销售利润': profits,
+            '销售成本': np.round(costs, 2),
+            '销售利润': np.round(profits, 2),
             '销售地区': regions_list,
             '销售城市': cities_list,
-            '销售渠道': np.random.choice(channels, size=num_records),
-            '支付方式': np.random.choice(payment_methods, size=num_records)
+            '销售渠道': channels_list,
+            '支付方式': payment_list
         }
 
         df = pd.DataFrame(data)
-
-        date_col = df['订单日期']
-        df['订单日期'] = date_col + pd.to_timedelta(
-            np.random.randint(0, 24, size=num_records), unit='h'
-        ) + pd.to_timedelta(
-            np.random.randint(0, 60, size=num_records), unit='m'
-        )
 
         return df
 

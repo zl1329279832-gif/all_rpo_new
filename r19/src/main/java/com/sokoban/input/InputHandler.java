@@ -57,22 +57,39 @@ public class InputHandler implements KeyListener {
         keyStates.put(keyCode, true);
 
         switch (keyCode) {
-            case KeyEvent.VK_UP, KeyEvent.VK_W -> lastDirection = Direction.UP;
-            case KeyEvent.VK_DOWN, KeyEvent.VK_S -> lastDirection = Direction.DOWN;
-            case KeyEvent.VK_LEFT, KeyEvent.VK_A -> lastDirection = Direction.LEFT;
-            case KeyEvent.VK_RIGHT, KeyEvent.VK_D -> lastDirection = Direction.RIGHT;
-            case KeyEvent.VK_Z -> {
+            case KeyEvent.VK_UP:
+            case KeyEvent.VK_W:
+                lastDirection = Direction.UP;
+                break;
+            case KeyEvent.VK_DOWN:
+            case KeyEvent.VK_S:
+                lastDirection = Direction.DOWN;
+                break;
+            case KeyEvent.VK_LEFT:
+            case KeyEvent.VK_A:
+                lastDirection = Direction.LEFT;
+                break;
+            case KeyEvent.VK_RIGHT:
+            case KeyEvent.VK_D:
+                lastDirection = Direction.RIGHT;
+                break;
+            case KeyEvent.VK_Z:
                 if (e.isControlDown() || e.isMetaDown()) {
                     undoPressed = true;
                 }
-            }
-            case KeyEvent.VK_BACK_SPACE -> undoPressed = true;
-            case KeyEvent.VK_R -> {
+                break;
+            case KeyEvent.VK_BACK_SPACE:
+                undoPressed = true;
+                break;
+            case KeyEvent.VK_R:
                 if (e.isControlDown() || e.isMetaDown()) {
                     restartPressed = true;
                 }
-            }
-            case KeyEvent.VK_ESCAPE, KeyEvent.VK_P -> pausePressed = true;
+                break;
+            case KeyEvent.VK_ESCAPE:
+            case KeyEvent.VK_P:
+                pausePressed = true;
+                break;
         }
     }
 

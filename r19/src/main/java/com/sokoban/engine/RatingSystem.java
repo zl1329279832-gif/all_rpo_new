@@ -31,12 +31,16 @@ public class RatingSystem {
     }
 
     public String getRatingMessage(int stars) {
-        return switch (stars) {
-            case 3 -> "完美通关！";
-            case 2 -> "做得不错！";
-            case 1 -> "还可以更好！";
-            default -> "继续努力！";
-        };
+        switch (stars) {
+            case 3:
+                return "完美通关！";
+            case 2:
+                return "做得不错！";
+            case 1:
+                return "还可以更好！";
+            default:
+                return "继续努力！";
+        }
     }
 
     public static String formatStars(int stars) {

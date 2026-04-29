@@ -52,4 +52,8 @@ public class JsonUtil {
     public static <T> T fromJson(String json, Class<T> clazz) throws IOException {
         return OBJECT_MAPPER.readValue(json, clazz);
     }
+
+    public static <T> T fromJson(String json, TypeReference<T> typeReference) throws IOException {
+        return OBJECT_MAPPER.readValue(json, typeReference);
+    }
 }

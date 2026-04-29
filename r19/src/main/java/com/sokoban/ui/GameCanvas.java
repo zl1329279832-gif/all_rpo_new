@@ -7,9 +7,8 @@ import com.sokoban.level.Level;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.image.BufferStrategy;
 
-public class GameCanvas extends Canvas implements Runnable {
+public class GameCanvas extends JPanel implements Runnable {
     private final GameEngine engine;
     private final PixelRenderer renderer;
     private Thread gameThread;
@@ -21,7 +20,8 @@ public class GameCanvas extends Canvas implements Runnable {
         this.renderer = new PixelRenderer();
         this.running = false;
         setBackground(GraphicsConfig.COLOR_BACKGROUND);
-        setIgnoreRepaint(true);
+        setDoubleBuffered(true);
+        setOpaque(true);
     }
 
     public void start() {
@@ -53,7 +53,7 @@ public class GameCanvas extends Canvas implements Runnable {
             lastTime = now;
 
             renderer.updateAnimation(deltaTime);
-            render();
+            repaint();
 
             try {
                 Thread.sleep(GameConfig.FRAME_TIME);
@@ -64,20 +64,16 @@ public class GameCanvas extends Canvas implements Runnable {
         }
     }
 
-    private void render() {
-        BufferStrategy bs = getBufferStrategy();
-        if (bs == null) {
-            createBufferStrategy(3);
-            return;
-        }
-
-        Graphics2D g = (Graphics2D) bs.getDrawGraphics();
+    @Override
+    protected void paintComponent(Graphics g) {
+        super.paintComponent(g);
+        Graphics2D g2d = (Graphics2D) g.create();
         try {
-            g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF);
-            g.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_SPEED);
+            g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF);
+            g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_SPEED);
 
-            g.setColor(GraphicsConfig.COLOR_BACKGROUND);
-            g.fillRect(0, 0, getWidth(), getHeight());
+            g2d.setColor(GraphicsConfig.COLOR_BACKGROUND);
+            g2d.fillRect(0, 0, getWidth(), getHeight());
 
             Level level = engine.getLevel();
             if (level != null) {
@@ -89,16 +85,13 @@ public class GameCanvas extends Canvas implements Runnable {
                 int offsetY = (getHeight() - GameConfig.HUD_HEIGHT - levelHeight) / 2;
                 offsetY = Math.max(offsetY, GameConfig.WINDOW_PADDING);
 
-                renderer.render(g, engine, offsetX, offsetY);
+                renderer.render(g2d, engine, offsetX, offsetY);
             }
 
-            renderer.drawHUD(g, engine, getWidth(), getHeight());
+            renderer.drawHUD(g2d, engine, getWidth(), getHeight());
 
         } finally {
-            g.dispose();
+            g2d.dispose();
         }
-
-        bs.show();
-        Toolkit.getDefaultToolkit().sync();
     }
 }

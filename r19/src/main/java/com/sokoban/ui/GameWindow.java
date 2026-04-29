@@ -27,7 +27,7 @@ public class GameWindow extends JFrame {
     private final List<LevelData> allLevels;
     
     private GameCanvas gameCanvas;
-    private JPanel currentPanel;
+    private Container currentPanel;
     private int currentLevelIndex;
     private Timer uiTimer;
 

@@ -10,6 +10,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class StorageManager {
     private static StorageManager instance;
@@ -112,7 +113,7 @@ public class StorageManager {
                     return Long.compare(a.getTimeSeconds(), b.getTimeSeconds());
                 })
                 .limit(GameConfig.RANKING_ENTRY_COUNT)
-                .toList();
+                .collect(Collectors.toList());
     }
 
     public void addRankingEntry(RankingEntry entry) {

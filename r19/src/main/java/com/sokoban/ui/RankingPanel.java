@@ -9,6 +9,7 @@ import javax.swing.*;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.util.Collections;
 import java.util.List;
 
 public class RankingPanel extends JPanel {
@@ -47,7 +48,7 @@ public class RankingPanel extends JPanel {
         tabbedPane.setOpaque(true);
 
         for (LevelData level : levels) {
-            List<RankingEntry> entries = rankingMap.getOrDefault(level.getId(), List.of());
+            List<RankingEntry> entries = rankingMap.getOrDefault(level.getId(), Collections.emptyList());
             JScrollPane levelScroll = createLevelRankingTable(entries);
             tabbedPane.addTab(level.getName(), levelScroll);
         }

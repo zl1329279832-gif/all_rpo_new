@@ -4,12 +4,14 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.sokoban.config.GameConfig;
 import com.sokoban.util.JsonUtil;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class LevelLoader {
@@ -62,7 +64,13 @@ public class LevelLoader {
             if (is == null) {
                 throw new IOException("资源文件不存在: " + DEFAULT_LEVELS_RESOURCE);
             }
-            return JsonUtil.fromJson(new String(is.readAllBytes()), new TypeReference<List<LevelData>>() {});
+            byte[] buffer = new byte[1024];
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            int bytesRead;
+            while ((bytesRead = is.read(buffer)) != -1) {
+                baos.write(buffer, 0, bytesRead);
+            }
+            return JsonUtil.fromJson(baos.toString("UTF-8"), new TypeReference<List<LevelData>>() {});
         }
     }
 
@@ -85,7 +93,7 @@ public class LevelLoader {
         level.setDifficulty(1);
         level.setParMoves(8);
         level.setParTime(30);
-        level.setMap(List.of(
+        level.setMap(Arrays.asList(
                 "  #####  ",
                 "###   ###",
                 "# P $ @ #",
@@ -102,7 +110,7 @@ public class LevelLoader {
         level.setDifficulty(1);
         level.setParMoves(20);
         level.setParTime(60);
-        level.setMap(List.of(
+        level.setMap(Arrays.asList(
                 "  ######  ",
                 "###    ###",
                 "# P  $   #",
@@ -120,7 +128,7 @@ public class LevelLoader {
         level.setDifficulty(2);
         level.setParMoves(35);
         level.setParTime(90);
-        level.setMap(List.of(
+        level.setMap(Arrays.asList(
                 "########",
                 "#      #",
                 "# @##@ #",
@@ -139,7 +147,7 @@ public class LevelLoader {
         level.setDifficulty(2);
         level.setParMoves(50);
         level.setParTime(120);
-        level.setMap(List.of(
+        level.setMap(Arrays.asList(
                 "  #######",
                 "  #     #",
                 "### # # #",
@@ -158,7 +166,7 @@ public class LevelLoader {
         level.setDifficulty(3);
         level.setParMoves(60);
         level.setParTime(150);
-        level.setMap(List.of(
+        level.setMap(Arrays.asList(
                 "  ########",
                 "  #      #",
                 "### # ## #",

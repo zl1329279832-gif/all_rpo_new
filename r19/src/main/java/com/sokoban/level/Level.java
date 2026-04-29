@@ -38,34 +38,40 @@ public class Level {
 
     private void parseTile(char symbol, Position pos, int row, int col) {
         switch (symbol) {
-            case '#' -> tiles[row][col] = TileType.WALL;
-            case '.' -> {
+            case '#':
+                tiles[row][col] = TileType.WALL;
+                break;
+            case '.':
                 tiles[row][col] = TileType.FLOOR;
-            }
-            case '@' -> {
+                break;
+            case '@':
                 tiles[row][col] = TileType.FLOOR;
                 targetPositions.add(pos);
-            }
-            case '$' -> {
+                break;
+            case '$':
                 tiles[row][col] = TileType.FLOOR;
                 boxStartPositions.add(pos);
-            }
-            case '*' -> {
+                break;
+            case '*':
                 tiles[row][col] = TileType.FLOOR;
                 targetPositions.add(pos);
                 boxStartPositions.add(pos);
-            }
-            case 'P' -> {
+                break;
+            case 'P':
                 tiles[row][col] = TileType.FLOOR;
                 playerStartPosition = pos;
-            }
-            case '+' -> {
+                break;
+            case '+':
                 tiles[row][col] = TileType.FLOOR;
                 targetPositions.add(pos);
                 playerStartPosition = pos;
-            }
-            case ' ' -> tiles[row][col] = TileType.EMPTY;
-            default -> tiles[row][col] = TileType.EMPTY;
+                break;
+            case ' ':
+                tiles[row][col] = TileType.EMPTY;
+                break;
+            default:
+                tiles[row][col] = TileType.EMPTY;
+                break;
         }
     }
 

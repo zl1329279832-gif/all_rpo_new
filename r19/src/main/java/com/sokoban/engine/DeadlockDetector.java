@@ -129,12 +129,17 @@ public class DeadlockDetector {
     }
 
     private Direction getPerpendicular(Direction dir, boolean clockwise) {
-        return switch (dir) {
-            case UP -> clockwise ? Direction.RIGHT : Direction.LEFT;
-            case DOWN -> clockwise ? Direction.LEFT : Direction.RIGHT;
-            case LEFT -> clockwise ? Direction.UP : Direction.DOWN;
-            case RIGHT -> clockwise ? Direction.DOWN : Direction.UP;
-        };
+        switch (dir) {
+            case UP:
+                return clockwise ? Direction.RIGHT : Direction.LEFT;
+            case DOWN:
+                return clockwise ? Direction.LEFT : Direction.RIGHT;
+            case LEFT:
+                return clockwise ? Direction.UP : Direction.DOWN;
+            case RIGHT:
+                return clockwise ? Direction.DOWN : Direction.UP;
+        }
+        return dir;
     }
 
     private boolean isWallDeadlock(Position box, Set<Position> boxPositions) {
