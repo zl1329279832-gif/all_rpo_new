@@ -1,8 +1,8 @@
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
-    QFrame, QGridLayout
+    QFrame, QGridLayout, QSizePolicy
 )
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QSize
 from typing import Dict, Any
 
 
@@ -14,18 +14,20 @@ class StatisticsPanel(QFrame):
     def _init_ui(self):
         self.setFrameStyle(QFrame.StyledPanel)
         self.setProperty("class", "statistics-panel")
-        self.setMaximumHeight(150)
+        self.setMinimumHeight(140)
+        self.setMaximumHeight(160)
         
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(15, 10, 15, 10)
-        layout.setSpacing(10)
+        layout.setContentsMargins(15, 8, 15, 8)
+        layout.setSpacing(8)
         
         title = QLabel("📊 任务统计")
         title.setStyleSheet("font-size: 14px; font-weight: bold; color: #333;")
         layout.addWidget(title)
         
         grid = QGridLayout()
-        grid.setSpacing(15)
+        grid.setSpacing(10)
+        grid.setContentsMargins(0, 0, 0, 0)
         
         self.total_label = self._create_stat_item("全部", "0", "#333")
         grid.addWidget(self.total_label, 0, 0)
@@ -51,7 +53,7 @@ class StatisticsPanel(QFrame):
         self.urgent_label = self._create_stat_item("紧急", "0", "#f44336")
         grid.addWidget(self.urgent_label, 1, 3)
         
-        layout.addLayout(grid)
+        layout.addLayout(grid, stretch=1)
         
         self.setStyleSheet("""
             QFrame.statistics-panel {
@@ -62,19 +64,28 @@ class StatisticsPanel(QFrame):
 
     def _create_stat_item(self, label_text: str, value_text: str, color: str) -> QFrame:
         frame = QFrame()
-        frame.setStyleSheet(f"background-color: white; border: 1px solid #e0e0e0; border-radius: 6px;")
+        frame.setMinimumSize(QSize(90, 45))
+        frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        frame.setStyleSheet(f"""
+            QFrame {{
+                background-color: white;
+                border: 1px solid #e0e0e0;
+                border-radius: 6px;
+            }}
+        """)
         
         layout = QVBoxLayout(frame)
-        layout.setContentsMargins(10, 8, 10, 8)
-        layout.setSpacing(4)
+        layout.setContentsMargins(8, 5, 8, 5)
+        layout.setSpacing(2)
         
         value_label = QLabel(value_text)
         value_label.setStyleSheet(f"font-size: 20px; font-weight: bold; color: {color};")
         value_label.setAlignment(Qt.AlignCenter)
+        value_label.setMinimumHeight(24)
         layout.addWidget(value_label)
         
         label = QLabel(label_text)
-        label.setStyleSheet("font-size: 11px; color: #666;")
+        label.setStyleSheet("font-size: 10px; color: #666;")
         label.setAlignment(Qt.AlignCenter)
         layout.addWidget(label)
         

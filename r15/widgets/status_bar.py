@@ -1,21 +1,20 @@
-from PySide6.QtWidgets import QWidget, QHBoxLayout, QLabel, QFrame, QPushButton
+from PySide6.QtWidgets import QWidget, QHBoxLayout, QLabel, QStatusBar, QPushButton
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QFont
 from datetime import datetime
 
 
-class StatusBar(QFrame):
+class StatusBar(QStatusBar):
     def __init__(self, parent=None):
         super().__init__(parent)
         self._init_ui()
         self._start_clock()
 
     def _init_ui(self):
-        self.setFrameStyle(QFrame.StyledPanel)
-        self.setProperty("class", "status-bar")
         self.setMaximumHeight(35)
         
-        layout = QHBoxLayout(self)
+        container = QWidget()
+        layout = QHBoxLayout(container)
         layout.setContentsMargins(15, 5, 15, 5)
         layout.setSpacing(20)
         
@@ -41,8 +40,10 @@ class StatusBar(QFrame):
         self.clock_label.setStyleSheet("color: #666;")
         layout.addWidget(self.clock_label)
         
+        self.addWidget(container, 1)
+        
         self.setStyleSheet("""
-            QFrame.status-bar {
+            QStatusBar {
                 background-color: #f5f5f5;
                 border-top: 1px solid #e0e0e0;
             }

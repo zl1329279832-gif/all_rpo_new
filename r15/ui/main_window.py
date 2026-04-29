@@ -122,6 +122,7 @@ class MainWindow(QMainWindow):
         self.category_list = QListWidget()
         self.category_list.setMinimumWidth(200)
         self.category_list.setMaximumWidth(300)
+        self.category_list.itemClicked.connect(self._on_category_item_clicked)
         left_layout.addWidget(self.category_list)
         
         category_btn_layout = QHBoxLayout()
@@ -523,15 +524,26 @@ class MainWindow(QMainWindow):
         stats = self.task_service.get_statistics()
         self.statistics_panel.update_statistics(stats)
 
+    def _on_category_item_clicked(self, item):
+        category_id = item.data(Qt.UserRole)
+        self._select_category(category_id)
+
     def _on_category_clicked(self, category_id: str):
+        self._select_category(category_id)
+
+    def _select_category(self, category_id):
         self.selected_category_id = category_id
         
         for i in range(self.category_list.count()):
             item = self.category_list.item(i)
+            item_category_id = item.data(Qt.UserRole)
             widget = self.category_list.itemWidget(item)
+            
             if widget:
-                item_category_id = item.data(Qt.UserRole)
                 widget.set_selected(item_category_id == category_id)
+            
+            if item_category_id == category_id:
+                self.category_list.setCurrentItem(item)
         
         self._refresh_tasks()
 
