@@ -343,16 +343,43 @@ class SalesAnalyzer:
             }).dropna()
 
             if len(rfm_data) > 0:
-                rfm_data['f_segment'] = pd.qcut(
-                    rfm_data['frequency'], 
-                    q=min(4, len(rfm_data['frequency'].unique())),
-                    labels=[1, 2, 3, 4] if len(rfm_data['frequency'].unique()) >= 4 else range(1, len(rfm_data['frequency'].unique()) + 1)
-                )
-                rfm_data['m_segment'] = pd.qcut(
-                    rfm_data['monetary'], 
-                    q=min(4, len(rfm_data['monetary'].unique())),
-                    labels=[1, 2, 3, 4] if len(rfm_data['monetary'].unique()) >= 4 else range(1, len(rfm_data['monetary'].unique()) + 1)
-                )
+                unique_freq = rfm_data['frequency'].unique()
+                if len(unique_freq) >= 2:
+                    try:
+                        freq_q = min(4, len(unique_freq))
+                        if freq_q >= 2:
+                            rfm_data['f_segment'] = pd.qcut(
+                                rfm_data['frequency'], 
+                                q=freq_q,
+                                duplicates='drop'
+                            )
+                            freq_labels = {v: i+1 for i, v in enumerate(sorted(rfm_data['f_segment'].unique()))}
+                            rfm_data['f_segment'] = rfm_data['f_segment'].map(freq_labels)
+                        else:
+                            rfm_data['f_segment'] = 1
+                    except:
+                        rfm_data['f_segment'] = 1
+                else:
+                    rfm_data['f_segment'] = 1
+
+                unique_monetary = rfm_data['monetary'].unique()
+                if len(unique_monetary) >= 2:
+                    try:
+                        monetary_q = min(4, len(unique_monetary))
+                        if monetary_q >= 2:
+                            rfm_data['m_segment'] = pd.qcut(
+                                rfm_data['monetary'], 
+                                q=monetary_q,
+                                duplicates='drop'
+                            )
+                            monetary_labels = {v: i+1 for i, v in enumerate(sorted(rfm_data['m_segment'].unique()))}
+                            rfm_data['m_segment'] = rfm_data['m_segment'].map(monetary_labels)
+                        else:
+                            rfm_data['m_segment'] = 1
+                    except:
+                        rfm_data['m_segment'] = 1
+                else:
+                    rfm_data['m_segment'] = 1
             else:
                 rfm_data = pd.DataFrame()
         else:

@@ -274,7 +274,7 @@ class DataProcessor:
                 cleaned_df[date_col] = pd.to_datetime(
                     cleaned_df[date_col],
                     errors='coerce',
-                    infer_datetime_format=True
+                    format='mixed'
                 )
 
         if fill_missing:

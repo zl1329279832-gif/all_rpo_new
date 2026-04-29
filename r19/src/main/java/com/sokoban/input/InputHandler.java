@@ -74,17 +74,13 @@ public class InputHandler implements KeyListener {
                 lastDirection = Direction.RIGHT;
                 break;
             case KeyEvent.VK_Z:
-                if (e.isControlDown() || e.isMetaDown()) {
-                    undoPressed = true;
-                }
+                undoPressed = true;
                 break;
             case KeyEvent.VK_BACK_SPACE:
                 undoPressed = true;
                 break;
             case KeyEvent.VK_R:
-                if (e.isControlDown() || e.isMetaDown()) {
-                    restartPressed = true;
-                }
+                restartPressed = true;
                 break;
             case KeyEvent.VK_ESCAPE:
             case KeyEvent.VK_P:

@@ -185,15 +185,19 @@ class DataService:
         payment_methods = ['微信支付', '支付宝', '银行卡', '信用卡', '货到付款']
 
         dates_list = []
+        date_range_list = list(date_range)
         for _ in range(num_records):
-            base_date = np.random.choice(date_range)
+            base_date = np.random.choice(date_range_list)
+            if hasattr(base_date, 'year'):
+                year, month, day = base_date.year, base_date.month, base_date.day
+            else:
+                ts = pd.Timestamp(base_date)
+                year, month, day = ts.year, ts.month, ts.day
+            
             hour = np.random.randint(8, 22)
             minute = np.random.randint(0, 60)
             second = np.random.randint(0, 60)
-            full_date = datetime(
-                base_date.year, base_date.month, base_date.day,
-                hour, minute, second
-            )
+            full_date = datetime(year, month, day, hour, minute, second)
             dates_list.append(full_date)
 
         product_list = np.random.choice(products, size=num_records)

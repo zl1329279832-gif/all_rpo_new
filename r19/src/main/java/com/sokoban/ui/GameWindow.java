@@ -13,6 +13,9 @@ import com.sokoban.util.Direction;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.KeyEventDispatcher;
+import java.awt.KeyboardFocusManager;
+import java.awt.event.KeyEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.util.HashMap;
@@ -39,9 +42,36 @@ public class GameWindow extends JFrame {
         this.allLevels = levelLoader.loadAllLevels();
         this.currentLevelIndex = 0;
         
+        initGlobalKeyboardDispatcher();
         initWindow();
         initUI();
         startInputLoop();
+    }
+    
+    private void initGlobalKeyboardDispatcher() {
+        KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(
+            new KeyEventDispatcher() {
+                @Override
+                public boolean dispatchKeyEvent(KeyEvent e) {
+                    Object source = e.getSource();
+                    if (source instanceof Component) {
+                        Component comp = (Component) source;
+                        Window window = SwingUtilities.getWindowAncestor(comp);
+                        if (window == GameWindow.this) {
+                            int id = e.getID();
+                            if (id == KeyEvent.KEY_PRESSED) {
+                                inputHandler.keyPressed(e);
+                            } else if (id == KeyEvent.KEY_RELEASED) {
+                                inputHandler.keyReleased(e);
+                            } else if (id == KeyEvent.KEY_TYPED) {
+                                inputHandler.keyTyped(e);
+                            }
+                        }
+                    }
+                    return false;
+                }
+            }
+        );
     }
 
     private void initWindow() {
@@ -209,7 +239,6 @@ public class GameWindow extends JFrame {
         gameCanvas = new GameCanvas(engine);
         gameCanvas.addKeyListener(inputHandler);
         gameCanvas.setFocusable(true);
-        gameCanvas.requestFocusInWindow();
         
         setContentPane(gameCanvas);
         currentPanel = gameCanvas;
@@ -217,6 +246,13 @@ public class GameWindow extends JFrame {
         repaint();
         
         gameCanvas.start();
+        
+        SwingUtilities.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                gameCanvas.requestFocusInWindow();
+            }
+        });
     }
 
     private void stopGame() {
@@ -246,9 +282,14 @@ public class GameWindow extends JFrame {
                 engine.resume();
                 setContentPane(gameCanvas);
                 currentPanel = gameCanvas;
-                gameCanvas.requestFocusInWindow();
                 revalidate();
                 repaint();
+                SwingUtilities.invokeLater(new Runnable() {
+                    @Override
+                    public void run() {
+                        gameCanvas.requestFocusInWindow();
+                    }
+                });
             }
 
             @Override
@@ -257,9 +298,14 @@ public class GameWindow extends JFrame {
                 engine.resume();
                 setContentPane(gameCanvas);
                 currentPanel = gameCanvas;
-                gameCanvas.requestFocusInWindow();
                 revalidate();
                 repaint();
+                SwingUtilities.invokeLater(new Runnable() {
+                    @Override
+                    public void run() {
+                        gameCanvas.requestFocusInWindow();
+                    }
+                });
             }
 
             @Override
@@ -324,9 +370,14 @@ public class GameWindow extends JFrame {
                     engine.restart();
                     setContentPane(gameCanvas);
                     currentPanel = gameCanvas;
-                    gameCanvas.requestFocusInWindow();
                     revalidate();
                     repaint();
+                    SwingUtilities.invokeLater(new Runnable() {
+                        @Override
+                        public void run() {
+                            gameCanvas.requestFocusInWindow();
+                        }
+                    });
                 }
 
                 @Override

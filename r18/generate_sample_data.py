@@ -120,11 +120,20 @@ def generate_sales_data(num_records: int = 5000, output_file: str = None) -> pd.
     order_ids = [f'O{str(i).zfill(8)}' for i in np.random.randint(1, 3000, size=num_records)]
 
     final_dates = []
-    for d in dates:
+    date_range_list = list(date_range)
+    for _ in range(num_records):
+        d = np.random.choice(date_range_list)
         hour = np.random.randint(8, 22)
         minute = np.random.randint(0, 60)
         second = np.random.randint(0, 60)
-        final_dates.append(d + timedelta(hours=hour, minutes=minute, seconds=second))
+        
+        if hasattr(d, 'year'):
+            final_date = datetime(d.year, d.month, d.day, hour, minute, second)
+        else:
+            ts = pd.Timestamp(d)
+            final_date = datetime(ts.year, ts.month, ts.day, hour, minute, second)
+        
+        final_dates.append(final_date)
 
     data = {
         '订单日期': final_dates,
