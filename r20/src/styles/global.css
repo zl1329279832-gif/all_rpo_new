@@ -1,0 +1,105 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #app {
+  height: 100%;
+  width: 100%;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  background-color: #f1f5f9;
+  color: #1f2937;
+}
+
+html.dark body {
+  background-color: #1f2937;
+  color: #e5e7eb;
+}
+
+html.dark .el-card {
+  background-color: #111827 !important;
+  color: #e5e7eb;
+}
+
+html.dark .el-card__header {
+  border-bottom-color: #374151 !important;
+}
+
+html.dark .el-table {
+  --el-table-bg-color: #111827;
+  --el-table-tr-bg-color: #111827;
+  --el-table-header-bg-color: #1f2937;
+  --el-table-row-hover-bg-color: #1f2937;
+  --el-table-border-color: #374151;
+  --el-table-text-color: #e5e7eb;
+  --el-table-header-text-color: #d1d5db;
+}
+
+html.dark .el-tabs__item {
+  color: #9ca3af;
+}
+
+html.dark .el-tabs__item.is-active {
+  color: #409EFF;
+}
+
+html.dark .el-tabs__nav-wrap::after {
+  background-color: #374151;
+}
+
+html.dark .el-form-item__label {
+  color: #d1d5db;
+}
+
+html.dark .el-input__wrapper {
+  background-color: #1f2937;
+  box-shadow: 0 0 0 1px #374151 inset;
+}
+
+html.dark .el-input__inner {
+  color: #e5e7eb;
+}
+
+html.dark .el-select-dropdown {
+  background-color: #1f2937;
+}
+
+html.dark .el-select-dropdown__item {
+  color: #e5e7eb;
+}
+
+html.dark .el-select-dropdown__item:hover {
+  background-color: #374151;
+}
+
+html.dark .el-dialog {
+  background-color: #111827;
+}
+
+html.dark .el-dialog__title {
+  color: #e5e7eb;
+}
+
+html.dark .el-message-box {
+  background-color: #111827;
+}
+
+html.dark .el-message-box__title {
+  color: #e5e7eb;
+}
+
+html.dark .el-message-box__message {
+  color: #d1d5db;
+}
+
+html.dark .el-empty__description {
+  color: #9ca3af;
+}
+
+html.dark .el-progress-bar__outer {
+  background-color: #374151;
+}
