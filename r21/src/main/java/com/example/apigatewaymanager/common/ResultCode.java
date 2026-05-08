@@ -1,10 +1,5 @@
 package com.example.apigatewaymanager.common;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-
-@Getter
-@AllArgsConstructor
 public enum ResultCode {
     SUCCESS(200, "操作成功"),
     
@@ -35,4 +30,17 @@ public enum ResultCode {
 
     private final Integer code;
     private final String message;
+
+    ResultCode(Integer code, String message) {
+        this.code = code;
+        this.message = message;
+    }
+
+    public Integer getCode() {
+        return code;
+    }
+
+    public String getMessage() {
+        return message;
+    }
 }

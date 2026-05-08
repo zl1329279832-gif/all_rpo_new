@@ -5,15 +5,19 @@ import com.example.apigatewaymanager.common.Result;
 import com.example.apigatewaymanager.entity.ApiKey;
 import com.example.apigatewaymanager.service.ApiKeyService;
 import com.example.apigatewaymanager.utils.SecurityUtils;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/keys")
-@RequiredArgsConstructor
 public class ApiKeyController {
 
     private final ApiKeyService apiKeyService;
+
+    @Autowired
+    public ApiKeyController(ApiKeyService apiKeyService) {
+        this.apiKeyService = apiKeyService;
+    }
 
     @PostMapping("/app/{appId}")
     public Result<ApiKey> generateApiKey(@PathVariable Long appId) {

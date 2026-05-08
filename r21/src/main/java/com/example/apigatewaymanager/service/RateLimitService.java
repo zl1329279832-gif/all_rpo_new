@@ -6,7 +6,7 @@ import com.example.apigatewaymanager.dto.RateLimitDTO;
 import com.example.apigatewaymanager.entity.RateLimit;
 import com.example.apigatewaymanager.exception.BusinessException;
 import com.example.apigatewaymanager.mapper.RateLimitMapper;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,11 +16,16 @@ import java.time.YearMonth;
 import java.util.concurrent.TimeUnit;
 
 @Service
-@RequiredArgsConstructor
 public class RateLimitService {
 
     private final RateLimitMapper rateLimitMapper;
     private final RedisTemplate<String, Object> redisTemplate;
+
+    @Autowired
+    public RateLimitService(RateLimitMapper rateLimitMapper, RedisTemplate<String, Object> redisTemplate) {
+        this.rateLimitMapper = rateLimitMapper;
+        this.redisTemplate = redisTemplate;
+    }
 
     private static final String QPS_KEY_PREFIX = "rate_limit:qps:";
     private static final String DAILY_KEY_PREFIX = "rate_limit:daily:";

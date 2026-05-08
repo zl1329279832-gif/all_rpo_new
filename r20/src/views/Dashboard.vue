@@ -6,7 +6,7 @@ import { useCategoryStore } from '@/stores/category'
 import { useBudgetStore } from '@/stores/budget'
 import { useSettingsStore } from '@/stores/settings'
 import * as echarts from 'echarts'
-import { Plus, TrendUp, Wallet, PiggyBank } from '@element-plus/icons-vue'
+import { Plus, ArrowUp, Wallet, Coin } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const transactionStore = useTransactionStore()
@@ -155,7 +155,7 @@ watch(isDark, () => {
     <div class="stats-cards">
       <el-card class="stat-card income-card" shadow="hover">
         <div class="stat-icon" style="background: rgba(76, 175, 80, 0.1)">
-          <el-icon size="24"><TrendUp /></el-icon>
+          <el-icon size="24"><ArrowUp /></el-icon>
         </div>
         <div class="stat-content">
           <div class="stat-label">本月收入</div>
@@ -175,7 +175,7 @@ watch(isDark, () => {
       
       <el-card class="stat-card balance-card" shadow="hover">
         <div class="stat-icon" style="background: rgba(64, 158, 255, 0.1)">
-          <el-icon size="24"><PiggyBank /></el-icon>
+          <el-icon size="24"><Coin /></el-icon>
         </div>
         <div class="stat-content">
           <div class="stat-label">本月结余</div>

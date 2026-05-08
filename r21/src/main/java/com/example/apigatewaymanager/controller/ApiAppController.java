@@ -7,15 +7,19 @@ import com.example.apigatewaymanager.entity.ApiApp;
 import com.example.apigatewaymanager.service.ApiAppService;
 import com.example.apigatewaymanager.utils.SecurityUtils;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/apps")
-@RequiredArgsConstructor
 public class ApiAppController {
 
     private final ApiAppService apiAppService;
+
+    @Autowired
+    public ApiAppController(ApiAppService apiAppService) {
+        this.apiAppService = apiAppService;
+    }
 
     @PostMapping
     public Result<ApiApp> createApiApp(@Valid @RequestBody ApiAppDTO apiAppDTO) {

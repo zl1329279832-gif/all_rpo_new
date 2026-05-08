@@ -6,11 +6,9 @@ import { useTransactionStore } from '@/stores/transaction'
 import { useCategoryStore } from '@/stores/category'
 import { useBudgetStore } from '@/stores/budget'
 import { useRouter } from 'vue-router'
-import { useRoute } from 'vue-router'
 import { defaultCategories, defaultTransactions, defaultBudgets } from '@/utils/mockData'
 
 const router = useRouter()
-const route = useRoute()
 const settingsStore = useSettingsStore()
 const transactionStore = useTransactionStore()
 const categoryStore = useCategoryStore()

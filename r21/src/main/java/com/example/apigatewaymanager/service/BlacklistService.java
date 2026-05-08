@@ -7,7 +7,7 @@ import com.example.apigatewaymanager.dto.BlacklistDTO;
 import com.example.apigatewaymanager.entity.Blacklist;
 import com.example.apigatewaymanager.exception.BusinessException;
 import com.example.apigatewaymanager.mapper.BlacklistMapper;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,11 +16,16 @@ import java.time.LocalDateTime;
 import java.util.concurrent.TimeUnit;
 
 @Service
-@RequiredArgsConstructor
 public class BlacklistService {
 
     private final BlacklistMapper blacklistMapper;
     private final RedisTemplate<String, Object> redisTemplate;
+
+    @Autowired
+    public BlacklistService(BlacklistMapper blacklistMapper, RedisTemplate<String, Object> redisTemplate) {
+        this.blacklistMapper = blacklistMapper;
+        this.redisTemplate = redisTemplate;
+    }
 
     private static final String BLACKLIST_KEY_PREFIX = "blacklist:";
 

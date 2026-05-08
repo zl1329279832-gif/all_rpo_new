@@ -6,15 +6,19 @@ import com.example.apigatewaymanager.dto.RateLimitDTO;
 import com.example.apigatewaymanager.entity.RateLimit;
 import com.example.apigatewaymanager.service.RateLimitService;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/rate-limits")
-@RequiredArgsConstructor
 public class RateLimitController {
 
     private final RateLimitService rateLimitService;
+
+    @Autowired
+    public RateLimitController(RateLimitService rateLimitService) {
+        this.rateLimitService = rateLimitService;
+    }
 
     @PostMapping
     public Result<RateLimit> createRateLimit(@Valid @RequestBody RateLimitDTO rateLimitDTO) {

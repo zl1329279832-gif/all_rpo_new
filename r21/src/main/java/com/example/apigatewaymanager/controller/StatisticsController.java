@@ -4,7 +4,7 @@ import com.example.apigatewaymanager.common.Result;
 import com.example.apigatewaymanager.entity.CallStatistics;
 import com.example.apigatewaymanager.service.CallStatisticsService;
 import com.example.apigatewaymanager.utils.SecurityUtils;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
 
@@ -13,10 +13,14 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/statistics")
-@RequiredArgsConstructor
 public class StatisticsController {
 
     private final CallStatisticsService callStatisticsService;
+
+    @Autowired
+    public StatisticsController(CallStatisticsService callStatisticsService) {
+        this.callStatisticsService = callStatisticsService;
+    }
 
     @GetMapping("/date-range")
     public Result<List<CallStatistics>> getStatisticsByDateRange(

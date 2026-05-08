@@ -4,16 +4,20 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.apigatewaymanager.entity.AccessLog;
 import com.example.apigatewaymanager.mapper.AccessLogMapper;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-@RequiredArgsConstructor
 public class AccessLogService {
 
     private final AccessLogMapper accessLogMapper;
+
+    @Autowired
+    public AccessLogService(AccessLogMapper accessLogMapper) {
+        this.accessLogMapper = accessLogMapper;
+    }
 
     @Async
     @Transactional

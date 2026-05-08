@@ -7,7 +7,8 @@ import {
   List,
   Plus,
   Folder,
-  DataAnalysis,
+  Histogram,
+  Wallet,
   Setting,
   Sunny,
   Moon,
@@ -26,7 +27,8 @@ const menuItems = [
   { path: '/transactions', label: '账单列表', icon: List },
   { path: '/add-transaction', label: '记一笔', icon: Plus },
   { path: '/categories', label: '分类管理', icon: Folder },
-  { path: '/statistics', label: '统计分析', icon: DataAnalysis },
+  { path: '/budget', label: '预算管理', icon: Wallet },
+  { path: '/statistics', label: '统计分析', icon: Histogram },
   { path: '/settings', label: '设置', icon: Setting }
 ]
 

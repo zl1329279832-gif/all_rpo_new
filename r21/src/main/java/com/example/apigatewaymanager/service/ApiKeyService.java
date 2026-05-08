@@ -4,19 +4,25 @@ import cn.hutool.core.util.IdUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.apigatewaymanager.common.ResultCode;
+import com.example.apigatewaymanager.entity.ApiApp;
 import com.example.apigatewaymanager.entity.ApiKey;
 import com.example.apigatewaymanager.exception.BusinessException;
 import com.example.apigatewaymanager.mapper.ApiKeyMapper;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-@RequiredArgsConstructor
 public class ApiKeyService {
 
     private final ApiKeyMapper apiKeyMapper;
     private final ApiAppService apiAppService;
+
+    @Autowired
+    public ApiKeyService(ApiKeyMapper apiKeyMapper, ApiAppService apiAppService) {
+        this.apiKeyMapper = apiKeyMapper;
+        this.apiAppService = apiAppService;
+    }
 
     @Transactional
     public ApiKey generateApiKey(Long userId, Long appId) {
@@ -50,6 +56,10 @@ public class ApiKeyService {
         ApiKey apiKey = apiKeyMapper.selectById(keyId);
         if (apiKey == null) {
             throw new BusinessException(ResultCode.API_KEY_NOT_FOUND);
+        }
+        ApiApp apiApp = apiAppService.getAppById(apiKey.getAppId());
+        if (!apiApp.getUserId().equals(userId)) {
+            throw new BusinessException(ResultCode.APP_NOT_OWNER);
         }
         return apiKey;
     }

@@ -6,15 +6,19 @@ import com.example.apigatewaymanager.dto.BlacklistDTO;
 import com.example.apigatewaymanager.entity.Blacklist;
 import com.example.apigatewaymanager.service.BlacklistService;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/blacklists")
-@RequiredArgsConstructor
 public class BlacklistController {
 
     private final BlacklistService blacklistService;
+
+    @Autowired
+    public BlacklistController(BlacklistService blacklistService) {
+        this.blacklistService = blacklistService;
+    }
 
     @PostMapping
     public Result<Blacklist> addToBlacklist(@Valid @RequestBody BlacklistDTO blacklistDTO) {

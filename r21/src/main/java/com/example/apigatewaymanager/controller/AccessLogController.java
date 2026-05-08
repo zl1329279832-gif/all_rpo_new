@@ -5,7 +5,7 @@ import com.example.apigatewaymanager.common.Result;
 import com.example.apigatewaymanager.entity.AccessLog;
 import com.example.apigatewaymanager.service.AccessLogService;
 import com.example.apigatewaymanager.utils.SecurityUtils;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -13,10 +13,14 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/logs")
-@RequiredArgsConstructor
 public class AccessLogController {
 
     private final AccessLogService accessLogService;
+
+    @Autowired
+    public AccessLogController(AccessLogService accessLogService) {
+        this.accessLogService = accessLogService;
+    }
 
     @GetMapping
     public Result<Page<AccessLog>> listAccessLogs(

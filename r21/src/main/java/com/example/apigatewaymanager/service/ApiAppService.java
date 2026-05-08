@@ -7,15 +7,19 @@ import com.example.apigatewaymanager.dto.ApiAppDTO;
 import com.example.apigatewaymanager.entity.ApiApp;
 import com.example.apigatewaymanager.exception.BusinessException;
 import com.example.apigatewaymanager.mapper.ApiAppMapper;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-@RequiredArgsConstructor
 public class ApiAppService {
 
     private final ApiAppMapper apiAppMapper;
+
+    @Autowired
+    public ApiAppService(ApiAppMapper apiAppMapper) {
+        this.apiAppMapper = apiAppMapper;
+    }
 
     @Transactional
     public ApiApp createApiApp(Long userId, ApiAppDTO apiAppDTO) {
@@ -73,5 +77,13 @@ public class ApiAppService {
 
     public void validateAppOwnership(Long userId, Long appId) {
         getApiAppById(userId, appId);
+    }
+
+    public ApiApp getAppById(Long appId) {
+        ApiApp apiApp = apiAppMapper.selectById(appId);
+        if (apiApp == null) {
+            throw new BusinessException(ResultCode.APP_NOT_FOUND);
+        }
+        return apiApp;
     }
 }

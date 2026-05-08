@@ -1,9 +1,7 @@
 package com.example.apigatewaymanager.exception;
 
 import com.example.apigatewaymanager.common.ResultCode;
-import lombok.Getter;
 
-@Getter
 public class BusinessException extends RuntimeException {
     private final Integer code;
     
@@ -20,5 +18,9 @@ public class BusinessException extends RuntimeException {
     public BusinessException(ResultCode resultCode) {
         super(resultCode.getMessage());
         this.code = resultCode.getCode();
+    }
+
+    public Integer getCode() {
+        return code;
     }
 }
