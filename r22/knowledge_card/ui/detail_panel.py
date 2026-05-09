@@ -1,10 +1,9 @@
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QTextEdit,
-    QPushButton, QCheckBox, QComboBox, QScrollArea, QFrame, QMessageBox,
-    QSizePolicy
+    QPushButton, QCheckBox, QComboBox, QFrame, QMessageBox
 )
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QFont, QColor
+from PySide6.QtGui import QColor
 
 from typing import Optional, List, Dict, Any, Set
 
@@ -20,6 +19,8 @@ class DetailPanel(QWidget):
         super().__init__(parent)
         self.db = db
         self.current_card_id: Optional[int] = None
+        self._original_tags: List[Dict[str, Any]] = []
+        self._original_is_favorite: bool = False
         self._init_ui()
         self._connect_signals()
         self._set_editable(False)
@@ -147,7 +148,6 @@ class DetailPanel(QWidget):
         self.save_btn.clicked.connect(self._on_save)
         self.delete_btn.clicked.connect(self._on_delete)
         self.add_tag_btn.clicked.connect(self._on_add_tag)
-        self.favorite_checkbox.stateChanged.connect(self._on_favorite_changed)
 
     def _set_editable(self, editable: bool):
         self.title_edit.setEnabled(editable)
@@ -173,11 +173,14 @@ class DetailPanel(QWidget):
             return
 
         self.current_card_id = card_id
+        self._original_tags = list(card['tags'])
+        self._original_is_favorite = (card['is_favorite'] == 1)
+
         self._clear_tag_buttons()
 
         self.title_edit.setText(card['title'])
         self.content_edit.setPlainText(card['content'])
-        self.favorite_checkbox.setChecked(card['is_favorite'] == 1)
+        self.favorite_checkbox.setChecked(self._original_is_favorite)
 
         for tag in card['tags']:
             self._add_tag_button(tag)
@@ -210,13 +213,42 @@ class DetailPanel(QWidget):
             "QPushButton:hover { opacity: 0.8; }"
         )
         btn.setProperty('tag_id', tag['id'])
+        btn.setProperty('tag_name', tag['name'])
+        btn.setProperty('tag_color', tag['color'])
         btn.clicked.connect(lambda: self._on_remove_tag(tag['id']))
         self.tags_container.addWidget(btn)
 
-    def _refresh_tag_combo(self, current_tags: List[Dict[str, Any]]):
-        self.tag_combo.clear()
-        current_tag_ids: Set[int] = {t['id'] for t in current_tags}
+    def _get_current_tag_ids(self) -> List[int]:
+        tag_ids = []
+        for i in range(self.tags_container.count()):
+            widget = self.tags_container.itemAt(i).widget()
+            if isinstance(widget, QPushButton):
+                tag_id = widget.property('tag_id')
+                if tag_id:
+                    tag_ids.append(tag_id)
+        return tag_ids
 
+    def _get_current_tags(self) -> List[Dict[str, Any]]:
+        tags = []
+        for i in range(self.tags_container.count()):
+            widget = self.tags_container.itemAt(i).widget()
+            if isinstance(widget, QPushButton):
+                tag_id = widget.property('tag_id')
+                tag_name = widget.property('tag_name')
+                tag_color = widget.property('tag_color')
+                if tag_id:
+                    tags.append({
+                        'id': tag_id,
+                        'name': tag_name,
+                        'color': tag_color
+                    })
+        return tags
+
+    def _refresh_tag_combo(self, current_tags: List[Dict[str, Any]]):
+        self.tag_combo.blockSignals(True)
+        self.tag_combo.clear()
+
+        current_tag_ids: Set[int] = {t['id'] for t in current_tags}
         all_tags = self.db.get_all_tags()
         available_tags = [t for t in all_tags if t['id'] not in current_tag_ids]
 
@@ -227,31 +259,31 @@ class DetailPanel(QWidget):
             for tag in available_tags:
                 self.tag_combo.addItem(tag['name'], tag['id'])
 
+        self.tag_combo.blockSignals(False)
+
     def _on_save(self):
         if not self.current_card_id:
             return
 
         title = self.title_edit.text().strip() or "未命名卡片"
         content = self.content_edit.toPlainText()
+        tag_ids = self._get_current_tag_ids()
+        is_favorite = self.favorite_checkbox.isChecked()
 
-        current_tag_ids = []
-        for i in range(self.tags_container.count()):
-            widget = self.tags_container.itemAt(i).widget()
-            if isinstance(widget, QPushButton):
-                tag_id = widget.property('tag_id')
-                if tag_id:
-                    current_tag_ids.append(tag_id)
-
-        success = self.db.update_card(
+        self.db.update_card(
             card_id=self.current_card_id,
             title=title,
             content=content,
-            tag_ids=current_tag_ids
+            tag_ids=tag_ids
         )
 
-        if success:
-            self.card_saved.emit()
-            self.load_card(self.current_card_id)
+        self.db.set_favorite(self.current_card_id, is_favorite)
+
+        self._original_tags = self._get_current_tags()
+        self._original_is_favorite = is_favorite
+
+        self.card_saved.emit()
+        self.load_card(self.current_card_id)
 
     def _on_delete(self):
         if not self.current_card_id:
@@ -271,6 +303,8 @@ class DetailPanel(QWidget):
         if reply == QMessageBox.Yes:
             self.db.delete_card(self.current_card_id)
             self.current_card_id = None
+            self._original_tags = []
+            self._original_is_favorite = False
             self._show_empty_state()
             self._set_editable(False)
             self.card_deleted.emit()
@@ -287,52 +321,33 @@ class DetailPanel(QWidget):
         if not tag:
             return
 
-        card = self.db.get_card_by_id(self.current_card_id)
-        if not card:
-            return
-
-        current_tag_ids = {t['id'] for t in card['tags']}
+        current_tag_ids = set(self._get_current_tag_ids())
         if tag_id in current_tag_ids:
             return
 
-        new_tag_ids = list(current_tag_ids) + [tag_id]
-        self.db.update_card(
-            card_id=self.current_card_id,
-            title=card['title'],
-            content=card['content'],
-            tag_ids=new_tag_ids
-        )
-
-        self.load_card(self.current_card_id)
-        self.tags_changed.emit()
+        self._add_tag_button(tag)
+        current_tags = self._get_current_tags()
+        self._refresh_tag_combo(current_tags)
 
     def _on_remove_tag(self, tag_id: int):
         if not self.current_card_id:
             return
 
-        card = self.db.get_card_by_id(self.current_card_id)
-        if not card:
-            return
+        for i in range(self.tags_container.count()):
+            widget = self.tags_container.itemAt(i).widget()
+            if isinstance(widget, QPushButton):
+                if widget.property('tag_id') == tag_id:
+                    self.tags_container.removeWidget(widget)
+                    widget.deleteLater()
+                    break
 
-        new_tag_ids = [t['id'] for t in card['tags'] if t['id'] != tag_id]
-        self.db.update_card(
-            card_id=self.current_card_id,
-            title=card['title'],
-            content=card['content'],
-            tag_ids=new_tag_ids
-        )
-
-        self.load_card(self.current_card_id)
-        self.tags_changed.emit()
-
-    def _on_favorite_changed(self, state):
-        if not self.current_card_id:
-            return
-
-        self.db.toggle_favorite(self.current_card_id)
+        current_tags = self._get_current_tags()
+        self._refresh_tag_combo(current_tags)
 
     def clear(self):
         self.current_card_id = None
+        self._original_tags = []
+        self._original_is_favorite = False
         self._clear_tag_buttons()
         self.title_edit.clear()
         self.content_edit.clear()

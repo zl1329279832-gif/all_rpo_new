@@ -3,22 +3,28 @@ from PySide6.QtWidgets import (
     QPushButton, QInputDialog, QColorDialog, QMessageBox, QMenu, QLabel
 )
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QAction, QColor, QIcon
+from PySide6.QtGui import QAction, QColor
 
-from typing import Optional
+from typing import Optional, Dict, Any
 
 from ..database import DatabaseManager
 
 
 class TagPanel(QWidget):
-    tag_selected = Signal(object)
+    filter_changed = Signal(object)
     tags_changed = Signal()
+
+    SPECIAL_ITEMS = [
+        {'id': -1, 'name': '全部卡片', 'color': '#6366f1', 'filter_type': 'all'},
+        {'id': -2, 'name': '收藏夹', 'color': '#eab308', 'filter_type': 'favorite'},
+        {'id': -3, 'name': '最近浏览', 'color': '#10b981', 'filter_type': 'recent'},
+    ]
 
     def __init__(self, db: DatabaseManager, parent=None):
         super().__init__(parent)
         self.db = db
-        self.selected_tag_id: Optional[int] = None
-        self.selected_filter_type: str = 'all'
+        self.current_filter: Dict[str, Any] = {'tag_id': -1, 'filter_type': 'all'}
+        self._refresh_lock = False
         self._init_ui()
         self._connect_signals()
         self.refresh()
@@ -56,53 +62,30 @@ class TagPanel(QWidget):
 
     def _connect_signals(self):
         self.add_btn.clicked.connect(self._on_add_tag)
-        self.tag_list.itemClicked.connect(self._on_tag_clicked)
-        self.tag_list.currentItemChanged.connect(self._on_tag_changed)
+        self.tag_list.currentRowChanged.connect(self._on_selection_changed)
         self.tag_list.customContextMenuRequested.connect(self._on_context_menu)
 
-    def refresh(self):
-        current_row = self.tag_list.currentRow()
-        current_filter_type = None
-        if current_row >= 0:
-            current_item = self.tag_list.item(current_row)
-            if current_item:
-                current_filter_type = current_item.data(Qt.UserRole + 1)
-
+    def refresh(self, keep_selection: bool = True):
+        self._refresh_lock = True
         self.tag_list.blockSignals(True)
+
+        saved_filter = dict(self.current_filter) if keep_selection else {'tag_id': -1, 'filter_type': 'all'}
+
         self.tag_list.clear()
         stats = self.db.get_statistics()
 
-        special_items = [
-            {
-                'id': -1,
-                'name': '全部卡片',
-                'color': '#6366f1',
-                'count': stats['total_cards'],
-                'filter_type': 'all'
-            },
-            {
-                'id': -2,
-                'name': '收藏夹',
-                'color': '#eab308',
-                'count': stats['favorite_cards'],
-                'filter_type': 'favorite'
-            },
-            {
-                'id': -3,
-                'name': '最近浏览',
-                'color': '#10b981',
-                'count': 0,
-                'filter_type': 'recent'
-            },
-        ]
+        for special in self.SPECIAL_ITEMS:
+            count = 0
+            if special['filter_type'] == 'all':
+                count = stats['total_cards']
+            elif special['filter_type'] == 'favorite':
+                count = stats['favorite_cards']
 
-        all_index = 0
-        for item_data in special_items:
-            item = QListWidgetItem(f"  {item_data['name']}  ({item_data['count']})")
-            item.setData(Qt.UserRole, item_data['id'])
-            item.setData(Qt.UserRole + 1, item_data['filter_type'])
+            item = QListWidgetItem(f"  {special['name']}  ({count})")
+            item.setData(Qt.UserRole, special['id'])
+            item.setData(Qt.UserRole + 1, special['filter_type'])
             item.setData(Qt.UserRole + 2, True)
-            item.setForeground(QColor(item_data['color']))
+            item.setForeground(QColor(special['color']))
             self.tag_list.addItem(item)
 
         tags = self.db.get_all_tags()
@@ -115,16 +98,37 @@ class TagPanel(QWidget):
             item.setForeground(QColor(tag['color']))
             self.tag_list.addItem(item)
 
-        new_row = all_index
-        if current_filter_type is not None:
-            for i in range(self.tag_list.count()):
-                item = self.tag_list.item(i)
-                if item.data(Qt.UserRole + 1) == current_filter_type:
-                    new_row = i
+        target_row = 0
+        for i in range(self.tag_list.count()):
+            item = self.tag_list.item(i)
+            if item.data(Qt.UserRole + 1) == saved_filter['filter_type']:
+                if saved_filter['filter_type'] == 'tag':
+                    if item.data(Qt.UserRole) == saved_filter['tag_id']:
+                        target_row = i
+                        break
+                else:
+                    target_row = i
                     break
 
+        if target_row < self.tag_list.count():
+            self.tag_list.setCurrentRow(target_row)
+
         self.tag_list.blockSignals(False)
-        self.tag_list.setCurrentRow(new_row)
+        self._refresh_lock = False
+
+    def _on_selection_changed(self, row: int):
+        if self._refresh_lock or row < 0:
+            return
+
+        item = self.tag_list.item(row)
+        if not item:
+            return
+
+        tag_id = item.data(Qt.UserRole)
+        filter_type = item.data(Qt.UserRole + 1)
+
+        self.current_filter = {'tag_id': tag_id, 'filter_type': filter_type}
+        self.filter_changed.emit(dict(self.current_filter))
 
     def _on_add_tag(self):
         name, ok = QInputDialog.getText(self, "新建标签", "请输入标签名称：")
@@ -132,26 +136,9 @@ class TagPanel(QWidget):
             name = name.strip()
             color = QColorDialog.getColor(QColor("#3498db"), self, "选择标签颜色")
             if color.isValid():
-                tag_id = self.db.create_tag(name, color.name())
-                self.refresh()
+                self.db.create_tag(name, color.name())
+                self.refresh(keep_selection=True)
                 self.tags_changed.emit()
-
-    def _on_tag_clicked(self, item: QListWidgetItem):
-        self._select_tag(item)
-
-    def _on_tag_changed(self, current: QListWidgetItem, previous: QListWidgetItem):
-        if current:
-            self._select_tag(current)
-
-    def _select_tag(self, item: QListWidgetItem):
-        tag_id = item.data(Qt.UserRole)
-        filter_type = item.data(Qt.UserRole + 1)
-        self.selected_tag_id = tag_id
-        self.selected_filter_type = filter_type
-        self.tag_selected.emit({
-            'tag_id': tag_id,
-            'filter_type': filter_type
-        })
 
     def _on_context_menu(self, pos):
         item = self.tag_list.itemAt(pos)
@@ -190,7 +177,7 @@ class TagPanel(QWidget):
             color = QColorDialog.getColor(current_color, self, "选择标签颜色")
             if color.isValid():
                 self.db.update_tag(tag_id, name, color.name())
-                self.refresh()
+                self.refresh(keep_selection=True)
                 self.tags_changed.emit()
 
     def _delete_tag(self, tag_id: int, tag_name: str):
@@ -207,18 +194,18 @@ class TagPanel(QWidget):
 
         if reply == QMessageBox.Yes:
             self.db.delete_tag(tag_id)
-            self.refresh()
+            if self.current_filter.get('filter_type') == 'tag' and self.current_filter.get('tag_id') == tag_id:
+                self.select_all_cards()
+            else:
+                self.refresh(keep_selection=True)
             self.tags_changed.emit()
-
-    def get_selected_filter(self):
-        return {
-            'tag_id': self.selected_tag_id,
-            'filter_type': self.selected_filter_type
-        }
 
     def select_all_cards(self):
         for i in range(self.tag_list.count()):
             item = self.tag_list.item(i)
             if item.data(Qt.UserRole + 1) == 'all':
-                self.tag_list.setCurrentItem(item)
+                self.tag_list.setCurrentRow(i)
                 break
+
+    def get_current_filter(self) -> Dict[str, Any]:
+        return dict(self.current_filter)

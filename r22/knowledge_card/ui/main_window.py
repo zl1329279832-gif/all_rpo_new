@@ -1,9 +1,10 @@
 from PySide6.QtWidgets import (
-    QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QSplitter,
-    QStatusBar, QMessageBox
+    QMainWindow, QWidget, QVBoxLayout, QSplitter, QStatusBar, QMessageBox
 )
-from PySide6.QtCore import Qt, QSize, QTimer
-from PySide6.QtGui import QFont, QIcon
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QFont
+
+from typing import Dict, Any
 
 from ..database import DatabaseManager
 from .tag_panel import TagPanel
@@ -15,18 +16,10 @@ class MainWindow(QMainWindow):
     def __init__(self, db: DatabaseManager):
         super().__init__()
         self.db = db
+        self._selected_card_id = None
         self._init_ui()
         self._connect_signals()
-        self._init_default_selection()
-        self._update_status()
-
-    def _init_default_selection(self):
-        QTimer.singleShot(50, self._trigger_initial_selection)
-
-    def _trigger_initial_selection(self):
-        first_item = self.tag_panel.tag_list.item(0)
-        if first_item:
-            self.tag_panel.tag_list.setCurrentRow(0)
+        self._initialize()
 
     def _init_ui(self):
         self.setWindowTitle("个人知识卡片管理")
@@ -73,58 +66,56 @@ class MainWindow(QMainWindow):
         self.setStatusBar(self.status_bar)
 
     def _connect_signals(self):
-        self.tag_panel.tag_selected.connect(self._on_tag_selected)
+        self.tag_panel.filter_changed.connect(self._on_filter_changed)
         self.tag_panel.tags_changed.connect(self._on_tags_changed)
 
         self.card_list_panel.card_selected.connect(self._on_card_selected)
-        self.card_list_panel.card_updated.connect(self._on_cards_changed)
         self.card_list_panel.card_deleted.connect(self._on_card_deleted)
-        self.card_list_panel.search_changed.connect(self._on_search_changed)
+        self.card_list_panel.cards_changed.connect(self._on_cards_changed)
         self.card_list_panel.new_card_created.connect(self._on_new_card_created)
 
         self.detail_panel.card_saved.connect(self._on_cards_changed)
         self.detail_panel.card_deleted.connect(self._on_card_deleted)
         self.detail_panel.tags_changed.connect(self._on_tags_changed)
 
-    def _on_tag_selected(self, filter_data: dict):
-        tag_id = filter_data.get('tag_id')
-        filter_type = filter_data.get('filter_type', 'all')
-        self.card_list_panel.set_filter(tag_id, filter_type)
+    def _initialize(self):
+        self._refresh_cards()
+        self._update_status()
 
-    def _on_new_card_created(self, card_id: int):
-        for i in range(self.tag_panel.tag_list.count()):
-            item = self.tag_panel.tag_list.item(i)
-            if item.data(Qt.UserRole + 1) == 'all':
-                self.tag_panel.tag_list.setCurrentRow(i)
-                break
+    def _on_filter_changed(self, filter_data: Dict[str, Any]):
+        self.card_list_panel.set_filter(filter_data)
+        self._update_status()
 
     def _on_tags_changed(self):
-        self.tag_panel.refresh()
         self.detail_panel.refresh_tags()
         self._update_status()
 
     def _on_card_selected(self, card_id: int):
+        self._selected_card_id = card_id
         self.detail_panel.load_card(card_id)
         self._update_status()
 
     def _on_cards_changed(self):
-        self.card_list_panel.refresh()
-        self.tag_panel.refresh()
+        self._refresh_cards()
         self._update_status()
 
     def _on_card_deleted(self):
+        self._selected_card_id = None
         self.detail_panel.clear()
-        self.card_list_panel.refresh()
-        self.tag_panel.refresh()
+        self._refresh_cards()
         self._update_status()
 
-    def _on_search_changed(self, query: str):
-        self._update_status()
+    def _on_new_card_created(self, card_id: int):
+        self.tag_panel.select_all_cards()
+        self._selected_card_id = card_id
+
+    def _refresh_cards(self):
+        self.card_list_panel.refresh()
+        self.tag_panel.refresh(keep_selection=True)
 
     def _update_status(self):
         stats = self.db.get_statistics()
-        search_query = self.card_list_panel.current_search
-        visible_count = self.card_list_panel.card_list.count()
+        search_query = self.card_list_panel.get_search_query()
 
         status_text = f"总卡片: {stats['total_cards']}  |  收藏: {stats['favorite_cards']}  |  标签: {stats['total_tags']}"
         if search_query:

@@ -235,6 +235,17 @@ class DatabaseManager:
             conn.commit()
             return updated
 
+    def set_favorite(self, card_id: int, is_favorite: bool) -> bool:
+        timestamp = self.get_timestamp()
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                'UPDATE cards SET is_favorite = ?, updated_at = ? WHERE id = ?',
+                (1 if is_favorite else 0, timestamp, card_id)
+            )
+            conn.commit()
+            return cursor.rowcount > 0
+
     def toggle_favorite(self, card_id: int) -> bool:
         timestamp = self.get_timestamp()
         with self.get_connection() as conn:
