@@ -61,6 +61,14 @@ class TagPanel(QWidget):
         self.tag_list.customContextMenuRequested.connect(self._on_context_menu)
 
     def refresh(self):
+        current_row = self.tag_list.currentRow()
+        current_filter_type = None
+        if current_row >= 0:
+            current_item = self.tag_list.item(current_row)
+            if current_item:
+                current_filter_type = current_item.data(Qt.UserRole + 1)
+
+        self.tag_list.blockSignals(True)
         self.tag_list.clear()
         stats = self.db.get_statistics()
 
@@ -88,6 +96,7 @@ class TagPanel(QWidget):
             },
         ]
 
+        all_index = 0
         for item_data in special_items:
             item = QListWidgetItem(f"  {item_data['name']}  ({item_data['count']})")
             item.setData(Qt.UserRole, item_data['id'])
@@ -105,6 +114,17 @@ class TagPanel(QWidget):
             item.setData(Qt.UserRole + 2, False)
             item.setForeground(QColor(tag['color']))
             self.tag_list.addItem(item)
+
+        new_row = all_index
+        if current_filter_type is not None:
+            for i in range(self.tag_list.count()):
+                item = self.tag_list.item(i)
+                if item.data(Qt.UserRole + 1) == current_filter_type:
+                    new_row = i
+                    break
+
+        self.tag_list.blockSignals(False)
+        self.tag_list.setCurrentRow(new_row)
 
     def _on_add_tag(self):
         name, ok = QInputDialog.getText(self, "新建标签", "请输入标签名称：")

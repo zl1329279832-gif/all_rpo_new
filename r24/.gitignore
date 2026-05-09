@@ -2,14 +2,12 @@
 __pycache__/
 dist/
 build/
-*.egg-info/
+*.egg-info
 *.pyc
 *.pyo
 *.pyd
 .Python
 *.egg
-*.json
-*.csv
 *.log
 logs/
 output/

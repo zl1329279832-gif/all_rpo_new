@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import List, Optional, Set
+from typing import Callable, List, Optional, Set
 
 import typer
 from rich.console import Console
@@ -14,9 +14,10 @@ from rich.table import Table
 from rich.tree import Tree
 from typing_extensions import Annotated
 
-from .analyzer import analyze_project, analyze_file
+from .analyzer import analyze_file
 from .exporter import export_csv, export_json
-from .models import ProjectStats
+from .models import FileStats, LanguageStats, ProjectStats
+from .scanner import scan_project
 
 
 app = typer.Typer(
@@ -46,6 +47,139 @@ def _parse_extensions(extensions: Optional[List[str]]) -> Optional[Set[str]]:
     return set(normalized)
 
 
+def _aggregate_stats(
+    project_path: Path, file_stats_list: List[FileStats]
+) -> ProjectStats:
+    project_stats = ProjectStats(project_path=project_path)
+    language_stats: dict[str, LanguageStats] = {}
+
+    for file_stat in file_stats_list:
+        language = file_stat.language
+        if language not in language_stats:
+            language_stats[language] = LanguageStats(
+                language=language,
+                file_count=0,
+                total_lines=0,
+                code_lines=0,
+                comment_lines=0,
+                blank_lines=0,
+                total_size_bytes=0,
+            )
+
+        lang_stat = language_stats[language]
+        lang_stat.file_count += 1
+        lang_stat.total_lines += file_stat.total_lines
+        lang_stat.code_lines += file_stat.code_lines
+        lang_stat.comment_lines += file_stat.comment_lines
+        lang_stat.blank_lines += file_stat.blank_lines
+        lang_stat.total_size_bytes += file_stat.file_size_bytes
+
+        project_stats.total_files += 1
+        project_stats.total_lines += file_stat.total_lines
+        project_stats.code_lines += file_stat.code_lines
+        project_stats.comment_lines += file_stat.comment_lines
+        project_stats.blank_lines += file_stat.blank_lines
+        project_stats.total_size_bytes += file_stat.file_size_bytes
+
+    project_stats.language_stats = language_stats
+    project_stats.file_stats = file_stats_list
+
+    return project_stats
+
+
+def _run_scan_with_progress(
+    project_path: Path,
+    parsed_ignore_dirs: Set[str],
+    parsed_ignore_patterns: Set[str],
+    parsed_extensions: Optional[Set[str]],
+    progress: Progress,
+) -> ProjectStats:
+    scan_task = progress.add_task("扫描文件列表...", total=None)
+    files = scan_project(
+        project_path=project_path,
+        ignore_dirs=parsed_ignore_dirs,
+        ignore_patterns=parsed_ignore_patterns,
+        extensions=parsed_extensions,
+    )
+    progress.update(scan_task, total=1, completed=1)
+
+    file_stats_list: List[FileStats] = []
+
+    if files:
+        analyze_task = progress.add_task("分析文件...", total=len(files))
+        for file_path in files:
+            file_stats = analyze_file(file_path)
+            if file_stats:
+                file_stats_list.append(file_stats)
+            progress.advance(analyze_task)
+
+    return _aggregate_stats(project_path, file_stats_list)
+
+
+def _run_scan_without_progress(
+    project_path: Path,
+    parsed_ignore_dirs: Set[str],
+    parsed_ignore_patterns: Set[str],
+    parsed_extensions: Optional[Set[str]],
+) -> ProjectStats:
+    files = scan_project(
+        project_path=project_path,
+        ignore_dirs=parsed_ignore_dirs,
+        ignore_patterns=parsed_ignore_patterns,
+        extensions=parsed_extensions,
+    )
+
+    file_stats_list: List[FileStats] = []
+    for file_path in files:
+        file_stats = analyze_file(file_path)
+        if file_stats:
+            file_stats_list.append(file_stats)
+
+    return _aggregate_stats(project_path, file_stats_list)
+
+
+def _run_scan(
+    project_path: Path,
+    ignore_dirs: Optional[List[str]],
+    ignore_patterns: Optional[List[str]],
+    extensions: Optional[List[str]],
+    show_progress: bool = True,
+) -> ProjectStats:
+    parsed_ignore_dirs = _parse_ignore_dirs(ignore_dirs)
+    parsed_ignore_patterns = _parse_ignore_patterns(ignore_patterns)
+    parsed_extensions = _parse_extensions(extensions)
+
+    if show_progress:
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            BarColumn(),
+            TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
+            TimeElapsedColumn(),
+            console=console,
+        ) as progress:
+            return _run_scan_with_progress(
+                project_path=project_path,
+                parsed_ignore_dirs=parsed_ignore_dirs,
+                parsed_ignore_patterns=parsed_ignore_patterns,
+                parsed_extensions=parsed_extensions,
+                progress=progress,
+            )
+    else:
+        return _run_scan_without_progress(
+            project_path=project_path,
+            parsed_ignore_dirs=parsed_ignore_dirs,
+            parsed_ignore_patterns=parsed_ignore_patterns,
+            parsed_extensions=parsed_extensions,
+        )
+
+
+def _check_empty_and_exit(stats: ProjectStats) -> None:
+    if stats.total_files == 0:
+        console.print("[yellow]未找到任何可分析的文件[/yellow]")
+        raise typer.Exit(code=0)
+
+
 def _display_summary(stats: ProjectStats) -> None:
     console.rule("[bold blue]项目代码统计摘要[/bold blue]")
     console.print()
@@ -67,7 +201,7 @@ def _display_summary(stats: ProjectStats) -> None:
     ratio_table.add_column("类型", style="cyan")
     ratio_table.add_column("比例", style="green")
     ratio_table.add_column("进度条")
-    
+
     code_ratio = stats.get_code_ratio()
     comment_ratio = stats.get_comment_ratio()
     blank_ratio = stats.get_blank_ratio()
@@ -94,7 +228,7 @@ def _display_summary(stats: ProjectStats) -> None:
         lang_table.add_column("注释行", style="blue", justify="right")
         lang_table.add_column("空行", style="yellow", justify="right")
         lang_table.add_column("大小 (KB)", style="magenta", justify="right")
-        
+
         sorted_langs = sorted(
             stats.language_stats.values(),
             key=lambda x: x.total_lines,
@@ -178,43 +312,56 @@ def _display_file_tree(stats: ProjectStats, limit: int = 50) -> None:
     console.print()
 
 
-def _run_scan(
+_ScanOptions = Annotated[
+    Optional[List[str]],
+    typer.Option(
+        "--ignore-dir",
+        "-i",
+        help="额外忽略的目录名称（可多次指定）",
+    ),
+]
+
+_PatternOptions = Annotated[
+    Optional[List[str]],
+    typer.Option(
+        "--ignore-pattern",
+        "-p",
+        help="额外忽略的文件匹配模式（可多次指定）",
+    ),
+]
+
+_ExtOptions = Annotated[
+    Optional[List[str]],
+    typer.Option(
+        "--ext",
+        "-e",
+        help="仅分析指定扩展名的文件（可多次指定）",
+    ),
+]
+
+_QuietOption = Annotated[
+    bool,
+    typer.Option("--quiet", "-q", help="静默模式，不显示进度条"),
+]
+
+
+def _scan_and_display(
     project_path: Path,
     ignore_dirs: Optional[List[str]],
     ignore_patterns: Optional[List[str]],
     extensions: Optional[List[str]],
-    show_progress: bool = True,
-) -> ProjectStats:
-    parsed_ignore_dirs = _parse_ignore_dirs(ignore_dirs)
-    parsed_ignore_patterns = _parse_ignore_patterns(ignore_patterns)
-    parsed_extensions = _parse_extensions(extensions)
-
-    if show_progress:
-        with Progress(
-            SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
-            BarColumn(),
-            TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
-            TimeElapsedColumn(),
-            console=console,
-        ) as progress:
-            scan_task = progress.add_task("扫描项目...", total=None)
-            stats = analyze_project(
-                project_path=project_path,
-                ignore_dirs=parsed_ignore_dirs,
-                ignore_patterns=parsed_ignore_patterns,
-                extensions=parsed_extensions,
-            )
-            progress.update(scan_task, total=1, completed=1)
-    else:
-        stats = analyze_project(
-            project_path=project_path,
-            ignore_dirs=parsed_ignore_dirs,
-            ignore_patterns=parsed_ignore_patterns,
-            extensions=parsed_extensions,
-        )
-
-    return stats
+    quiet: bool,
+    display_handler: Callable[[ProjectStats], None],
+) -> None:
+    stats = _run_scan(
+        project_path=project_path,
+        ignore_dirs=ignore_dirs,
+        ignore_patterns=ignore_patterns,
+        extensions=extensions,
+        show_progress=not quiet,
+    )
+    _check_empty_and_exit(stats)
+    display_handler(stats)
 
 
 @app.command("scan")
@@ -229,34 +376,10 @@ def scan(
             help="要分析的项目路径",
         ),
     ],
-    ignore_dirs: Annotated[
-        Optional[List[str]],
-        typer.Option(
-            "--ignore-dir",
-            "-i",
-            help="额外忽略的目录名称（可多次指定）",
-        ),
-    ] = None,
-    ignore_patterns: Annotated[
-        Optional[List[str]],
-        typer.Option(
-            "--ignore-pattern",
-            "-p",
-            help="额外忽略的文件匹配模式（可多次指定）",
-        ),
-    ] = None,
-    extensions: Annotated[
-        Optional[List[str]],
-        typer.Option(
-            "--ext",
-            "-e",
-            help="仅分析指定扩展名的文件（可多次指定）",
-        ),
-    ] = None,
-    quiet: Annotated[
-        bool,
-        typer.Option("--quiet", "-q", help="静默模式，不显示进度条"),
-    ] = False,
+    ignore_dirs: _ScanOptions = None,
+    ignore_patterns: _PatternOptions = None,
+    extensions: _ExtOptions = None,
+    quiet: _QuietOption = False,
     show_files: Annotated[
         bool,
         typer.Option("--files", "-f", help="显示文件列表"),
@@ -267,22 +390,20 @@ def scan(
     ] = 50,
 ) -> None:
     """扫描项目并显示完整分析结果。"""
-    stats = _run_scan(
+
+    def handler(stats: ProjectStats) -> None:
+        _display_summary(stats)
+        if show_files:
+            _display_file_tree(stats, limit=file_limit)
+
+    _scan_and_display(
         project_path=project_path,
         ignore_dirs=ignore_dirs,
         ignore_patterns=ignore_patterns,
         extensions=extensions,
-        show_progress=not quiet,
+        quiet=quiet,
+        display_handler=handler,
     )
-
-    if stats.total_files == 0:
-        console.print("[yellow]未找到任何可分析的文件[/yellow]")
-        raise typer.Exit(code=0)
-
-    _display_summary(stats)
-
-    if show_files:
-        _display_file_tree(stats, limit=file_limit)
 
 
 @app.command("summary")
@@ -297,49 +418,21 @@ def summary(
             help="要分析的项目路径",
         ),
     ],
-    ignore_dirs: Annotated[
-        Optional[List[str]],
-        typer.Option(
-            "--ignore-dir",
-            "-i",
-            help="额外忽略的目录名称（可多次指定）",
-        ),
-    ] = None,
-    ignore_patterns: Annotated[
-        Optional[List[str]],
-        typer.Option(
-            "--ignore-pattern",
-            "-p",
-            help="额外忽略的文件匹配模式（可多次指定）",
-        ),
-    ] = None,
-    extensions: Annotated[
-        Optional[List[str]],
-        typer.Option(
-            "--ext",
-            "-e",
-            help="仅分析指定扩展名的文件（可多次指定）",
-        ),
-    ] = None,
-    quiet: Annotated[
-        bool,
-        typer.Option("--quiet", "-q", help="静默模式，不显示进度条"),
-    ] = False,
+    ignore_dirs: _ScanOptions = None,
+    ignore_patterns: _PatternOptions = None,
+    extensions: _ExtOptions = None,
+    quiet: _QuietOption = False,
 ) -> None:
     """仅显示项目统计摘要。"""
-    stats = _run_scan(
+
+    _scan_and_display(
         project_path=project_path,
         ignore_dirs=ignore_dirs,
         ignore_patterns=ignore_patterns,
         extensions=extensions,
-        show_progress=not quiet,
+        quiet=quiet,
+        display_handler=_display_summary,
     )
-
-    if stats.total_files == 0:
-        console.print("[yellow]未找到任何可分析的文件[/yellow]")
-        raise typer.Exit(code=0)
-
-    _display_summary(stats)
 
 
 @app.command("export")
@@ -371,34 +464,10 @@ def export(
             case_sensitive=False,
         ),
     ] = "json",
-    ignore_dirs: Annotated[
-        Optional[List[str]],
-        typer.Option(
-            "--ignore-dir",
-            "-i",
-            help="额外忽略的目录名称（可多次指定）",
-        ),
-    ] = None,
-    ignore_patterns: Annotated[
-        Optional[List[str]],
-        typer.Option(
-            "--ignore-pattern",
-            "-p",
-            help="额外忽略的文件匹配模式（可多次指定）",
-        ),
-    ] = None,
-    extensions: Annotated[
-        Optional[List[str]],
-        typer.Option(
-            "--ext",
-            "-e",
-            help="仅分析指定扩展名的文件（可多次指定）",
-        ),
-    ] = None,
-    quiet: Annotated[
-        bool,
-        typer.Option("--quiet", "-q", help="静默模式，不显示进度条"),
-    ] = False,
+    ignore_dirs: _ScanOptions = None,
+    ignore_patterns: _PatternOptions = None,
+    extensions: _ExtOptions = None,
+    quiet: _QuietOption = False,
 ) -> None:
     """将分析结果导出为 JSON 或 CSV 格式。"""
     stats = _run_scan(
@@ -409,9 +478,7 @@ def export(
         show_progress=not quiet,
     )
 
-    if stats.total_files == 0:
-        console.print("[yellow]未找到任何可分析的文件[/yellow]")
-        raise typer.Exit(code=0)
+    _check_empty_and_exit(stats)
 
     format_lower = format.lower()
 

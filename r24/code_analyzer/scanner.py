@@ -10,7 +10,7 @@ DEFAULT_IGNORE_DIRS: Set[str] = {
 
 DEFAULT_IGNORE_PATTERNS: Set[str] = {
     "*.egg-info", "*.pyc", "*.pyo", "*.pyd", ".Python", "*.egg",
-    "*.json", "*.csv", "*.log", "*.egg-info/", "*.swp", "*.swo",
+    "*.log", "*.swp", "*.swo",
 }
 
 

@@ -151,14 +151,16 @@ class DatabaseManager:
             query_parts = ['SELECT DISTINCT c.* FROM cards c']
             params = []
 
-            if tag_filter is not None:
+            apply_tag_filter = tag_filter is not None and tag_filter > 0
+
+            if apply_tag_filter:
                 query_parts.append('JOIN card_tags ct ON c.id = ct.card_id')
 
             if recent_only:
                 query_parts.append('JOIN recent_views rv ON c.id = rv.card_id')
 
             conditions = []
-            if tag_filter is not None:
+            if apply_tag_filter:
                 conditions.append('ct.tag_id = ?')
                 params.append(tag_filter)
 

@@ -15,6 +15,7 @@ class CardListPanel(QWidget):
     card_deleted = Signal()
     card_updated = Signal()
     search_changed = Signal(str)
+    new_card_created = Signal(int)
 
     def __init__(self, db: DatabaseManager, parent=None):
         super().__init__(parent)
@@ -108,6 +109,7 @@ class CardListPanel(QWidget):
             content="",
             tag_ids=[]
         )
+        self.new_card_created.emit(new_card_id)
         self.refresh()
         self.card_updated.emit()
         self._select_card_by_id(new_card_id)

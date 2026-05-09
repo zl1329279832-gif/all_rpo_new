@@ -2,7 +2,7 @@ from PySide6.QtWidgets import (
     QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QSplitter,
     QStatusBar, QMessageBox
 )
-from PySide6.QtCore import Qt, QSize
+from PySide6.QtCore import Qt, QSize, QTimer
 from PySide6.QtGui import QFont, QIcon
 
 from ..database import DatabaseManager
@@ -17,7 +17,16 @@ class MainWindow(QMainWindow):
         self.db = db
         self._init_ui()
         self._connect_signals()
+        self._init_default_selection()
         self._update_status()
+
+    def _init_default_selection(self):
+        QTimer.singleShot(50, self._trigger_initial_selection)
+
+    def _trigger_initial_selection(self):
+        first_item = self.tag_panel.tag_list.item(0)
+        if first_item:
+            self.tag_panel.tag_list.setCurrentRow(0)
 
     def _init_ui(self):
         self.setWindowTitle("个人知识卡片管理")
@@ -71,6 +80,7 @@ class MainWindow(QMainWindow):
         self.card_list_panel.card_updated.connect(self._on_cards_changed)
         self.card_list_panel.card_deleted.connect(self._on_card_deleted)
         self.card_list_panel.search_changed.connect(self._on_search_changed)
+        self.card_list_panel.new_card_created.connect(self._on_new_card_created)
 
         self.detail_panel.card_saved.connect(self._on_cards_changed)
         self.detail_panel.card_deleted.connect(self._on_card_deleted)
@@ -80,6 +90,13 @@ class MainWindow(QMainWindow):
         tag_id = filter_data.get('tag_id')
         filter_type = filter_data.get('filter_type', 'all')
         self.card_list_panel.set_filter(tag_id, filter_type)
+
+    def _on_new_card_created(self, card_id: int):
+        for i in range(self.tag_panel.tag_list.count()):
+            item = self.tag_panel.tag_list.item(i)
+            if item.data(Qt.UserRole + 1) == 'all':
+                self.tag_panel.tag_list.setCurrentRow(i)
+                break
 
     def _on_tags_changed(self):
         self.tag_panel.refresh()
