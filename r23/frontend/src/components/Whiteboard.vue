@@ -3,6 +3,8 @@
     <canvas
       ref="canvasRef"
       class="whiteboard-canvas"
+      :class="{ 'read-only': readOnly }"
+      :style="{ cursor: readOnly ? 'default' : 'crosshair' }"
       @mousedown="handleMouseDown"
       @mousemove="handleMouseMove"
       @mouseup="handleMouseUp"
@@ -41,6 +43,10 @@ const props = defineProps({
   initialElements: {
     type: Array,
     default: () => []
+  },
+  readOnly: {
+    type: Boolean,
+    default: false
   }
 })
 
@@ -117,6 +123,10 @@ const getCanvasCoords = (e) => {
 }
 
 const handleMouseDown = (e) => {
+  if (props.readOnly) {
+    return
+  }
+
   const { x, y } = getCanvasCoords(e)
   startX.value = x
   startY.value = y
@@ -230,6 +240,10 @@ const handleMouseUp = () => {
 }
 
 const handleDoubleClick = (e) => {
+  if (props.readOnly) {
+    return
+  }
+
   const { x, y } = getCanvasCoords(e)
   const elem = findElementAt(x, y)
   
@@ -629,6 +643,10 @@ defineExpose({
   top: 0;
   left: 0;
   cursor: crosshair;
+}
+
+.whiteboard-canvas.read-only {
+  cursor: default;
 }
 
 .whiteboard-canvas.overlay {
