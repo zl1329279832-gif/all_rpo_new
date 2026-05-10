@@ -6,9 +6,9 @@ spring:
     name: server-monitor
   
   datasource:
-    url: jdbc:mysql://localhost:3307/monitor_system?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
-    username: root
-    password: root123
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3307/monitor_system?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true}
+    username: ${SPRING_DATASOURCE_USERNAME:root}
+    password: ${SPRING_DATASOURCE_PASSWORD:root123}
     driver-class-name: com.mysql.cj.jdbc.Driver
   
   jpa:
@@ -22,9 +22,9 @@ spring:
   
   data:
     redis:
-      host: localhost
-      port: 6379
-      password:
+      host: ${SPRING_DATA_REDIS_HOST:localhost}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
+      password: ${SPRING_DATA_REDIS_PASSWORD:}
       timeout: 10000ms
       lettuce:
         pool:
@@ -38,12 +38,12 @@ spring:
     date-format: yyyy-MM-dd HH:mm:ss
 
 jwt:
-  secret: monitor-system-jwt-secret-key-2024-very-long-secret-key-for-security
-  expiration: 86400000
+  secret: ${JWT_SECRET:monitor-system-jwt-secret-key-2024-very-long-secret-key-for-security}
+  expiration: ${JWT_EXPIRATION:86400000}
   header: Authorization
   prefix: Bearer
 
 logging:
   level:
-    com.monitor: DEBUG
+    com.monitor: INFO
     org.springframework.security: INFO
