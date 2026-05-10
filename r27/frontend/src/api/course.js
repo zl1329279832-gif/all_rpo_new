@@ -86,3 +86,10 @@ export const deleteCourseMaterial = (materialId) => {
     method: 'delete'
   })
 }
+
+export const getCourseAssignments = (courseId) => {
+  return request({
+    url: `/courses/${courseId}/assignments`,
+    method: 'get'
+  })
+}

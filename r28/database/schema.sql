@@ -148,12 +148,9 @@ INSERT INTO `roles` (`name`, `description`) VALUES
 ('VIEWER', '只读用户，只能查看监控数据')
 ON DUPLICATE KEY UPDATE `description` = VALUES(`description`);
 
--- 插入默认管理员用户 (密码: admin123, 需要在应用中使用 BCrypt 加密)
--- 注意: 实际部署时请修改密码
-INSERT INTO `users` (`username`, `password`, `email`, `real_name`, `role_id`, `enabled`)
-SELECT 'admin', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iAt6Z5EH', 'admin@example.com', '系统管理员', r.id, 1
-FROM `roles` r WHERE r.name = 'ADMIN'
-AND NOT EXISTS (SELECT 1 FROM `users` WHERE `username` = 'admin');
+-- 默认管理员用户会在应用启动时由 DataInitializer 自动创建
+-- 账号: admin, 密码: admin123
+-- DataInitializer 会自动确保密码正确，并在每次启动时校验
 
 -- 插入示例服务器
 INSERT INTO `servers` (`name`, `ip_address`, `hostname`, `os_type`, `os_version`, `cpu_cores`, `total_memory_gb`, `total_disk_gb`, `status`, `description`)

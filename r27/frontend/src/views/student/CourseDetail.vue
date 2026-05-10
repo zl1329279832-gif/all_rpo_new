@@ -63,11 +63,10 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getCourseById, getCourseMaterials } from '@/api/course'
-import { getCourseAssignments } from '@/api/assignment'
+import { getCourseById, getCourseMaterials, getCourseAssignments } from '@/api/course'
 import { 
-  ArrowLeft, User, Collection, Document, Video, Link, 
-  Grid, Trophy, Clock 
+  ArrowLeft, User, Collection, DocumentCopy, Monitor, Link, 
+  MoreFilled, Trophy, Clock 
 } from '@element-plus/icons-vue'
 
 const route = useRoute()
@@ -81,12 +80,14 @@ const assignments = ref([])
 
 const loadData = async () => {
   try {
-    const [courseRes, materialRes] = await Promise.all([
+    const [courseRes, materialRes, assignRes] = await Promise.all([
       getCourseById(courseId.value),
-      getCourseMaterials(courseId.value)
+      getCourseMaterials(courseId.value),
+      getCourseAssignments(courseId.value)
     ])
     if (courseRes.success) course.value = courseRes.data
     if (materialRes.success) materials.value = materialRes.data || []
+    if (assignRes.success) assignments.value = assignRes.data || []
   } catch (e) {
     console.error(e)
   }
@@ -94,12 +95,12 @@ const loadData = async () => {
 
 const getMaterialIcon = (type) => {
   const map = {
-    DOCUMENT: Document,
-    VIDEO: Video,
+    DOCUMENT: DocumentCopy,
+    VIDEO: Monitor,
     LINK: Link,
-    OTHER: Grid
+    OTHER: MoreFilled
   }
-  return map[type] || Grid
+  return map[type] || MoreFilled
 }
 
 const getMaterialTypeName = (type) => {

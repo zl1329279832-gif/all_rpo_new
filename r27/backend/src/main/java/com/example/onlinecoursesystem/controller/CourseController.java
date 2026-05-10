@@ -2,10 +2,12 @@ package com.example.onlinecoursesystem.controller;
 
 import com.example.onlinecoursesystem.dto.ApiResponse;
 import com.example.onlinecoursesystem.dto.CourseDTO;
+import com.example.onlinecoursesystem.entity.Assignment;
 import com.example.onlinecoursesystem.entity.Course;
 import com.example.onlinecoursesystem.entity.CourseEnrollment;
 import com.example.onlinecoursesystem.entity.CourseMaterial;
 import com.example.onlinecoursesystem.entity.User;
+import com.example.onlinecoursesystem.repository.AssignmentRepository;
 import com.example.onlinecoursesystem.service.CourseService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -19,6 +21,9 @@ public class CourseController {
 
     @Autowired
     private CourseService courseService;
+
+    @Autowired
+    private AssignmentRepository assignmentRepository;
 
     @GetMapping
     public ApiResponse<List<CourseDTO>> getAllCourses() {
@@ -37,6 +42,11 @@ public class CourseController {
     @GetMapping("/{id}/materials")
     public ApiResponse<List<CourseMaterial>> getCourseMaterials(@PathVariable Long id) {
         return ApiResponse.success(courseService.getCourseMaterials(id));
+    }
+
+    @GetMapping("/{id}/assignments")
+    public ApiResponse<List<Assignment>> getCourseAssignments(@PathVariable Long id) {
+        return ApiResponse.success(assignmentRepository.findByCourseId(id));
     }
 
     @GetMapping("/enrolled")
