@@ -1,0 +1,6 @@
+{
+  "server_url": "http://localhost:8080",
+  "report_interval": 30,
+  "log_file": "agent.log",
+  "verbose": true
+}

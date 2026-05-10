@@ -151,23 +151,29 @@ public class MetricService {
         boolean triggered = evaluateCondition(currentValue, rule.getThreshold(), rule.getOperator());
         
         if (triggered) {
-            Alert alert = new Alert();
-            alert.setRuleId(rule.getId());
-            alert.setServerId(server.getId());
-            alert.setMetricType(rule.getMetricType());
-            alert.setCurrentValue(currentValue);
-            alert.setThresholdValue(rule.getThreshold());
-            alert.setAlertLevel(rule.getAlertLevel());
-            alert.setMessage(String.format("服务器[%s] %s 当前值: %.2f, 阈值: %.2f, 触发条件: %s",
-                    server.getName(),
-                    getMetricTypeName(rule.getMetricType()),
-                    currentValue,
-                    rule.getThreshold(),
-                    rule.getOperator()));
-            alert.setStatus("ACTIVE");
-            alert.setOccurredAt(LocalDateTime.now());
+            LocalDateTime fiveMinutesAgo = LocalDateTime.now().minusMinutes(5);
+            boolean recentAlertExists = alertRepository.existsActiveAlertForRule(
+                    rule.getId(), server.getId(), fiveMinutesAgo);
             
-            alertRepository.save(alert);
+            if (!recentAlertExists) {
+                Alert alert = new Alert();
+                alert.setRuleId(rule.getId());
+                alert.setServerId(server.getId());
+                alert.setMetricType(rule.getMetricType());
+                alert.setCurrentValue(currentValue);
+                alert.setThresholdValue(rule.getThreshold());
+                alert.setAlertLevel(rule.getAlertLevel());
+                alert.setMessage(String.format("服务器[%s] %s 当前值: %.2f, 阈值: %.2f, 触发条件: %s",
+                        server.getName(),
+                        getMetricTypeName(rule.getMetricType()),
+                        currentValue,
+                        rule.getThreshold(),
+                        rule.getOperator()));
+                alert.setStatus("ACTIVE");
+                alert.setOccurredAt(LocalDateTime.now());
+                
+                alertRepository.save(alert);
+            }
             
             updateServerStatusByAlertLevel(server, rule.getAlertLevel());
         }

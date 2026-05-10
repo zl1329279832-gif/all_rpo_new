@@ -22,4 +22,7 @@ public interface AlertRepository extends JpaRepository<Alert, Long> {
     
     @Query("SELECT COUNT(a) FROM Alert a WHERE a.status = 'ACTIVE' AND a.alertLevel = :level")
     long countActiveAlertsByLevel(@Param("level") Integer level);
+    
+    @Query("SELECT COUNT(a) > 0 FROM Alert a WHERE a.ruleId = :ruleId AND a.serverId = :serverId AND a.occurredAt >= :sinceTime")
+    boolean existsActiveAlertForRule(@Param("ruleId") Long ruleId, @Param("serverId") Long serverId, @Param("sinceTime") LocalDateTime sinceTime);
 }
