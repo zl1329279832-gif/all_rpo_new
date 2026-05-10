@@ -1,0 +1,58 @@
+# ============================================================
+# 后端项目 Dockerfile (Linux 容器，推荐使用)
+# Spring Boot 3 + JDK 17
+# 多阶段构建：构建阶段 + 运行阶段
+# 适用于 Docker Desktop Linux 容器模式
+# ============================================================
+
+# ============================================================
+# 第一阶段：构建阶段
+# 使用 Maven 镜像打包 Spring Boot 项目
+# ============================================================
+FROM maven:3.9-eclipse-temurin-17 AS build-env
+
+# 设置工作目录
+WORKDIR /app
+
+# 设置 Maven 镜像源（可选，加速国内构建）
+# RUN mkdir -p /root/.m2 && echo '<settings><mirrors><mirror><id>aliyun</id><url>https://maven.aliyun.com/repository/public</url><mirrorOf>*</mirrorOf></mirror></mirrors></settings>' > /root/.m2/settings.xml
+
+# 复制 pom.xml（利用 Docker 缓存）
+COPY pom.xml ./
+
+# 下载 Maven 依赖
+RUN mvn dependency:go-offline -B
+
+# 复制所有源代码
+COPY . .
+
+# 打包项目（跳过测试）
+RUN mvn clean package -DskipTests
+
+# ============================================================
+# 第二阶段：运行阶段
+# 使用 JRE 17 镜像运行 Spring Boot 应用
+# ============================================================
+FROM eclipse-temurin:17-jre-alpine
+
+# 设置时区
+ENV TZ=Asia/Shanghai
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
+# 设置工作目录
+WORKDIR /app
+
+# 从构建阶段复制打包好的 jar 文件
+COPY --from=build-env /app/target/*.jar app.jar
+
+# 创建数据和日志目录（用于挂载卷）
+RUN mkdir -p /app/data /app/logs
+
+# 暴露端口
+EXPOSE 8080
+
+# 设置 JVM 参数（可在运行时覆盖）
+ENV JAVA_OPTS="-Xms256m -Xmx512m"
+
+# 启动 Spring Boot 应用
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]

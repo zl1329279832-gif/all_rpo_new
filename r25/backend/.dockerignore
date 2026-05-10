@@ -1,0 +1,78 @@
+# ============================================================
+# 后端项目 .dockerignore
+# 构建 Docker 镜像时排除这些文件和目录
+# ============================================================
+
+# 构建输出
+target/
+build/
+out/
+
+# 编辑器配置
+.vscode/
+.idea/
+*.swp
+*.swo
+*.DS_Store
+*.iml
+*.ipr
+*.iws
+
+# Git 相关
+.git/
+.gitignore
+.gitattributes
+
+# Maven 本地仓库（如果在项目内）
+.mvn/wrapper/maven-wrapper.jar
+.mvn/wrapper/maven-wrapper.properties
+mvnw
+mvnw.cmd
+
+# 日志文件
+logs/
+*.log
+*.log.*
+
+# 环境变量
+.env
+.env.local
+.env.*.local
+*.properties.local
+*.yml.local
+
+# 测试相关
+target/test-classes/
+target/surefire-reports/
+target/failsafe-reports/
+*.hprof
+
+# 临时文件
+tmp/
+temp/
+*.tmp
+*.temp
+*.bak
+*.swp
+
+# 操作系统文件
+Thumbs.db
+.DS_Store
+
+# 数据库文件（H2 等）
+*.db
+*.h2.db
+*.mv.db
+*.trace.db
+data/
+
+# 文档
+# README.md
+# docs/
+
+# 其他
+.settings/
+.classpath
+.project
+.factorypath
+spring-boot.bin

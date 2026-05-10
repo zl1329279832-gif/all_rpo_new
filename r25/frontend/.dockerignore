@@ -1,0 +1,73 @@
+# ============================================================
+# 前端项目 .dockerignore
+# 构建 Docker 镜像时排除这些文件和目录
+# ============================================================
+
+# 依赖目录
+node_modules/
+
+# 构建输出
+dist/
+output/
+
+# 编辑器配置
+.vscode/
+.idea/
+*.swp
+*.swo
+*.DS_Store
+
+# Git 相关
+.git/
+.gitignore
+.gitattributes
+
+# 日志文件
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# 环境变量
+.env
+.env.local
+.env.*.local
+.env.development
+.env.production
+.env.test
+
+# 测试覆盖率
+coverage/
+.nyc_output/
+
+# 临时文件
+tmp/
+temp/
+*.tmp
+*.temp
+*.bak
+
+# 开发工具
+.husky/
+.eslintcache
+.stylelintcache
+
+# 文档（可选，构建镜像通常不需要文档）
+# README.md
+# docs/
+
+# 其他
+.pnpm-store/
+.DS_Store
+Thumbs.db
+
+# 操作系统文件
+*.db
+*.sqlite
+*.sqlite3
+
+# 缓存文件
+.cache/
+.parcel-cache/
+.vite/

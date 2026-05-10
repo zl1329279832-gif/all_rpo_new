@@ -1,0 +1,89 @@
+# ============================================================
+# Docker Compose 配置文件
+# 企业内部组件配置与接口联调平台
+# 服务：
+#   - frontend: Vue 3 + Nginx 前端服务
+#   - backend: Spring Boot 3 后端服务
+# ============================================================
+
+version: '3.8'
+
+services:
+  # ============================================================
+  # 后端服务 - Spring Boot
+  # ============================================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: component-config-backend:latest
+    container_name: component-config-backend
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      # JVM 运行参数
+      - JAVA_OPTS=-Xms256m -Xmx512m
+      # Spring Boot 配置（可选，用于覆盖 application.yml）
+      - SPRING_PROFILES_ACTIVE=prod
+      - SERVER_PORT=8080
+    volumes:
+      # 挂载 H2 数据库文件到宿主机（数据持久化）
+      - ./backend/data:/app/data
+      # 挂载日志目录
+      - ./backend/logs:/app/logs
+    healthcheck:
+      test: ["CMD", "powershell", "-Command", "try { Invoke-WebRequest -Uri http://localhost:8080/api/component/list?current=1&size=1 -UseBasicParsing | Out-Null; exit 0 } catch { exit 1 }"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - component-config-network
+
+  # ============================================================
+  # 前端服务 - Vue 3 + Nginx
+  # ============================================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    image: component-config-frontend:latest
+    container_name: component-config-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    volumes:
+      # 挂载 Nginx 日志
+      - ./frontend/logs:/var/log/nginx
+    healthcheck:
+      test: ["CMD", "powershell", "-Command", "try { Invoke-WebRequest -Uri http://localhost:80 -UseBasicParsing | Out-Null; exit 0 } catch { exit 1 }"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - component-config-network
+
+# ============================================================
+# 网络配置
+# ============================================================
+networks:
+  component-config-network:
+    driver: nat
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
+
+# ============================================================
+# 数据卷（可选）
+# ============================================================
+volumes:
+  backend-data:
+    name: component-config-backend-data
+  backend-logs:
+    name: component-config-backend-logs
+  frontend-logs:
+    name: component-config-frontend-logs

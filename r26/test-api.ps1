@@ -82,8 +82,9 @@ function Start-ServerCheck {
     
     while ($attempt -lt $maxAttempts) {
         try {
-            $checkUrl = $BASE_URL + "/api/tasks/page?pageNum=1&pageSize=5"
-            $response = Invoke-WebRequest -Uri $checkUrl -UseBasicParsing -TimeoutSec 2 -ErrorAction Stop
+            $checkUrl = "$BASE_URL/api/tasks/page"
+            $body = @{ pageNum = 1; pageSize = 5 } | ConvertTo-Json
+            $response = Invoke-WebRequest -Uri $checkUrl -Method GET -UseBasicParsing -TimeoutSec 2 -ErrorAction Stop
             if ($response.StatusCode -eq 200) {
                 Write-Host "    Server is running!" -ForegroundColor Green
                 return $true
@@ -107,7 +108,16 @@ if (-not (Start-ServerCheck)) {
 
 Show-Header "1. Task Management API Tests"
 
-$createBody1 = "{`"taskName`":`"API Test Task 1`",`"taskGroup`":`"TEST_GROUP`",`"cronExpression`":`"0/30 * * * * ?`",`"targetClass`":`"com.example.taskscheduler.task.DemoTask`",`"targetMethod`":`"execute`",`"methodParams`":`"{`"`"message`"`":`"`"API Test Param 1`"`"}",`"maxRetryCount`":3,`"remark`":`"Created by API test`"}"
+$createBody1 = @{
+    taskName = "API Test Task 1"
+    taskGroup = "TEST_GROUP"
+    cronExpression = "0/30 * * * * ?"
+    targetClass = "com.example.taskscheduler.task.DemoTask"
+    targetMethod = "execute"
+    methodParams = '{"message":"API Test Param 1"}'
+    maxRetryCount = 3
+    remark = "Created by API test"
+} | ConvertTo-Json -Compress
 
 $result = Invoke-ApiTest -Name "Create Task 1" -Method "POST" -Url "/api/tasks" -Body $createBody1
 if ($result) {
@@ -123,17 +133,28 @@ if ($result) {
     }
 }
 
-$createBody2 = "{`"taskName`":`"API Test Task 2`",`"taskGroup`":`"DATA_SYNC`",`"cronExpression`":`"0 0/5 * * * ?`",`"targetClass`":`"com.example.taskscheduler.task.DataSyncTask`",`"targetMethod`":`"syncAll`",`"maxRetryCount`":5,`"remark`":`"Data sync test task`"}"
+$createBody2 = @{
+    taskName = "API Test Task 2"
+    taskGroup = "DATA_SYNC"
+    cronExpression = "0 0/5 * * * ?"
+    targetClass = "com.example.taskscheduler.task.DataSyncTask"
+    targetMethod = "syncAll"
+    maxRetryCount = 5
+    remark = "Data sync test task"
+} | ConvertTo-Json -Compress
 
 Invoke-ApiTest -Name "Create Task 2" -Method "POST" -Url "/api/tasks" -Body $createBody2
 
 Show-Header "2. Task Query API Tests"
 
-Invoke-ApiTest -Name "Query Task List (Page 1, Size 5)" -Method "GET" -Url "/api/tasks/page?pageNum=1&pageSize=5"
+$url1 = "/api/tasks/page"
+Invoke-ApiTest -Name "Query Task List (Page 1, Size 5)" -Method "GET" -Url "$url1`?pageNum=1&pageSize=5"
 
-Invoke-ApiTest -Name "Query Task List (By Name)" -Method "GET" -Url "/api/tasks/page?taskName=API&pageNum=1&pageSize=10"
+$url2 = "/api/tasks/page"
+Invoke-ApiTest -Name "Query Task List (By Name)" -Method "GET" -Url "$url2`?taskName=API&pageNum=1&pageSize=10"
 
-Invoke-ApiTest -Name "Query Task List (By Group)" -Method "GET" -Url "/api/tasks/page?taskGroup=TEST_GROUP&pageNum=1&pageSize=10"
+$url3 = "/api/tasks/page"
+Invoke-ApiTest -Name "Query Task List (By Group)" -Method "GET" -Url "$url3`?taskGroup=TEST_GROUP&pageNum=1&pageSize=10"
 
 if ($GLOBAL_TASK_ID) {
     Invoke-ApiTest -Name "Query Single Task Details" -Method "GET" -Url "/api/tasks/$GLOBAL_TASK_ID"
@@ -164,7 +185,13 @@ if ($GLOBAL_TASK_ID) {
 Show-Header "4. Task Update API Tests"
 
 if ($GLOBAL_TASK_ID) {
-    $updateBody = "{`"id`":$GLOBAL_TASK_ID,`"taskName`":`"API Test Task 1 (Updated)`",`"cronExpression`":`"0/15 * * * * ?`",`"maxRetryCount`":5,`"remark`":`"Task updated by API`"}"
+    $updateBody = @{
+        id = $GLOBAL_TASK_ID
+        taskName = "API Test Task 1 (Updated)"
+        cronExpression = "0/15 * * * * ?"
+        maxRetryCount = 5
+        remark = "Task updated by API"
+    } | ConvertTo-Json -Compress
     
     Invoke-ApiTest -Name "Update Task Info" -Method "PUT" -Url "/api/tasks" -Body $updateBody
     
@@ -179,19 +206,28 @@ if ($GLOBAL_TASK_ID) {
 
 Show-Header "6. Task Log API Tests"
 
-Invoke-ApiTest -Name "Query Log List" -Method "GET" -Url "/api/task-logs/page?pageNum=1&pageSize=10"
+$logUrl1 = "/api/task-logs/page"
+Invoke-ApiTest -Name "Query Log List" -Method "GET" -Url "$logUrl1`?pageNum=1&pageSize=10"
 
-Invoke-ApiTest -Name "Query Log List (By Status)" -Method "GET" -Url "/api/task-logs/page?executeStatus=SUCCESS&pageNum=1&pageSize=10"
+$logUrl2 = "/api/task-logs/page"
+Invoke-ApiTest -Name "Query Log List (By Status)" -Method "GET" -Url "$logUrl2`?executeStatus=SUCCESS&pageNum=1&pageSize=10"
 
 if ($GLOBAL_TASK_ID) {
-    Invoke-ApiTest -Name "Query Latest Task Logs" -Method "GET" -Url "/api/task-logs/task/$GLOBAL_TASK_ID/latest?limit=5"
+    Invoke-ApiTest -Name "Query Latest Task Logs" -Method "GET" -Url "/api/task-logs/task/$GLOBAL_TASK_ID/latest`?limit=5"
     
     Invoke-ApiTest -Name "Get Latest Result from Redis Cache" -Method "GET" -Url "/api/task-logs/task/$GLOBAL_TASK_ID/latest-result" -IsOptional $true
 }
 
 Show-Header "7. Error Scenario Tests"
 
-$invalidCronBody = "{`"taskName`":`"Invalid Cron Test`",`"taskGroup`":`"TEST_GROUP`",`"cronExpression`":`"invalid cron`",`"targetClass`":`"com.example.taskscheduler.task.DemoTask`",`"targetMethod`":`"execute`",`"maxRetryCount`":3}"
+$invalidCronBody = @{
+    taskName = "Invalid Cron Test"
+    taskGroup = "TEST_GROUP"
+    cronExpression = "invalid cron"
+    targetClass = "com.example.taskscheduler.task.DemoTask"
+    targetMethod = "execute"
+    maxRetryCount = 3
+} | ConvertTo-Json -Compress
 
 Invoke-ApiTest -Name "Test Invalid Cron Expression" -Method "POST" -Url "/api/tasks" -Body $invalidCronBody -IsOptional $true
 
@@ -209,7 +245,8 @@ if ($GLOBAL_TASK_ID) {
     Invoke-ApiTest -Name "Delete Test Task 1" -Method "DELETE" -Url "/api/tasks/$GLOBAL_TASK_ID"
 }
 
-$secondTaskResult = Invoke-ApiTest -Name "Get Task 2 ID" -Method "GET" -Url "/api/tasks/page?taskName=API+Test+Task+2&pageNum=1&pageSize=1" -ShowResponse $false
+$secondTaskQuery = "/api/tasks/page"
+$secondTaskResult = Invoke-ApiTest -Name "Get Task 2 ID" -Method "GET" -Url "$secondTaskQuery`?taskName=API+Test+Task+2&pageNum=1&pageSize=1" -ShowResponse $false
 if ($secondTaskResult) {
     try {
         $json = $secondTaskResult | ConvertFrom-Json
