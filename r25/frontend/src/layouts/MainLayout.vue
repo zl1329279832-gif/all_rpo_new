@@ -12,6 +12,7 @@
         background-color="#304156"
         text-color="#bfcbd9"
         active-text-color="#409EFF"
+        @select="handleMenuSelect"
       >
         <el-menu-item index="/dashboard">
           <el-icon><DataAnalysis /></el-icon>
@@ -44,7 +45,11 @@
         </div>
       </el-header>
       <el-main class="main-content">
-        <router-view />
+        <router-view v-slot="{ Component }">
+          <transition name="fade" mode="out-in">
+            <component :is="Component" />
+          </transition>
+        </router-view>
       </el-main>
     </el-container>
   </el-container>
@@ -52,7 +57,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import {
   Menu,
   DataAnalysis,
@@ -64,8 +69,15 @@ import {
 } from '@element-plus/icons-vue';
 
 const route = useRoute();
+const router = useRouter();
+
 const activeMenu = computed(() => route.path);
-const pageTitle = computed(() => (route.meta.title as string) || '');
+const pageTitle = computed(() => (route.meta?.title as string) || '');
+
+const handleMenuSelect = (index: string) => {
+  console.log('菜单点击:', index);
+  router.push(index);
+};
 </script>
 
 <style scoped>
@@ -88,10 +100,27 @@ const pageTitle = computed(() => (route.meta.title as string) || '');
   font-weight: bold;
   color: #fff;
   border-bottom: 1px solid #1f2d3d;
+  cursor: pointer;
 }
 
 .sidebar-menu {
   border-right: none;
+  height: calc(100vh - 60px);
+}
+
+.sidebar-menu :deep(.el-menu-item) {
+  height: 50px;
+  line-height: 50px;
+  margin: 0;
+}
+
+.sidebar-menu :deep(.el-menu-item:hover) {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.sidebar-menu :deep(.el-menu-item.is-active) {
+  background-color: #409EFF;
+  color: #fff;
 }
 
 .header {
@@ -119,5 +148,17 @@ const pageTitle = computed(() => (route.meta.title as string) || '');
 .main-content {
   background-color: #f0f2f5;
   padding: 20px;
+  min-height: calc(100vh - 60px);
+  overflow-y: auto;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 </style>

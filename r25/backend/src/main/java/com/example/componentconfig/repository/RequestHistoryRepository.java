@@ -7,5 +7,4 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface RequestHistoryRepository extends JpaRepository<RequestHistory, String>, JpaSpecificationExecutor<RequestHistory> {
-    void deleteAll();
 }

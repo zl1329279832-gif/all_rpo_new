@@ -1,6 +1,7 @@
 package com.example.componentconfig.controller;
 
 import cn.hutool.core.date.DateUtil;
+import cn.hutool.core.util.StrUtil;
 import com.example.componentconfig.common.PageResult;
 import com.example.componentconfig.common.Result;
 import com.example.componentconfig.entity.OperationLog;
@@ -32,15 +33,20 @@ public class OperationLogController {
             @Parameter(description = "操作类型") @RequestParam(required = false) String action,
             @Parameter(description = "开始时间") @RequestParam(required = false) String startTime,
             @Parameter(description = "结束时间") @RequestParam(required = false) String endTime) {
-        
+
         LocalDateTime start = null;
         LocalDateTime end = null;
-        
-        if (startTime != null && !startTime.isEmpty()) {
-            start = DateUtil.parse(startTime).toLocalDateTime();
-        }
-        if (endTime != null && !endTime.isEmpty()) {
-            end = DateUtil.parse(endTime + " 23:59:59").toLocalDateTime();
+
+        try {
+            if (StrUtil.isNotBlank(startTime)) {
+                start = DateUtil.parse(startTime).toLocalDateTime();
+            }
+            if (StrUtil.isNotBlank(endTime)) {
+                end = DateUtil.parse(endTime + " 23:59:59").toLocalDateTime();
+            }
+        } catch (Exception e) {
+            start = null;
+            end = null;
         }
 
         PageResult<OperationLog> result = operationLogService.list(current, size, keyword, module, action, start, end);
