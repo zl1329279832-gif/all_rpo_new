@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.taskscheduler.mapper.TaskMapper">
+
+    <resultMap id="TaskResultMap" type="com.example.taskscheduler.entity.Task">
+        <id column="id" property="id"/>
+        <result column="task_name" property="taskName"/>
+        <result column="task_group" property="taskGroup"/>
+        <result column="cron_expression" property="cronExpression"/>
+        <result column="target_class" property="targetClass"/>
+        <result column="target_method" property="targetMethod"/>
+        <result column="method_params" property="methodParams"/>
+        <result column="task_status" property="taskStatus"/>
+        <result column="max_retry_count" property="maxRetryCount"/>
+        <result column="current_retry_count" property="currentRetryCount"/>
+        <result column="last_execute_time" property="lastExecuteTime"/>
+        <result column="next_execute_time" property="nextExecuteTime"/>
+        <result column="last_execute_result" property="lastExecuteResult"/>
+        <result column="last_execute_message" property="lastExecuteMessage"/>
+        <result column="remark" property="remark"/>
+        <result column="created_time" property="createdTime"/>
+        <result column="updated_time" property="updatedTime"/>
+        <result column="deleted" property="deleted"/>
+    </resultMap>
+
+    <select id="selectTaskPage" resultMap="TaskResultMap">
+        SELECT
+            id,
+            task_name,
+            task_group,
+            cron_expression,
+            target_class,
+            target_method,
+            method_params,
+            task_status,
+            max_retry_count,
+            current_retry_count,
+            last_execute_time,
+            next_execute_time,
+            last_execute_result,
+            last_execute_message,
+            remark,
+            created_time,
+            updated_time
+        FROM task
+        WHERE deleted = 0
+        <if test="query.taskName != null and query.taskName != ''">
+            AND task_name LIKE CONCAT('%', #{query.taskName}, '%')
+        </if>
+        <if test="query.taskGroup != null and query.taskGroup != ''">
+            AND task_group = #{query.taskGroup}
+        </if>
+        <if test="query.taskStatus != null">
+            AND task_status = #{query.taskStatus}
+        </if>
+        <if test="query.lastExecuteResult != null and query.lastExecuteResult != ''">
+            AND last_execute_result = #{query.lastExecuteResult}
+        </if>
+        ORDER BY created_time DESC
+    </select>
+
+    <select id="selectRunningTasks" resultMap="TaskResultMap">
+        SELECT
+            id,
+            task_name,
+            task_group,
+            cron_expression,
+            target_class,
+            target_method,
+            method_params,
+            task_status,
+            max_retry_count,
+            current_retry_count,
+            last_execute_time,
+            next_execute_time,
+            last_execute_result,
+            last_execute_message,
+            remark,
+            created_time,
+            updated_time
+        FROM task
+        WHERE deleted = 0 AND task_status = 1
+        ORDER BY created_time DESC
+    </select>
+
+</mapper>
