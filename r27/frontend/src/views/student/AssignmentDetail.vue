@@ -83,7 +83,7 @@
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getAssignmentById, getSubmission, submitAssignment, saveDraft } from '@/api/assignment'
+import { getAssignmentById, getSubmission, submitAssignment, saveDraft as saveDraftApi } from '@/api/assignment'
 import { ElMessage } from 'element-plus'
 import { ArrowLeft, Trophy, Clock } from '@element-plus/icons-vue'
 
@@ -165,7 +165,7 @@ const openFile = (url) => {
 
 const saveDraft = async () => {
   try {
-    const res = await saveDraft(assignmentId.value, {
+    const res = await saveDraftApi(assignmentId.value, {
       content: submitForm.content,
       fileUrl: submitForm.fileUrl
     })

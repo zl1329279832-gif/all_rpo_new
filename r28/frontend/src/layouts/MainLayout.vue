@@ -65,6 +65,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { alertApi } from '@/api'
+import { Monitor, DataAnalysis, Warning, Setting, User, UserFilled, SwitchButton } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const route = useRoute()

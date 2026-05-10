@@ -137,6 +137,7 @@
 <script setup>
 import { ref, reactive, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import * as echarts from 'echarts'
+import { Monitor, CircleCheck, Warning, CloseBold, Refresh } from '@element-plus/icons-vue'
 import { serverApi, alertApi, metricApi } from '@/api'
 
 const loading = ref(false)

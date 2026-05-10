@@ -132,6 +132,7 @@
 import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import * as echarts from 'echarts'
+import { ArrowLeft } from '@element-plus/icons-vue'
 import { serverApi, metricApi, alertApi } from '@/api'
 
 const route = useRoute()
