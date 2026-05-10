@@ -1,6 +1,6 @@
-import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router';
+import { createRouter, createWebHistory } from 'vue-router';
 
-const routes: RouteRecordRaw[] = [
+const routes = [
   {
     path: '/',
     redirect: '/dashboard'
@@ -55,7 +55,7 @@ const router = createRouter({
 });
 
 router.beforeEach((to, _from, next) => {
-  document.title = (to.meta.title as string) || '企业内部组件配置平台';
+  document.title = (to.meta?.title as string) || '企业内部组件配置平台';
   next();
 });
 

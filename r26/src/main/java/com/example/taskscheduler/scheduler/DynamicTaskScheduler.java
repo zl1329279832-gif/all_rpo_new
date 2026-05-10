@@ -1,7 +1,6 @@
 package com.example.taskscheduler.scheduler;
 
 import cn.hutool.cron.CronUtil;
-import cn.hutool.cron.task.TaskasHutoolTask;
 import com.example.taskscheduler.entity.Task;
 import com.example.taskscheduler.enums.TaskStatusEnum;
 import com.example.taskscheduler.enums.TriggerTypeEnum;
@@ -14,7 +13,6 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.lang.reflect.Method;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -55,7 +53,7 @@ public class DynamicTaskScheduler {
         String taskIdStr = String.valueOf(taskId);
         
         try {
-            String scheduleId = CronUtil.schedule(taskIdStr, cronExpression, (HutoolTask) () -> {
+            String scheduleId = CronUtil.schedule(taskIdStr, cronExpression, () -> {
                 try {
                     executeScheduledTask(taskId);
                 } catch (Exception e) {

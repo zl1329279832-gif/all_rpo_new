@@ -1,7 +1,7 @@
 package com.example.taskscheduler.service.impl;
 
 import cn.hutool.core.util.StrUtil;
-import cn.hutool.cron.CronUtil;
+import org.springframework.scheduling.support.CronExpression;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -292,7 +292,7 @@ public class TaskServiceImpl implements TaskService {
 
     private void validateCronExpression(String cronExpression) {
         try {
-            CronUtil.parseCron(cronExpression);
+            CronExpression.parse(cronExpression);
         } catch (Exception e) {
             throw new BusinessException(ResultCode.INVALID_CRON_EXPRESSION);
         }
