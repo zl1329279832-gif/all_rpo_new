@@ -160,7 +160,7 @@ export class CarModel {
   createFallbackCar() {
     const carGroup = new THREE.Group()
 
-    const bodyGeo = new THREE.BoxGeometry(4, 0.8, 2)
+    const bodyGeo = new THREE.BoxGeometry(2, 0.8, 4)
     const bodyMat = new THREE.MeshStandardMaterial({
       color: 0xff2200,
       metalness: 0.8,
@@ -172,20 +172,20 @@ export class CarModel {
     carGroup.add(body)
     this.bodyMaterial = bodyMat
 
-    const roofGeo = new THREE.BoxGeometry(2.2, 0.6, 1.8)
+    const roofGeo = new THREE.BoxGeometry(1.8, 0.6, 2.2)
     const roofMat = new THREE.MeshStandardMaterial({
       color: 0x1a1a2e,
       metalness: 0.5,
       roughness: 0.3
     })
     const roof = new THREE.Mesh(roofGeo, roofMat)
-    roof.position.set(-0.3, 1.3, 0)
+    roof.position.set(0, 1.3, -0.3)
     roof.castShadow = true
     carGroup.add(roof)
 
-    const doorLeftGeo = new THREE.BoxGeometry(0.05, 0.6, 1.7)
+    const doorLeftGeo = new THREE.BoxGeometry(1.7, 0.6, 0.05)
     const doorLeft = new THREE.Mesh(doorLeftGeo, bodyMat.clone())
-    doorLeft.position.set(1.95, 0.9, 0)
+    doorLeft.position.set(0, 0.9, 1.95)
     doorLeft.castShadow = true
     doorLeft.name = 'door_left'
     carGroup.add(doorLeft)
@@ -194,9 +194,9 @@ export class CarModel {
     this.doors.left.originalRotation = doorLeft.rotation.y
     this.interactiveObjects.push(doorLeft)
 
-    const doorRightGeo = new THREE.BoxGeometry(0.05, 0.6, 1.7)
+    const doorRightGeo = new THREE.BoxGeometry(1.7, 0.6, 0.05)
     const doorRight = new THREE.Mesh(doorRightGeo, bodyMat.clone())
-    doorRight.position.set(-1.95, 0.9, 0)
+    doorRight.position.set(0, 0.9, -1.95)
     doorRight.castShadow = true
     doorRight.name = 'door_right'
     carGroup.add(doorRight)
@@ -209,15 +209,15 @@ export class CarModel {
     const wheelMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a })
 
     const wheelPositions = [
-      [1.2, 0.4, 0.9],
-      [1.2, 0.4, -0.9],
-      [-1.2, 0.4, 0.9],
-      [-1.2, 0.4, -0.9]
+      [0.9, 0.4, 1.2],
+      [-0.9, 0.4, 1.2],
+      [0.9, 0.4, -1.2],
+      [-0.9, 0.4, -1.2]
     ]
 
     wheelPositions.forEach(([x, y, z]) => {
       const wheel = new THREE.Mesh(wheelGeo, wheelMat)
-      wheel.rotation.z = Math.PI / 2
+      wheel.rotation.x = Math.PI / 2
       wheel.position.set(x, y, z)
       wheel.castShadow = true
       carGroup.add(wheel)
