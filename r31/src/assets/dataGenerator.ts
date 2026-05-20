@@ -34,6 +34,15 @@ export function generateRackData(count: number = 10000): RackData[] {
     } else if (typeRand > 0.7) {
       rackType = 'storage'
     }
+
+    let alarmProgress = 0
+    if (status === 'critical') {
+      alarmProgress = 0.7 + Math.random() * 0.3
+    } else if (status === 'warning') {
+      alarmProgress = 0.3 + Math.random() * 0.4
+    } else if (status === 'offline') {
+      alarmProgress = 0.1 + Math.random() * 0.2
+    }
     
     racks.push({
       id: i,
@@ -44,7 +53,8 @@ export function generateRackData(count: number = 10000): RackData[] {
       temperature: Math.round(temperature * 10) / 10,
       power: Math.round((2 + Math.random() * 8) * 10) / 10,
       status,
-      rackType
+      rackType,
+      alarmProgress: Math.round(alarmProgress * 100) / 100
     })
   }
   

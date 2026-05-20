@@ -8,8 +8,11 @@ export class SceneManager {
   private renderer: THREE.WebGLRenderer
   private rackManager: InstancedRackManager
   private needsRender: boolean = true
+  private hasActiveAnimation: boolean = false
   private animationId: number | null = null
   private renderCallback: (() => void) | null = null
+  private startTime: number = performance.now()
+  private clock: THREE.Clock
 
   constructor(canvas: HTMLCanvasElement) {
     this.scene = new THREE.Scene()
@@ -33,6 +36,7 @@ export class SceneManager {
     this.renderer.outputColorSpace = THREE.SRGBColorSpace
 
     this.rackManager = new InstancedRackManager()
+    this.clock = new THREE.Clock()
     this.setupLighting()
     this.setupGround()
   }
@@ -80,10 +84,22 @@ export class SceneManager {
     mesh.castShadow = true
     mesh.receiveShadow = true
     this.scene.add(mesh)
+    
+    this.hasActiveAnimation = racks.some(rack => rack.alarmProgress > 0.01)
     this.requestRender()
   }
 
+  private updateAnimation(): void {
+    if (this.hasActiveAnimation) {
+      const elapsed = this.clock.getElapsedTime()
+      this.rackManager.updateAnimationTime(elapsed)
+      this.needsRender = true
+    }
+  }
+
   render(): void {
+    this.updateAnimation()
+    
     if (!this.needsRender) return
     this.renderer.render(this.scene, this.camera)
     this.needsRender = false
@@ -112,6 +128,10 @@ export class SceneManager {
 
   requestRender(): void {
     this.needsRender = true
+  }
+
+  setAnimationActive(active: boolean): void {
+    this.hasActiveAnimation = active
   }
 
   onRender(callback: () => void): void {
@@ -143,6 +163,10 @@ export class SceneManager {
 
   getRackMesh(): THREE.InstancedMesh {
     return this.rackManager.getMesh()
+  }
+
+  getElapsedTime(): number {
+    return this.clock.getElapsedTime()
   }
 
   dispose(): void {

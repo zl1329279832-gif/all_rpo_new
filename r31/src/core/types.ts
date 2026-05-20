@@ -8,6 +8,7 @@ export interface RackData {
   power: number
   status: 'normal' | 'warning' | 'critical' | 'offline'
   rackType: 'server' | 'network' | 'storage'
+  alarmProgress: number
 }
 
 export interface ScreenPosition {

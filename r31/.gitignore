@@ -53,3 +53,8 @@ Thumbs.db
 .cache/
 .temp/
 .tmp/
+
+# Shader debug logs
+*.glsl.log
+*.vert.log
+*.frag.log

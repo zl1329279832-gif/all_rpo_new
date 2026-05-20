@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import { RACK_CONFIG, TEMPERATURE_COLORS, type RackData } from './types'
+import { HeatPulseMaterial } from './HeatPulseMaterial'
 
 export class InstancedRackManager {
   private instancedMesh: THREE.InstancedMesh
@@ -9,9 +10,12 @@ export class InstancedRackManager {
   private rackIdToInstanceId: Map<number, number>
   private rackData: Map<number, RackData>
   private geometry: THREE.BoxGeometry
-  private material: THREE.MeshStandardMaterial
+  private material: HeatPulseMaterial
+  private alarmProgressAttribute: THREE.InstancedBufferAttribute | null = null
+  private maxInstances: number
 
-  constructor() {
+  constructor(maxInstances: number = RACK_CONFIG.ROWS * RACK_CONFIG.COLS) {
+    this.maxInstances = maxInstances
     this.dummy = new THREE.Object3D()
     this.colorMap = new Map()
     this.instanceIdToRackId = new Map()
@@ -24,7 +28,7 @@ export class InstancedRackManager {
       RACK_CONFIG.DEPTH
     )
     
-    this.material = new THREE.MeshStandardMaterial({
+    this.material = new HeatPulseMaterial({
       metalness: 0.3,
       roughness: 0.7,
       vertexColors: false
@@ -33,7 +37,7 @@ export class InstancedRackManager {
     this.instancedMesh = new THREE.InstancedMesh(
       this.geometry,
       this.material,
-      RACK_CONFIG.ROWS * RACK_CONFIG.COLS
+      maxInstances
     )
     
     this.instancedMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage)
@@ -43,7 +47,12 @@ export class InstancedRackManager {
   build(racks: RackData[]): THREE.InstancedMesh {
     this.clear()
     
+    const instanceCount = Math.min(racks.length, this.maxInstances)
+    const alarmProgressArray = new Float32Array(instanceCount)
+    
     racks.forEach((rack, index) => {
+      if (index >= instanceCount) return
+      
       this.rackData.set(rack.id, rack)
       this.instanceIdToRackId.set(index, rack.id)
       this.rackIdToInstanceId.set(rack.id, index)
@@ -51,17 +60,23 @@ export class InstancedRackManager {
       const color = this.getTemperatureColor(rack)
       this.colorMap.set(index, color)
       
+      alarmProgressArray[index] = rack.alarmProgress
+      
       this.dummy.position.set(rack.x, RACK_CONFIG.HEIGHT / 2, rack.z)
       this.dummy.updateMatrix()
       this.instancedMesh.setMatrixAt(index, this.dummy.matrix)
       this.instancedMesh.setColorAt(index, color)
     })
     
+    this.alarmProgressAttribute = new THREE.InstancedBufferAttribute(alarmProgressArray, 1)
+    this.alarmProgressAttribute.setUsage(THREE.DynamicDrawUsage)
+    this.geometry.setAttribute('instanceAlarmProgress', this.alarmProgressAttribute)
+    
     this.instancedMesh.instanceMatrix.needsUpdate = true
     if (this.instancedMesh.instanceColor) {
       this.instancedMesh.instanceColor.needsUpdate = true
     }
-    this.instancedMesh.count = racks.length
+    this.instancedMesh.count = instanceCount
     
     return this.instancedMesh
   }
@@ -82,6 +97,15 @@ export class InstancedRackManager {
     if (this.instancedMesh.instanceColor) {
       this.instancedMesh.instanceColor.needsUpdate = true
     }
+
+    if (data.alarmProgress !== undefined && this.alarmProgressAttribute) {
+      this.alarmProgressAttribute.setX(instanceId, rack.alarmProgress)
+      this.alarmProgressAttribute.needsUpdate = true
+    }
+  }
+
+  updateAnimationTime(time: number): void {
+    this.material.updateTime(time)
   }
 
   highlightRack(rackId: number | null): void {
@@ -139,12 +163,17 @@ export class InstancedRackManager {
     this.rackIdToInstanceId.clear()
     this.colorMap.clear()
     this.instancedMesh.count = 0
+    
+    if (this.alarmProgressAttribute) {
+      this.geometry.deleteAttribute('instanceAlarmProgress')
+      this.alarmProgressAttribute = null
+    }
   }
 
   dispose(): void {
+    this.clear()
     this.geometry.dispose()
     this.material.dispose()
     this.instancedMesh.dispose()
-    this.clear()
   }
 }
