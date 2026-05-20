@@ -183,9 +183,9 @@ export class CarModel {
     roof.castShadow = true
     carGroup.add(roof)
 
-    const doorLeftGeo = new THREE.BoxGeometry(1.7, 0.6, 0.05)
+    const doorLeftGeo = new THREE.BoxGeometry(0.05, 0.6, 1.7)
     const doorLeft = new THREE.Mesh(doorLeftGeo, bodyMat.clone())
-    doorLeft.position.set(0, 0.9, 1.95)
+    doorLeft.position.set(1.0, 0.9, 0)
     doorLeft.castShadow = true
     doorLeft.name = 'door_left'
     carGroup.add(doorLeft)
@@ -194,9 +194,9 @@ export class CarModel {
     this.doors.left.originalRotation = doorLeft.rotation.y
     this.interactiveObjects.push(doorLeft)
 
-    const doorRightGeo = new THREE.BoxGeometry(1.7, 0.6, 0.05)
+    const doorRightGeo = new THREE.BoxGeometry(0.05, 0.6, 1.7)
     const doorRight = new THREE.Mesh(doorRightGeo, bodyMat.clone())
-    doorRight.position.set(0, 0.9, -1.95)
+    doorRight.position.set(-1.0, 0.9, 0)
     doorRight.castShadow = true
     doorRight.name = 'door_right'
     carGroup.add(doorRight)
@@ -217,7 +217,7 @@ export class CarModel {
 
     wheelPositions.forEach(([x, y, z]) => {
       const wheel = new THREE.Mesh(wheelGeo, wheelMat)
-      wheel.rotation.x = Math.PI / 2
+      wheel.rotation.z = Math.PI / 2
       wheel.position.set(x, y, z)
       wheel.castShadow = true
       carGroup.add(wheel)
