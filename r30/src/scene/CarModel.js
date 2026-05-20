@@ -151,7 +151,7 @@ export class CarModel {
       if (Math.abs(diff) > 0.001) {
         door.currentAngle += diff * speed
 
-        const direction = door === this.doors.left ? 1 : -1
+        const direction = door === this.doors.left ? -1 : 1
         door.mesh.rotation.y = (door.originalRotation || 0) + door.currentAngle * direction
       }
     })
