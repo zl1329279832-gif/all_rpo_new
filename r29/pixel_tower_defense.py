@@ -256,7 +256,9 @@ class Game:
         self.hover_tile = None
         self.score = 0
 
-        self.placement_grid = [[False for _ in range(SCREEN_WIDTH // TILE_SIZE)] for _ in range(SCREEN_HEIGHT // TILE_SIZE)]
+        grid_cols = math.ceil(SCREEN_WIDTH / TILE_SIZE)
+        grid_rows = math.ceil(SCREEN_HEIGHT / TILE_SIZE)
+        self.placement_grid = [[False for _ in range(grid_cols)] for _ in range(grid_rows)]
         center_gx = (SCREEN_WIDTH // 2) // TILE_SIZE
         center_gy = (SCREEN_HEIGHT // 2) // TILE_SIZE
         for gy in range(center_gy - 2, center_gy + 2):
