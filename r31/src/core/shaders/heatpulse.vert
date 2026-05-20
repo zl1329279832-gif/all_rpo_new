@@ -1,12 +1,12 @@
 in float instanceAlarmProgress;
-out float vAlarmProgress;
-out vec3 vLocalPosition;
-out vec3 vWorldPosition;
+out float vHpAlarmProgress;
+out vec3 vHpLocalPosition;
+out vec3 vHpWorldPosition;
+out vec3 vHpWorldNormal;
 
-void main_heatpulse_vertex() {
-    vAlarmProgress = instanceAlarmProgress;
-    vLocalPosition = position;
-    
-    vec4 worldPosition = modelMatrix * instanceMatrix * vec4(position, 1.0);
-    vWorldPosition = worldPosition.xyz;
+void main_heatpulse_vertex(vec3 worldPos, vec3 worldNormal) {
+    vHpAlarmProgress = instanceAlarmProgress;
+    vHpLocalPosition = position;
+    vHpWorldPosition = worldPos;
+    vHpWorldNormal = worldNormal;
 }
