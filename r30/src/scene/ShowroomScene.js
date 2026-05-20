@@ -92,6 +92,29 @@ export class ShowroomScene {
     }
   }
 
+  startDriving() {
+    if (this.carModel) {
+      this.carModel.startDriving()
+    }
+  }
+
+  stopDriving() {
+    if (this.carModel) {
+      this.carModel.stopDriving()
+    }
+  }
+
+  toggleDriving() {
+    if (this.carModel) {
+      return this.carModel.toggleDriving()
+    }
+    return false
+  }
+
+  isDriving() {
+    return this.carModel ? this.carModel.isDriving : false
+  }
+
   dispose() {
     if (this.carModel) {
       this.carModel.dispose()

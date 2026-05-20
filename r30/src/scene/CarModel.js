@@ -17,6 +17,12 @@ export class CarModel {
     this.mouse = new THREE.Vector2()
     this.onDoorClickCallback = null
     this.boundHandleClick = this._handleClick.bind(this)
+
+    this.isDriving = false
+    this.driveAngle = 0
+    this.driveCenter = new THREE.Vector3(0, 0, 0)
+    this.driveRadius = 6
+    this.driveSpeed = 0.8
   }
 
   async load(modelPath, onProgress) {
@@ -119,6 +125,25 @@ export class CarModel {
     }
   }
 
+  startDriving() {
+    this.isDriving = true
+  }
+
+  stopDriving() {
+    this.isDriving = false
+  }
+
+  toggleDriving() {
+    this.isDriving = !this.isDriving
+    return this.isDriving
+  }
+
+  setDriveConfig(options = {}) {
+    if (options.radius !== undefined) this.driveRadius = options.radius
+    if (options.speed !== undefined) this.driveSpeed = options.speed
+    if (options.center !== undefined) this.driveCenter.copy(options.center)
+  }
+
   setBodyColor(color) {
     if (this.bodyMaterial) {
       if (Array.isArray(this.bodyMaterial)) {
@@ -155,6 +180,17 @@ export class CarModel {
         door.mesh.rotation.y = (door.originalRotation || 0) + door.currentAngle * direction
       }
     })
+
+    if (this.isDriving && this.model) {
+      this.driveAngle += this.driveSpeed * delta
+
+      const x = this.driveCenter.x + Math.cos(this.driveAngle) * this.driveRadius
+      const z = this.driveCenter.z + Math.sin(this.driveAngle) * this.driveRadius
+
+      this.model.position.x = x
+      this.model.position.z = z
+      this.model.rotation.y = -this.driveAngle + Math.PI / 2
+    }
   }
 
   createFallbackCar() {

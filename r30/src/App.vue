@@ -58,6 +58,19 @@
       </div>
 
       <div class="panel-section">
+        <h3 class="panel-title">车辆控制</h3>
+        <div class="view-controls">
+          <button
+            class="control-btn"
+            :class="{ active: isDriving }"
+            @click="toggleDriving"
+          >
+            {{ isDriving ? '停止车辆' : '启动车辆' }}
+          </button>
+        </div>
+      </div>
+
+      <div class="panel-section">
         <h3 class="panel-title">视角预设</h3>
         <div class="view-controls">
           <button class="control-btn" @click="resetCamera">
@@ -83,6 +96,7 @@ const loadProgress = ref(0)
 const currentColor = ref('#ff2200')
 const leftDoorOpen = ref(false)
 const rightDoorOpen = ref(false)
+const isDriving = ref(false)
 
 let showroom = null
 
@@ -122,6 +136,12 @@ const resetCamera = () => {
     camera.position.set(5, 2.5, 8)
     controls.target.set(0, 0.8, 0)
     controls.update()
+  }
+}
+
+const toggleDriving = () => {
+  if (showroom) {
+    isDriving.value = showroom.toggleDriving()
   }
 }
 
