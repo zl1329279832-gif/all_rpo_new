@@ -1,0 +1,137 @@
+# ==================== Python 编译缓存 ====================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+pip-wheel-metadata/
+
+# ==================== 虚拟环境 ====================
+venv/
+env/
+ENV/
+.venv/
+.virtualenv/
+
+# ==================== IDE 配置与临时文件 ====================
+# VS Code
+.vscode/
+.vscode-test/
+*.code-workspace
+
+# JetBrains (PyCharm, IntelliJ, etc.)
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Vim
+*.swp
+*.swo
+*~
+
+# Sublime Text
+*.sublime-workspace
+
+# Eclipse
+.project
+.pydevproject
+.settings/
+
+# ==================== 系统文件 ====================
+.DS_Store
+Thumbs.db
+desktop.ini
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+*.lnk
+
+# ==================== 日志文件 ====================
+*.log
+logs/
+*.bak
+*.tmp
+*.temp
+
+# ==================== 测试与覆盖率 ====================
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# ==================== Jupyter Notebook ====================
+.ipynb_checkpoints
+
+# ==================== 多媒体素材源文件 (大型文件) ====================
+# 图像源文件
+*.psd
+*.psb
+*.ai
+*.cdr
+*.xcf
+*.kra
+
+# 未经压缩的音频
+*.wav
+*.aiff
+*.flac
+*.alaw
+*.mulaw
+*.raw
+
+# 视频源文件
+*.mp4
+*.avi
+*.mov
+*.wmv
+*.flv
+*.mkv
+*.webm
+*.m4v
+*.mpeg
+*.mpg
+
+# 3D 模型源文件
+*.blend
+*.fbx
+*.obj
+*.ma
+*.max
+*.3ds
+
+# 大型压缩包
+*.zip
+*.rar
+*.7z
+*.tar
+*.tar.gz
+*.tar.bz2
+
+# ==================== 游戏构建产物 ====================
+*.exe
+*.dll
+*.so
+*.dylib
+*.app/
