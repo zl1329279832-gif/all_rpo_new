@@ -1,0 +1,68 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Dependencies
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Build outputs
+*.tsbuildinfo
+
+# 3D Model files - 防止大体积模型文件进入 Git 仓库
+*.glb
+*.gltf
+*.fbx
+*.obj
+*.3ds
+*.dae
+*.stl
+*.ply
+
+# HDR Environment maps - HDR 全景贴图环境文件
+*.hdr
+*.hdri
+*.exr
+*.tga
+*.hdr.png
+
+# Texture files - 大型纹理贴图
+textures/*.png
+textures/*.jpg
+textures/*.jpeg
+textures/*.bmp
+public/models/**
+public/textures/**
+public/hdr/**
+
+# Cache files
+.cache
+.parcel-cache
+.eslintcache
+.stylelintcache
+
+# OS files
+Thumbs.db
