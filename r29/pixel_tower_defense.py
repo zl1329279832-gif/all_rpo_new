@@ -227,14 +227,36 @@ class Tower(Entity):
         pygame.draw.line(surface, (100, 100, 120), (self.x, self.y), (end_x, end_y), 1)
 
 
+def get_chinese_font(size: int) -> pygame.font.Font:
+    font_candidates = [
+        "microsoftyahei",
+        "microsoftyaheiui",
+        "simhei",
+        "simsun",
+        "kaiti",
+        "mingsun",
+        "consolas",
+        "arial",
+    ]
+    for font_name in font_candidates:
+        try:
+            font = pygame.font.SysFont(font_name, size)
+            test_surface = font.render("测试", True, (255, 255, 255))
+            if test_surface.get_width() > 0:
+                return font
+        except Exception:
+            continue
+    return pygame.font.Font(None, size)
+
+
 class Game:
     def __init__(self):
         pygame.init()
         pygame.display.set_caption("像素塔防 - Pixel Tower Defense")
         self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
         self.clock = pygame.time.Clock()
-        self.font_small = pygame.font.SysFont("consolas", 16)
-        self.font_large = pygame.font.SysFont("consolas", 28)
+        self.font_small = get_chinese_font(16)
+        self.font_large = get_chinese_font(28)
 
         self.base = Base(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2)
         self.towers: list[Tower] = []
