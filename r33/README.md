@@ -1,0 +1,128 @@
+# 本地笔记管理器
+
+基于 Python 和 PySide6 开发的桌面笔记管理应用，数据存储在 SQLite 数据库中。
+
+## 项目结构
+
+```
+r33/
+├── main.py              # 程序入口
+├── main_window.py       # 界面层 - PySide6 GUI 实现
+├── note_service.py      # 业务逻辑层 - 笔记业务处理
+├── db.py                # 数据访问层 - SQLite 数据库操作
+├── requirements.txt     # 依赖包列表
+├── .gitignore          # Git 忽略配置
+└── README.md           # 项目说明文档
+```
+
+## 功能特性
+
+- 笔记列表展示（按更新时间倒序）
+- 搜索功能（支持标题和内容搜索）
+- 新建笔记
+- 编辑保存笔记
+- 删除笔记（带确认提示）
+- 空标题校验
+- 搜索无结果提示
+- 创建时间和更新时间展示
+
+## 数据库设计
+
+SQLite 数据库 `notes.db` 包含 `notes` 表：
+
+| 字段       | 类型    | 说明         |
+|------------|---------|--------------|
+| id         | INTEGER | 主键，自增   |
+| title      | TEXT    | 笔记标题     |
+| content    | TEXT    | 笔记内容     |
+| created_at | TEXT    | 创建时间     |
+| updated_at | TEXT    | 更新时间     |
+
+## 环境要求
+
+- Python 3.9+
+- Windows 10/11
+
+## 依赖安装
+
+1. 创建虚拟环境（推荐）：
+
+```bash
+python -m venv venv
+```
+
+2. 激活虚拟环境：
+
+Windows PowerShell:
+```bash
+venv\Scripts\Activate.ps1
+```
+
+Windows CMD:
+```bash
+venv\Scripts\activate.bat
+```
+
+3. 安装依赖：
+
+```bash
+pip install -r requirements.txt
+```
+
+## 运行应用
+
+```bash
+python main.py
+```
+
+## 打包为 Windows 可执行文件
+
+使用 PyInstaller 打包：
+
+### 方法一：打包为单个可执行文件（推荐）
+
+```bash
+pyinstaller --onefile --windowed --name "笔记管理器" --icon=NONE main.py
+```
+
+参数说明：
+- `--onefile`: 打包为单个 exe 文件
+- `--windowed`: 不显示命令行窗口
+- `--name "笔记管理器"`: 指定可执行文件名称
+- `--icon=NONE`: 不使用自定义图标（如需自定义图标，替换为图标路径）
+
+### 方法二：打包为文件夹形式
+
+```bash
+pyinstaller --windowed --name "笔记管理器" --icon=NONE main.py
+```
+
+### 打包完成后
+
+可执行文件位于 `dist/` 目录下。
+
+### 打包注意事项
+
+1. 首次打包较慢，请耐心等待
+2. 杀毒软件可能误报，需添加信任
+3. 如需包含数据库文件到打包目录，可在打包后手动复制 `notes.db` 到 `dist/` 目录
+4. 数据库文件会在程序首次运行时自动创建
+
+## 使用说明
+
+1. **新建笔记**：点击左侧「新建笔记」按钮，右侧输入标题和内容后点击「保存」
+2. **查看笔记**：点击左侧列表中的笔记标题，右侧显示笔记详情
+3. **编辑笔记**：在右侧编辑区域修改内容后点击「保存」
+4. **删除笔记**：选中笔记后点击「删除」按钮，确认后删除
+5. **搜索笔记**：在搜索框输入关键词，实时过滤笔记列表
+
+## 常见问题
+
+**Q: 数据库文件在哪里？**
+A: 数据库文件 `notes.db` 会自动创建在程序运行目录下。
+
+**Q: 如何备份数据？**
+A: 直接复制 `notes.db` 文件即可备份所有笔记数据。
+
+**Q: 打包后的 exe 运行很慢？**
+A: 首次启动 PyInstaller 打包的程序会稍慢，属于正常现象。
