@@ -1,5 +1,6 @@
 from typing import Optional, List
 import sqlite3
+import re
 from db import Database
 
 
@@ -8,11 +9,23 @@ class NoteService:
         self.db = Database(db_path)
         self.current_note_id: Optional[int] = None
 
+    def _html_to_plain_text(self, html: str) -> str:
+        text = re.sub(r'<[^<]+?>', '', html)
+        text = text.replace('&nbsp;', ' ')
+        text = text.replace('&amp;', '&')
+        text = text.replace('&lt;', '<')
+        text = text.replace('&gt;', '>')
+        text = text.replace('&quot;', '"')
+        text = text.replace('&#39;', "'")
+        text = re.sub(r'\s+', ' ', text)
+        return text.strip()
+
     def create_note(self, title: str, content: str) -> int:
         title = title.strip()
         if not title:
             raise ValueError("标题不能为空")
-        return self.db.create_note(title, content.strip())
+        plain_content = self._html_to_plain_text(content)
+        return self.db.create_note(title, content.strip(), plain_content)
 
     def get_note(self, note_id: int) -> Optional[sqlite3.Row]:
         return self.db.get_note(note_id)
@@ -30,7 +43,8 @@ class NoteService:
         title = title.strip()
         if not title:
             raise ValueError("标题不能为空")
-        return self.db.update_note(note_id, title, content.strip())
+        plain_content = self._html_to_plain_text(content)
+        return self.db.update_note(note_id, title, content.strip(), plain_content)
 
     def delete_note(self, note_id: int) -> bool:
         return self.db.delete_note(note_id)
@@ -40,11 +54,13 @@ class NoteService:
         if not title:
             raise ValueError("标题不能为空")
 
+        plain_content = self._html_to_plain_text(content)
+
         if self.current_note_id is None:
-            self.current_note_id = self.create_note(title, content)
+            self.current_note_id = self.db.create_note(title, content.strip(), plain_content)
             return self.current_note_id
         else:
-            self.update_note(self.current_note_id, title, content)
+            self.db.update_note(self.current_note_id, title, content.strip(), plain_content)
             return self.current_note_id
 
     def load_note(self, note_id: int) -> Optional[sqlite3.Row]:

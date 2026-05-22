@@ -75,18 +75,36 @@ export class Enemy extends Entity {
       const newX = this.x + moveX
       const newY = this.y + moveY
 
-      if (map.isWalkable(newX, this.y) && map.isWalkable(newX + this.width, this.y) &&
-          map.isWalkable(newX, this.y + this.height) && map.isWalkable(newX + this.width, this.y + this.height)) {
+      if (this.canMoveTo(newX, this.y, map)) {
         this.x = newX
       }
-      if (map.isWalkable(this.x, newY) && map.isWalkable(this.x + this.width, newY) &&
-          map.isWalkable(this.x, newY + this.height) && map.isWalkable(this.x + this.width, newY + this.height)) {
+      if (this.canMoveTo(this.x, newY, map)) {
         this.y = newY
       }
 
       if (dx < 0) this.facing = 'left'
       else this.facing = 'right'
     }
+  }
+
+  private canMoveTo(x: number, y: number, map: { isWalkable: (x: number, y: number) => boolean }): boolean {
+    const checkPoints = [
+      { x: x + 2, y: y + 2 },
+      { x: x + this.width - 2, y: y + 2 },
+      { x: x + 2, y: y + this.height - 2 },
+      { x: x + this.width - 2, y: y + this.height - 2 },
+      { x: x + this.width / 2, y: y + 2 },
+      { x: x + this.width / 2, y: y + this.height - 2 },
+      { x: x + 2, y: y + this.height / 2 },
+      { x: x + this.width - 2, y: y + this.height / 2 },
+    ]
+
+    for (const point of checkPoints) {
+      if (!map.isWalkable(point.x, point.y)) {
+        return false
+      }
+    }
+    return true
   }
 
   private patrol(dt: number, map: { isWalkable: (x: number, y: number) => boolean }): void {
@@ -109,10 +127,10 @@ export class Enemy extends Entity {
       const moveX = (dx / dist) * speed
       const moveY = (dy / dist) * speed
 
-      if (map.isWalkable(this.x + moveX, this.y)) {
+      if (this.canMoveTo(this.x + moveX, this.y, map)) {
         this.x += moveX
       }
-      if (map.isWalkable(this.x, this.y + moveY)) {
+      if (this.canMoveTo(this.x, this.y + moveY, map)) {
         this.y += moveY
       }
     }

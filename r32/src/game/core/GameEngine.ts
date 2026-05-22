@@ -121,11 +121,11 @@ export class GameEngine {
   private update(dt: number): void {
     this.player.update(dt, { isWalkable: (x, y) => this.map.isWalkable(x, y) })
 
-    if (inputManager.isKeyPressed(' ') || inputManager.isKeyPressed('j')) {
-      this.combatSystem.playerAttack(this.player, this.enemies)
+    if (inputManager.isKeyPressed(' ') || inputManager.isKeyPressed('j') || inputManager.isKeyPressed('1')) {
+      if (this.player.useSkill('slash')) {
+        this.combatSystem.playerAttack(this.player, this.enemies)
+      }
     }
-
-    if (inputManager.isKeyPressed('1')) this.player.useSkill('slash')
     if (inputManager.isKeyPressed('2')) {
       if (this.player.useSkill('fireball')) {
         this.createFireballProjectile()
