@@ -10,7 +10,7 @@ from datetime import datetime
 from .logger import get_logger
 from .models import (
     DocumentInfo, DocumentMetadata, FileType,
-    ArchiveStrategy, ConflictStrategy,
+    ArchiveStrategy, ConflictStrategy, DuplicateStrategy,
 )
 
 logger = get_logger()
@@ -36,6 +36,16 @@ class ProcessingRules:
     preserve_original: bool = True
     allowed_file_types: List[FileType] = None
     custom_metadata: Dict[str, str] = None
+    enable_deduplication: bool = False
+    duplicate_strategy: DuplicateStrategy = DuplicateStrategy.SKIP
+    duplicate_area: Optional[Path] = None
+    use_fast_hash: bool = False
+    enable_ocr: bool = False
+    ocr_languages: str = "chi_sim+eng"
+    ocr_max_pages: int = 10
+    ocr_dpi: int = 300
+    enable_persistence: bool = True
+    db_path: Optional[Path] = None
 
     def __post_init__(self) -> None:
         if self.allowed_file_types is None:
@@ -44,6 +54,8 @@ class ProcessingRules:
             ]
         if self.custom_metadata is None:
             self.custom_metadata = {}
+        if self.duplicate_area is None:
+            self.duplicate_area = Path.cwd() / "_duplicates"
 
 
 class MetadataExtractor:
@@ -293,6 +305,14 @@ class RulesLoader:
             except ValueError:
                 logger.warning(f"忽略未知的文件类型: {t}")
 
+        deduplication = config.get("deduplication", {})
+        ocr = config.get("ocr", {})
+        persistence = config.get("persistence", {})
+
+        duplicate_strategy = DuplicateStrategy(
+            deduplication.get("strategy", "skip").lower()
+        )
+
         return ProcessingRules(
             rename_pattern=rename.get("pattern", "{project_code}_{date}_{original_name}"),
             date_format=rename.get("date_format", "%Y%m%d"),
@@ -305,6 +325,16 @@ class RulesLoader:
             preserve_original=general.get("preserve_original", True),
             allowed_file_types=allowed_types,
             custom_metadata=general.get("custom_metadata", {}),
+            enable_deduplication=deduplication.get("enabled", False),
+            duplicate_strategy=duplicate_strategy,
+            duplicate_area=Path(deduplication.get("duplicate_area")) if deduplication.get("duplicate_area") else None,
+            use_fast_hash=deduplication.get("use_fast_hash", False),
+            enable_ocr=ocr.get("enabled", False),
+            ocr_languages=ocr.get("languages", "chi_sim+eng"),
+            ocr_max_pages=ocr.get("max_pages", 10),
+            ocr_dpi=ocr.get("dpi", 300),
+            enable_persistence=persistence.get("enabled", True),
+            db_path=Path(persistence.get("db_path")) if persistence.get("db_path") else None,
         )
 
     @staticmethod

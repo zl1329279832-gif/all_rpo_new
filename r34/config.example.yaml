@@ -54,3 +54,69 @@ extraction:
 
   # 无法提取项目编号时使用的默认值
   project_code_default: "DEFAULT"
+
+  # 合同编号提取正则表达式
+  contract_code_pattern: "(?:HT|合同|Contract)[-_]?([A-Za-z0-9-]{6,})"
+
+  # 日期提取正则表达式（支持多种格式）
+  date_patterns:
+    - "\\d{4}[-_]\\d{2}[-_]\\d{2}"
+    - "\\d{4}\\d{2}\\d{2}"
+    - "\\d{4}年\\d{1,2}月\\d{1,2}日"
+
+# === 新增：重复文件检测配置 ===
+deduplication:
+  # 是否启用重复文件检测
+  enabled: true
+
+  # 重复文件处理策略:
+  # skip - 跳过重复文件，保留第一个处理的文件
+  # keep_copy - 保留副本，重命名添加 _copy1, _copy2 后缀
+  # move_to_duplicate_area - 移动到重复文件专区
+  strategy: "skip"
+
+  # 重复文件专区目录（strategy=move_to_duplicate_area 时使用）
+  duplicate_area_dir: "./_duplicates"
+
+  # 使用快速哈希（仅计算文件头尾 + 大小，适合大文件）
+  fast_hash: false
+
+  # 快速哈希采样大小（字节）
+  fast_hash_sample_size: 1048576
+
+# === 新增：OCR 文本提取配置 ===
+ocr:
+  # 是否启用 OCR（需要安装 pytesseract 和 pdf2image）
+  enabled: false
+
+  # OCR 语言（支持多语言，如 chi_sim+eng）
+  languages: "chi_sim+eng"
+
+  # OCR 识别置信度阈值（0-100）
+  confidence_threshold: 60
+
+  # 扫描版 PDF 转图片的 DPI
+  pdf_dpi: 300
+
+  # OCR 临时文件目录
+  temp_dir: "./ocr_temp"
+
+  # 是否缓存 OCR 结果
+  cache_results: true
+
+# === 新增：持久化和批次追踪配置 ===
+persistence:
+  # 是否启用 SQLite 持久化
+  enabled: true
+
+  # 数据库文件路径
+  db_path: "./.doc_processor/index.db"
+
+  # 是否在批次完成后自动生成 manifest
+  auto_manifest: true
+
+  # manifest 输出目录
+  manifest_dir: "./manifests"
+
+  # 是否导出完整处理历史
+  export_history_on_completion: false

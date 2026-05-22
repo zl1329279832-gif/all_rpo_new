@@ -75,3 +75,52 @@ htmlcov/
 coverage.xml
 *.cover
 .hypothesis/
+
+# === 文档治理工具新增忽略规则 ===
+
+# SQLite 本地索引库
+.doc_processor/
+*.db
+*.sqlite
+*.sqlite3
+
+# OCR 临时文件
+ocr_temp/
+.ocr_cache/
+*.ocr.tmp
+*_ocr_temp/
+poppler_temp/
+
+# 批次清单和操作日志
+manifests/
+*.manifest.json
+*.manifest.sig
+
+# 重复文件区
+_duplicates/
+duplicate_files/
+
+# 恢复测试目录
+test_recovery/
+recovery_test/
+rollback_test/
+
+# 导出报告
+exports/
+*.export.json
+*.export.csv
+
+# 回滚报告
+reports/rollback/
+*_rollback_report.*
+
+# 缓存
+.cache/
+.file_cache/
+.hash_cache/
+
+# 本地配置覆盖
+config.override.yaml
+config.override.yml
+.secrets.yaml
+*.secret.*
