@@ -83,14 +83,15 @@ class MainWindow(QMainWindow):
         content_label.setFont(title_font)
         layout.addWidget(content_label)
 
-        toolbar = self._create_format_toolbar()
-        layout.addWidget(toolbar)
-
         self.content_edit = QTextEdit()
         self.content_edit.setPlaceholderText("请输入笔记内容，支持富文本格式...")
         self.content_edit.setFont(QFont("Arial", 11))
         self.content_edit.setAcceptRichText(True)
         self.content_edit.currentCharFormatChanged.connect(self._update_format_actions)
+
+        toolbar = self._create_format_toolbar()
+        layout.addWidget(toolbar)
+
         layout.addWidget(self.content_edit, 1)
 
         btn_layout = QHBoxLayout()
