@@ -7,7 +7,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import (
     QFont, QAction, QIcon, QTextCursor, QTextDocument,
-    QColor, QTextCharFormat, QTextListFormat
+    QColor, QTextCharFormat, QTextListFormat, QPixmap, QPainter
 )
 from note_service import NoteService
 
@@ -185,7 +185,7 @@ class MainWindow(QMainWindow):
 
         toolbar.addSeparator()
 
-        self.color_action = QAction("A", self)
+        self.color_action = QAction("字色", self)
         self.color_action.triggered.connect(self._change_text_color)
         self._update_color_icon(QColor("#000000"))
         toolbar.addAction(self.color_action)
@@ -237,9 +237,14 @@ class MainWindow(QMainWindow):
         return toolbar
 
     def _update_color_icon(self, color: QColor) -> None:
-        pixmap = self.content_edit.style().standardPixmap(
-            self.content_edit.style().SP_FileIcon
-        )
+        pixmap = QPixmap(16, 16)
+        pixmap.fill(Qt.transparent)
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.Antialiasing)
+        painter.setBrush(color)
+        painter.setPen(QColor("#333333"))
+        painter.drawRect(1, 1, 14, 14)
+        painter.end()
         icon = QIcon(pixmap)
         self.color_action.setIcon(icon)
         self.color_action.setToolTip(f"文字颜色: {color.name()}")
