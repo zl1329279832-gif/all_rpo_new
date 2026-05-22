@@ -1,0 +1,47 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "doc-auto-processor"
+version = "1.0.0"
+description = "企业文档批处理自动化工具 - 扫描、识别、重命名、归档企业文档"
+readme = "README.md"
+requires-python = ">=3.9"
+license = {text = "MIT"}
+authors = [{name = "Doc Auto Processor Team"}]
+keywords = ["document", "automation", "batch-processing", "enterprise", "archive"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Topic :: Office/Business",
+    "Topic :: System :: Filesystems",
+    "Topic :: Utilities",
+]
+dependencies = [
+    "PyYAML>=6.0",
+    "python-docx>=1.1.0",
+    "openpyxl>=3.1.2",
+    "PyPDF2>=3.0.1",
+    "Pillow>=10.0.0",
+    "send2trash>=1.8.2",
+    "click>=8.1.7",
+    "colorama>=0.4.6",
+    "tqdm>=4.66.1",
+]
+
+[project.scripts]
+doc-processor = "doc_auto_processor.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/your-org/doc-auto-processor"
+Issues = "https://github.com/your-org/doc-auto-processor/issues"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["doc_auto_processor*"]
