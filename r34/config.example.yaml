@@ -1,0 +1,56 @@
+# 企业文档批处理自动化工具 - 规则配置示例
+# 复制此文件为 config.yaml 或 config.local.yaml 后进行自定义
+
+general:
+  # 是否保留原始文件（复制而非移动），默认 true
+  preserve_original: true
+
+  # 允许处理的文件类型
+  allowed_file_types:
+    - pdf
+    - word
+    - excel
+    - image
+
+  # 自定义元数据，可在重命名模板中使用
+  custom_metadata:
+    department: "IT"
+    company: "ExampleCorp"
+
+rename:
+  # 重命名模板，可用变量:
+  # {project_code} - 项目编号（从文件名或目录提取）
+  # {date} - 文件创建日期
+  # {original_name} - 原始文件名（不含扩展名）
+  # {title} - 文档标题（从元数据提取）
+  # {file_type} - 文件类型（pdf/word/excel/image）
+  # {timestamp} - 处理时间戳
+  pattern: "{project_code}_{date}_{original_name}"
+
+  # 日期格式，用于文件名
+  date_format: "%Y%m%d"
+
+archive:
+  # 归档策略: date（按日期）, project（按项目）, type（按文件类型）, none（不归档）
+  strategy: "date"
+
+  # 归档目标目录
+  target_dir: "./archive"
+
+  # 归档日期目录格式（strategy=date 时使用）
+  date_format: "%Y-%m"
+
+conflict:
+  # 重名冲突处理策略:
+  # skip - 跳过已存在的文件
+  # rename - 自动添加后缀重命名 (file_1.pdf, file_2.pdf, ...)
+  # overwrite - 覆盖已存在的文件（危险！）
+  strategy: "rename"
+
+extraction:
+  # 从文件名提取项目编号的正则表达式
+  # 示例: "PRJ-(\d+)" 匹配 "PRJ-1234_report.pdf" 中的 "1234"
+  project_code_pattern: "(?:PRJ|PROJ|项目)[-_]?([A-Za-z0-9]{4,})"
+
+  # 无法提取项目编号时使用的默认值
+  project_code_default: "DEFAULT"
