@@ -1,3 +1,4 @@
+import streamlit as st
 import pandas as pd
 import numpy as np
 from typing import Dict, List, Tuple, Optional
@@ -167,6 +168,7 @@ def _clean_ingredient_costs(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+@st.cache_data(ttl=3600, show_spinner="正在合并数据...")
 def merge_orders_with_details(data_dict: Dict[str, pd.DataFrame]) -> Optional[pd.DataFrame]:
     if "orders" not in data_dict or "order_items" not in data_dict:
         return None
@@ -282,3 +284,114 @@ def get_store_list(df: pd.DataFrame) -> List[Dict[str, str]]:
         {"store_id": row["store_id"], "store_name": row["store_name"]}
         for _, row in stores.iterrows()
     ]
+
+
+def get_filter_options(df: pd.DataFrame, cleaned_data: Dict[str, pd.DataFrame]) -> Dict[str, List[str]]:
+    options = {}
+    
+    if "city" in df.columns:
+        options["cities"] = sorted([x for x in df["city"].dropna().unique().tolist() if x])
+    elif "stores" in cleaned_data and "city" in cleaned_data["stores"].columns:
+        options["cities"] = sorted([x for x in cleaned_data["stores"]["city"].dropna().unique().tolist() if x])
+    else:
+        options["cities"] = []
+    
+    if "area" in df.columns:
+        options["areas"] = sorted([x for x in df["area"].dropna().unique().tolist() if x])
+    elif "stores" in cleaned_data and "area" in cleaned_data["stores"].columns:
+        options["areas"] = sorted([x for x in cleaned_data["stores"]["area"].dropna().unique().tolist() if x])
+    else:
+        options["areas"] = []
+    
+    if "store_id" in df.columns and "store_name" in df.columns:
+        stores = df[["store_id", "store_name"]].drop_duplicates().dropna()
+        options["stores"] = [
+            {"store_id": row["store_id"], "store_name": row["store_name"]}
+            for _, row in stores.iterrows()
+        ]
+    else:
+        options["stores"] = []
+    
+    if "level" in df.columns:
+        options["member_levels"] = sorted([x for x in df["level"].dropna().unique().tolist() if x])
+    elif "member_level" in df.columns:
+        options["member_levels"] = sorted([x for x in df["member_level"].dropna().unique().tolist() if x])
+    else:
+        options["member_levels"] = []
+    
+    if "category" in df.columns:
+        options["categories"] = sorted([x for x in df["category"].dropna().unique().tolist() if x])
+    else:
+        options["categories"] = []
+    
+    if "promotion_id" in df.columns and "promotion_name" in df.columns:
+        promotions = df[["promotion_id", "promotion_name"]].drop_duplicates().dropna()
+        options["promotions"] = [
+            {"promotion_id": row["promotion_id"], "promotion_name": row["promotion_name"]}
+            for _, row in promotions.iterrows()
+        ]
+    elif "promotions" in cleaned_data and "promotion_id" in cleaned_data["promotions"].columns:
+        promo_df = cleaned_data["promotions"]
+        promo_cols = ["promotion_id"]
+        if "promotion_name" in promo_df.columns:
+            promo_cols.append("promotion_name")
+        promotions = promo_df[promo_cols].drop_duplicates().dropna()
+        options["promotions"] = [
+            {
+                "promotion_id": row["promotion_id"],
+                "promotion_name": row.get("promotion_name", row["promotion_id"]),
+            }
+            for _, row in promotions.iterrows()
+        ]
+    else:
+        options["promotions"] = []
+    
+    return options
+
+
+def filter_by_multiple_dimensions(
+    df: pd.DataFrame,
+    date_column: str = "order_time",
+    start_date: Optional[datetime] = None,
+    end_date: Optional[datetime] = None,
+    store_ids: Optional[List[str]] = None,
+    cities: Optional[List[str]] = None,
+    areas: Optional[List[str]] = None,
+    member_levels: Optional[List[str]] = None,
+    categories: Optional[List[str]] = None,
+    promotion_ids: Optional[List[str]] = None,
+) -> pd.DataFrame:
+    if df.empty:
+        return df
+    
+    filtered = df.copy()
+    
+    if start_date and end_date and date_column in filtered.columns:
+        filtered[date_column] = pd.to_datetime(filtered[date_column], errors="coerce")
+        filtered = filtered[
+            (filtered[date_column] >= pd.Timestamp(start_date))
+            & (filtered[date_column] <= pd.Timestamp(end_date) + timedelta(days=1))
+        ]
+    
+    if cities and "city" in filtered.columns:
+        filtered = filtered[filtered["city"].isin(cities)]
+    
+    if areas and "area" in filtered.columns:
+        filtered = filtered[filtered["area"].isin(areas)]
+    
+    if store_ids and "store_id" in filtered.columns:
+        filtered = filtered[filtered["store_id"].isin(store_ids)]
+    
+    if member_levels:
+        if "level" in filtered.columns:
+            filtered = filtered[filtered["level"].isin(member_levels)]
+        elif "member_level" in filtered.columns:
+            filtered = filtered[filtered["member_level"].isin(member_levels)]
+    
+    if categories and "category" in filtered.columns:
+        filtered = filtered[filtered["category"].isin(categories)]
+    
+    if promotion_ids and "promotion_id" in filtered.columns:
+        filtered = filtered[filtered["promotion_id"].isin(promotion_ids)]
+    
+    return filtered

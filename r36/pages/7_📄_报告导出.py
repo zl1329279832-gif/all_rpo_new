@@ -40,12 +40,18 @@ if not st.session_state.analysis_results:
                 calculate_hourly_trend,
                 calculate_dish_combinations,
                 detect_anomalous_stores,
+                validate_all_datasets,
+                detect_all_alerts,
             )
             
             with st.spinner("正在生成完整分析报告..."):
                 merged_df = st.session_state.merged_df
                 cleaned_data = st.session_state.cleaned_data
+                data_dict = st.session_state.data_dict
                 refunds_df = cleaned_data.get("refunds", pd.DataFrame())
+                
+                st.session_state.validation_report = validate_all_datasets(data_dict)
+                st.session_state.alert_report = detect_all_alerts(merged_df, cleaned_data)
                 
                 st.session_state.analysis_results = {
                     "date_range": st.session_state.get("date_range", (
@@ -126,6 +132,10 @@ with col2:
     report_name = st.text_input("报告名称", value=f"餐饮数据分析报告_{datetime.now().strftime('%Y%m%d')}")
     
     include_date = st.checkbox("在文件名中包含日期", value=True)
+    
+    st.markdown("#### 📑 报告内容")
+    include_quality = st.checkbox("包含数据质量报告", value=True)
+    include_alerts = st.checkbox("包含预警信息", value=True)
     
     if include_date:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -215,8 +225,15 @@ with col2:
         
         with st.spinner("正在生成报告..."):
             try:
+                validation_report = st.session_state.get("validation_report") if include_quality else None
+                alert_report = st.session_state.get("alert_report") if include_alerts else None
+                
                 if report_format == "Excel (.xlsx)":
-                    excel_bytes = generate_excel_report(export_data)
+                    excel_bytes = generate_excel_report(
+                        export_data,
+                        validation_report=validation_report,
+                        alert_report=alert_report,
+                    )
                     
                     st.success("✅ Excel 报告生成成功！")
                     
@@ -229,7 +246,11 @@ with col2:
                         type="secondary",
                     )
                 else:
-                    html_content = generate_html_report(export_data)
+                    html_content = generate_html_report(
+                        export_data,
+                        validation_report=validation_report,
+                        alert_report=alert_report,
+                    )
                     
                     st.success("✅ HTML 报告生成成功！")
                     

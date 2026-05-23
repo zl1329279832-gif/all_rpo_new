@@ -1,3 +1,4 @@
+import streamlit as st
 import pandas as pd
 import numpy as np
 from typing import Dict, List, Optional, Tuple, Any
@@ -404,6 +405,7 @@ def calculate_dish_combinations(df: pd.DataFrame, min_support: float = 0.01) -> 
     return pd.DataFrame(data).sort_values("支持度", ascending=False).head(50)
 
 
+@st.cache_data(ttl=300, show_spinner=False)
 def detect_anomalous_stores(
     df: pd.DataFrame, metric: str = "营业额", method: str = "iqr"
 ) -> pd.DataFrame:
@@ -470,3 +472,432 @@ def detect_cost_anomalies(cost_df: pd.DataFrame) -> pd.DataFrame:
             })
 
     return pd.DataFrame(cost_anomalies)
+
+
+def calculate_store_ranking(df: pd.DataFrame, metric: str = "营业额") -> pd.DataFrame:
+    store_metrics = calculate_store_metrics(df)
+    if store_metrics.empty:
+        return pd.DataFrame()
+    
+    valid_metrics = ["营业额", "毛利", "订单数", "客单价", "毛利率"]
+    if metric not in valid_metrics:
+        metric = "营业额"
+    
+    ranked = store_metrics.sort_values(metric, ascending=False).copy()
+    ranked[f"{metric}排名"] = range(1, len(ranked) + 1)
+    ranked[f"{metric}占比"] = (ranked[metric] / ranked[metric].sum() * 100).round(2)
+    
+    if "area" in ranked.columns:
+        area_totals = ranked.groupby("area")[metric].transform("sum")
+        ranked[f"区域{metric}占比"] = (ranked[metric] / area_totals * 100).round(2)
+    
+    cols = [f"{metric}排名", "store_id", "store_name", "city", "area", 
+            metric, f"{metric}占比", f"区域{metric}占比" if f"区域{metric}占比" in ranked.columns else None,
+            "订单数", "客单价", "毛利率"]
+    cols = [c for c in cols if c and c in ranked.columns]
+    
+    return ranked[cols]
+
+
+def calculate_meal_period_performance(df: pd.DataFrame) -> pd.DataFrame:
+    if df.empty or "order_hour" not in df.columns:
+        return pd.DataFrame()
+    
+    df = df.copy()
+    
+    def _get_meal_period(hour):
+        if 5 <= hour < 10:
+            return "早餐"
+        elif 10 <= hour < 14:
+            return "午餐"
+        elif 14 <= hour < 17:
+            return "下午茶"
+        elif 17 <= hour < 21:
+            return "晚餐"
+        elif 21 <= hour < 24 or 0 <= hour < 5:
+            return "夜宵"
+        else:
+            return "其他"
+    
+    df["时段"] = df["order_hour"].apply(_get_meal_period)
+    
+    order_level = df.drop_duplicates("order_id")
+    revenue_field = "pay_amount" if "pay_amount" in order_level.columns else "total_amount"
+    
+    period_metrics = order_level.groupby("时段").agg(
+        订单数=("order_id", "nunique"),
+        营业额=(revenue_field, "sum"),
+        顾客数=("member_id", "nunique"),
+    ).reset_index()
+    
+    period_order_items = df.groupby("时段").agg(
+        菜品销量=("quantity", "sum"),
+        毛利=("item_gross_margin", "sum"),
+    ).reset_index()
+    
+    period_metrics = period_metrics.merge(period_order_items, on="时段", how="left")
+    
+    period_metrics["客单价"] = np.where(
+        period_metrics["订单数"] > 0,
+        period_metrics["营业额"] / period_metrics["订单数"],
+        0
+    ).round(2)
+    
+    period_metrics["毛利率"] = np.where(
+        period_metrics["营业额"] > 0,
+        period_metrics["毛利"] / period_metrics["营业额"] * 100,
+        0
+    ).round(2)
+    
+    period_metrics["单均价"] = np.where(
+        period_metrics["订单数"] > 0,
+        period_metrics["菜品销量"] / period_metrics["订单数"],
+        0
+    ).round(2)
+    
+    period_order = ["早餐", "午餐", "下午茶", "晚餐", "夜宵", "其他"]
+    period_metrics["时段"] = pd.Categorical(period_metrics["时段"], categories=period_order, ordered=True)
+    period_metrics = period_metrics.sort_values("时段")
+    
+    total_revenue = period_metrics["营业额"].sum()
+    period_metrics["营业额占比"] = np.where(
+        total_revenue > 0,
+        period_metrics["营业额"] / total_revenue * 100,
+        0
+    ).round(2)
+    
+    return period_metrics
+
+
+def calculate_dish_margin_contribution(df: pd.DataFrame, top_n: int = 20) -> pd.DataFrame:
+    if df.empty or "dish_id" not in df.columns:
+        return pd.DataFrame()
+    
+    dish_metrics = df.groupby(["dish_id", "dish_name", "category"]).agg(
+        销售数量=("quantity", "sum"),
+        销售额=("subtotal", "sum"),
+        毛利=("item_gross_margin", "sum"),
+        订单数=("order_id", "nunique"),
+    ).reset_index()
+    
+    total_margin = dish_metrics["毛利"].sum()
+    total_revenue = dish_metrics["销售额"].sum()
+    
+    dish_metrics["毛利率"] = np.where(
+        dish_metrics["销售额"] > 0,
+        dish_metrics["毛利"] / dish_metrics["销售额"] * 100,
+        0
+    ).round(2)
+    
+    dish_metrics["毛利贡献度"] = np.where(
+        total_margin > 0,
+        dish_metrics["毛利"] / total_margin * 100,
+        0
+    ).round(2)
+    
+    dish_metrics["销售贡献度"] = np.where(
+        total_revenue > 0,
+        dish_metrics["销售额"] / total_revenue * 100,
+        0
+    ).round(2)
+    
+    dish_metrics["累计毛利贡献"] = dish_metrics.sort_values("毛利贡献度", ascending=False)["毛利贡献度"].cumsum()
+    
+    dish_metrics = dish_metrics.sort_values("毛利", ascending=False)
+    
+    def _get_contribution_level(row):
+        if row["累计毛利贡献"] <= 50:
+            return "核心利润菜品"
+        elif row["累计毛利贡献"] <= 80:
+            return "重要利润菜品"
+        elif row["累计毛利贡献"] <= 95:
+            return "补充利润菜品"
+        else:
+            return "低贡献菜品"
+    
+    dish_metrics_sorted = dish_metrics.sort_values("毛利", ascending=False)
+    dish_metrics_sorted["累计毛利贡献"] = dish_metrics_sorted["毛利贡献度"].cumsum()
+    dish_metrics_sorted["利润层级"] = dish_metrics_sorted.apply(_get_contribution_level, axis=1)
+    
+    return dish_metrics_sorted.head(top_n)
+
+
+def calculate_member_repurchase_cycle(df: pd.DataFrame) -> pd.DataFrame:
+    if df.empty or "member_id" not in df.columns or "order_time" not in df.columns:
+        return pd.DataFrame()
+    
+    member_orders = df[df["is_member"]].copy()
+    if member_orders.empty:
+        return pd.DataFrame()
+    
+    member_orders = member_orders.sort_values(["member_id", "order_time"])
+    member_orders["prev_order_time"] = member_orders.groupby("member_id")["order_time"].shift(1)
+    member_orders["days_since_prev"] = (member_orders["order_time"] - member_orders["prev_order_time"]).dt.total_seconds() / 86400
+    
+    valid_cycles = member_orders[member_orders["days_since_prev"].notna()]
+    
+    if valid_cycles.empty:
+        return pd.DataFrame()
+    
+    cycle_stats = valid_cycles.groupby("member_id").agg(
+        平均复购周期=("days_since_prev", "mean"),
+        最短复购周期=("days_since_prev", "min"),
+        最长复购周期=("days_since_prev", "max"),
+        复购次数=("days_since_prev", "count"),
+    ).reset_index()
+    
+    if "member_name" in member_orders.columns:
+        member_names = member_orders[["member_id", "member_name"]].drop_duplicates()
+        cycle_stats = cycle_stats.merge(member_names, on="member_id", how="left")
+    
+    if "level" in member_orders.columns or "member_level" in member_orders.columns:
+        level_col = "level" if "level" in member_orders.columns else "member_level"
+        member_levels = member_orders[["member_id", level_col]].drop_duplicates()
+        member_levels = member_levels.rename(columns={level_col: "会员等级"})
+        cycle_stats = cycle_stats.merge(member_levels, on="member_id", how="left")
+    
+    cycle_stats["平均复购周期"] = cycle_stats["平均复购周期"].round(1)
+    cycle_stats["复购频次_周"] = (7 / cycle_stats["平均复购周期"]).round(2)
+    cycle_stats["复购频次_月"] = (30 / cycle_stats["平均复购周期"]).round(2)
+    
+    def _get_cycle_segment(days):
+        if days <= 3:
+            return "高频（≤3天）"
+        elif days <= 7:
+            return "较高频（3-7天）"
+        elif days <= 14:
+            return "中频（7-14天）"
+        elif days <= 30:
+            return "较低频（14-30天）"
+        else:
+            return "低频（>30天）"
+    
+    cycle_stats["复购分层"] = cycle_stats["平均复购周期"].apply(_get_cycle_segment)
+    
+    return cycle_stats.sort_values("平均复购周期")
+
+
+def calculate_promotion_roi(
+    df: pd.DataFrame,
+    cleaned_data: Dict[str, pd.DataFrame],
+) -> pd.DataFrame:
+    if df.empty or "promotion_id" not in df.columns:
+        return pd.DataFrame()
+    
+    order_level = df.drop_duplicates("order_id")
+    revenue_field = "pay_amount" if "pay_amount" in order_level.columns else "total_amount"
+    
+    promotion_metrics = order_level[order_level["promotion_id"].notna()].groupby(
+        ["promotion_id", "promotion_name"]
+    ).agg(
+        活动订单数=("order_id", "nunique"),
+        活动顾客数=("member_id", "nunique"),
+        优惠前金额=("total_amount", "sum"),
+        实际收入=(revenue_field, "sum"),
+    ).reset_index()
+    
+    promotion_metrics["优惠金额"] = promotion_metrics["优惠前金额"] - promotion_metrics["实际收入"]
+    
+    if "promotions" in cleaned_data:
+        promo_df = cleaned_data["promotions"]
+        budget_col = "budget" if "budget" in promo_df.columns else None
+        
+        if budget_col:
+            promo_budget = promo_df[["promotion_id", budget_col]].drop_duplicates()
+            promo_budget = promo_budget.rename(columns={budget_col: "活动预算"})
+            promotion_metrics = promotion_metrics.merge(promo_budget, on="promotion_id", how="left")
+    
+    total_orders = len(order_level)
+    total_revenue = order_level[revenue_field].sum()
+    
+    no_promo_orders = order_level[order_level["promotion_id"].isna()]
+    no_promo_aov = no_promo_orders[revenue_field].mean() if len(no_promo_orders) > 0 else 0
+    
+    promotion_metrics["增量收入"] = np.where(
+        no_promo_aov > 0,
+        promotion_metrics["实际收入"] - (promotion_metrics["活动订单数"] * no_promo_aov),
+        promotion_metrics["实际收入"]
+    )
+    
+    promotion_metrics["投入成本"] = promotion_metrics.get("活动预算", promotion_metrics["优惠金额"])
+    
+    promotion_metrics["ROI"] = np.where(
+        promotion_metrics["投入成本"] > 0,
+        (promotion_metrics["增量收入"] - promotion_metrics["投入成本"]) / promotion_metrics["投入成本"] * 100,
+        0
+    ).round(2)
+    
+    promotion_metrics["活动订单占比"] = (promotion_metrics["活动订单数"] / total_orders * 100).round(2)
+    promotion_metrics["活动收入占比"] = (promotion_metrics["实际收入"] / total_revenue * 100).round(2)
+    
+    promotion_metrics["活动客单价"] = np.where(
+        promotion_metrics["活动订单数"] > 0,
+        promotion_metrics["实际收入"] / promotion_metrics["活动订单数"],
+        0
+    ).round(2)
+    
+    def _get_roi_level(roi):
+        if roi >= 200:
+            return "优秀（ROI≥200%）"
+        elif roi >= 100:
+            return "良好（100%≤ROI<200%）"
+        elif roi >= 0:
+            return "一般（0≤ROI<100%）"
+        else:
+            return "亏损（ROI<0）"
+    
+    promotion_metrics["效果评级"] = promotion_metrics["ROI"].apply(_get_roi_level)
+    
+    return promotion_metrics.sort_values("ROI", ascending=False)
+
+
+@st.cache_data(ttl=600, show_spinner=False)
+def calculate_ingredient_cost_volatility(
+    cost_df: pd.DataFrame,
+    dishes_df: Optional[pd.DataFrame] = None,
+) -> pd.DataFrame:
+    if cost_df.empty:
+        return pd.DataFrame()
+    
+    date_col = None
+    for col in ["cost_date", "date", "日期"]:
+        if col in cost_df.columns:
+            date_col = col
+            break
+    
+    if not date_col:
+        return pd.DataFrame()
+    
+    cost_df[date_col] = pd.to_datetime(cost_df[date_col], errors="coerce")
+    
+    ingredient_col = None
+    for col in ["ingredient_name", "原料名称", "name"]:
+        if col in cost_df.columns:
+            ingredient_col = col
+            break
+    
+    price_col = None
+    for col in ["unit_price", "单价", "price"]:
+        if col in cost_df.columns:
+            price_col = col
+            break
+    
+    if not ingredient_col or not price_col:
+        return pd.DataFrame()
+    
+    cost_stats = cost_df.groupby(ingredient_col).agg(
+        记录数=(price_col, "count"),
+        平均价格=(price_col, "mean"),
+        最高价格=(price_col, "max"),
+        最低价格=(price_col, "min"),
+        价格标准差=(price_col, "std"),
+        最早日期=(date_col, "min"),
+        最晚日期=(date_col, "max"),
+    ).reset_index()
+    
+    cost_stats["价格波动幅度"] = np.where(
+        cost_stats["平均价格"] > 0,
+        (cost_stats["最高价格"] - cost_stats["最低价格"]) / cost_stats["平均价格"] * 100,
+        0
+    ).round(2)
+    
+    cost_stats["变异系数"] = np.where(
+        cost_stats["平均价格"] > 0,
+        cost_stats["价格标准差"] / cost_stats["平均价格"] * 100,
+        0
+    ).round(2)
+    
+    if dishes_df is not None and "dish_id" in cost_df.columns and "dish_id" in dishes_df.columns:
+        dish_cols = ["dish_id", "dish_name", "category"]
+        dish_cols = [c for c in dish_cols if c in dishes_df.columns]
+        dish_info = dishes_df[dish_cols].drop_duplicates()
+        cost_df = cost_df.merge(dish_info, on="dish_id", how="left")
+        if "category" in cost_df.columns:
+            category_stats = cost_df.groupby([ingredient_col, "category"]).agg(
+                分类平均价格=(price_col, "mean"),
+            ).reset_index()
+            cost_stats = cost_stats.merge(
+                category_stats.groupby(ingredient_col).agg(
+                    关联菜品数=("category", "nunique"),
+                ).reset_index(),
+                on=ingredient_col,
+                how="left",
+            )
+    
+    def _get_volatility_level(cv):
+        if cv >= 30:
+            return "剧烈波动（≥30%）"
+        elif cv >= 15:
+            return "较大波动（15%-30%）"
+        elif cv >= 5:
+            return "轻微波动（5%-15%）"
+        else:
+            return "基本稳定（<5%）"
+    
+    cost_stats["波动等级"] = cost_stats["变异系数"].apply(_get_volatility_level)
+    
+    cost_stats["平均价格"] = cost_stats["平均价格"].round(2)
+    cost_stats["最高价格"] = cost_stats["最高价格"].round(2)
+    cost_stats["最低价格"] = cost_stats["最低价格"].round(2)
+    cost_stats["价格标准差"] = cost_stats["价格标准差"].round(2)
+    
+    return cost_stats.sort_values("变异系数", ascending=False)
+
+
+def calculate_refund_reason_distribution(
+    refunds_df: pd.DataFrame,
+    merged_df: Optional[pd.DataFrame] = None,
+) -> pd.DataFrame:
+    if refunds_df.empty:
+        return pd.DataFrame()
+    
+    reason_col = None
+    for col in ["refund_reason", "reason", "退款原因"]:
+        if col in refunds_df.columns:
+            reason_col = col
+            break
+    
+    if not reason_col:
+        return pd.DataFrame()
+    
+    amount_col = None
+    for col in ["refund_amount", "退款金额", "amount"]:
+        if col in refunds_df.columns:
+            amount_col = col
+            break
+    
+    reason_stats = refunds_df.groupby(reason_col).agg(
+        退款次数=("refund_id", "nunique"),
+        退款订单数=("order_id", "nunique"),
+    ).reset_index()
+    
+    if amount_col:
+        amount_stats = refunds_df.groupby(reason_col).agg(
+            退款金额=(amount_col, "sum"),
+        ).reset_index()
+        reason_stats = reason_stats.merge(amount_stats, on=reason_col, how="left")
+    
+    total_refunds = reason_stats["退款次数"].sum()
+    reason_stats["占比"] = (reason_stats["退款次数"] / total_refunds * 100).round(2)
+    
+    if amount_col:
+        total_amount = reason_stats["退款金额"].sum()
+        reason_stats["金额占比"] = (reason_stats["退款金额"] / total_amount * 100).round(2)
+        reason_stats["平均退款金额"] = (reason_stats["退款金额"] / reason_stats["退款次数"]).round(2)
+    
+    if merged_df is not None and "store_id" in merged_df.columns:
+        store_refunds = refunds_df.merge(
+            merged_df[["order_id", "store_id", "store_name"]].drop_duplicates(),
+            on="order_id",
+            how="left",
+        )
+        if "store_name" in store_refunds.columns:
+            top_store = store_refunds.groupby(reason_col)["store_name"].agg(
+                lambda x: x.value_counts().index[0] if len(x) > 0 else None
+            ).reset_index()
+            top_store.columns = [reason_col, "高发门店"]
+            reason_stats = reason_stats.merge(top_store, on=reason_col, how="left")
+    
+    reason_stats.columns = [c.replace(reason_col, "退款原因") for c in reason_stats.columns]
+    
+    return reason_stats.sort_values("退款次数", ascending=False)

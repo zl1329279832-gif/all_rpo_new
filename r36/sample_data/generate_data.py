@@ -1,6 +1,6 @@
 """
 连锁餐饮数据分析平台 - 示例数据生成脚本
-生成9张表的测试数据，订单主表约1000条
+支持生成正常数据（≥1200条订单）和异常测试数据
 """
 import os
 import random
@@ -8,10 +8,8 @@ from datetime import datetime, timedelta
 import pandas as pd
 import numpy as np
 
-random.seed(42)
-np.random.seed(42)
-
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+ANOMALY_DIR = os.path.join(BASE_DIR, "anomaly")
 
 STORE_NAMES = [
     "北京王府井店", "上海南京路店", "广州天河店", "深圳南山店",
@@ -48,6 +46,13 @@ REFUND_REASONS = ["菜品质量问题", "上菜太慢", "价格争议", "服务�
 
 TIME_SLOTS = ["10:00-12:00", "12:00-14:00", "14:00-16:00", "16:00-18:00", "18:00-20:00", "20:00-22:00"]
 
+
+def set_seed(seed):
+    """设置随机种子"""
+    random.seed(seed)
+    np.random.seed(seed)
+
+
 def generate_stores():
     """生成门店数据"""
     stores = []
@@ -64,6 +69,7 @@ def generate_stores():
             "status": random.choice(["营业中", "营业中", "营业中", "装修中"])
         })
     return pd.DataFrame(stores)
+
 
 def generate_dishes():
     """生成菜品数据"""
@@ -87,6 +93,7 @@ def generate_dishes():
             dish_id += 1
     return pd.DataFrame(dishes)
 
+
 def generate_members():
     """生成会员数据"""
     members = []
@@ -109,6 +116,7 @@ def generate_members():
             "is_active": random.choice([True, True, True, False])
         })
     return pd.DataFrame(members)
+
 
 def generate_promotions():
     """生成优惠活动数据"""
@@ -145,19 +153,18 @@ def generate_promotions():
         })
     return pd.DataFrame(promotions)
 
-def generate_orders_and_items(stores_df, members_df, promotions_df, dishes_df):
-    """生成订单和订单明细数据（1000条订单）"""
+
+def generate_orders_and_items(stores_df, members_df, promotions_df, dishes_df, order_count=1200):
+    """生成订单和订单明细数据"""
     orders = []
     order_items = []
     order_id = 1000
     
-    for _ in range(1000):
+    for _ in range(order_count):
         store = stores_df.sample(1).iloc[0]
         date = datetime(2024, 1, 1) + timedelta(days=random.randint(0, 180), 
                                                 hours=random.randint(10, 21),
                                                 minutes=random.randint(0, 59))
-        time_slot_idx = min((date.hour - 10) // 2, 5)
-        time_slot = TIME_SLOTS[time_slot_idx]
         
         use_member = random.random() > 0.3
         member = members_df.sample(1).iloc[0] if use_member else None
@@ -194,10 +201,11 @@ def generate_orders_and_items(stores_df, members_df, promotions_df, dishes_df):
             elif promotion["promotion_type"] == "优惠券" and subtotal >= promotion["min_amount"]:
                 discount_amount = promotion["discount_value"]
         
-        total_amount = round(max(subtotal - discount_amount, 0), 2)
+        total_amount = round(subtotal, 2)
+        pay_amount = round(max(subtotal - discount_amount, 0), 2)
         
         payment_method = random.choice(["微信支付", "支付宝", "现金", "银行卡", "会员余额"])
-        if member is not None and member["balance"] > total_amount:
+        if member is not None and member["balance"] > pay_amount:
             payment_method = random.choice(["微信支付", "支付宝", "会员余额"])
         
         orders.append({
@@ -207,34 +215,32 @@ def generate_orders_and_items(stores_df, members_df, promotions_df, dishes_df):
             "member_id": member["member_id"] if member is not None else None,
             "member_name": member["member_name"] if member is not None else None,
             "order_datetime": date.strftime("%Y-%m-%d %H:%M:%S"),
-            "order_date": date.strftime("%Y-%m-%d"),
-            "time_slot": time_slot,
-            "weekday": date.strftime("%A"),
-            "people_count": random.randint(1, 8),
-            "dish_count": num_dishes,
-            "subtotal": round(subtotal, 2),
-            "discount_amount": round(discount_amount, 2),
             "total_amount": total_amount,
+            "discount_amount": round(discount_amount, 2),
+            "pay_amount": pay_amount,
             "payment_method": payment_method,
             "promotion_id": promotion["promotion_id"] if promotion is not None else None,
             "promotion_name": promotion["promotion_name"] if promotion is not None else None,
-            "order_status": random.choice(["已完成", "已完成", "已完成", "已完成", "已取消"])
+            "remarks": ""
         })
         
         order_id += 1
     
     return pd.DataFrame(orders), pd.DataFrame(order_items)
 
+
 def generate_refunds(orders_df, order_items_df):
     """生成退款数据"""
     refunds = []
     refund_id = 1
     
-    completed_orders = orders_df[orders_df["order_status"] == "已完成"]
+    completed_orders = orders_df.copy()
     refund_orders = completed_orders.sample(frac=0.08)
     
     for _, order in refund_orders.iterrows():
         items = order_items_df[order_items_df["order_id"] == order["order_id"]]
+        if len(items) == 0:
+            continue
         item = items.sample(1).iloc[0]
         reason = random.choice(REFUND_REASONS)
         refund_amount = round(item["subtotal"] * random.uniform(0.5, 1.0), 2)
@@ -256,6 +262,7 @@ def generate_refunds(orders_df, order_items_df):
     
     return pd.DataFrame(refunds)
 
+
 def generate_business_hours(stores_df):
     """生成营业时段数据"""
     business_hours = []
@@ -271,6 +278,7 @@ def generate_business_hours(stores_df):
                 "target_revenue": random.randint(3000, 8000) if is_peak else random.randint(500, 3000)
             })
     return pd.DataFrame(business_hours)
+
 
 def generate_ingredient_costs(dishes_df):
     """生成原料成本数据"""
@@ -304,40 +312,305 @@ def generate_ingredient_costs(dishes_df):
     
     return pd.DataFrame(ingredient_costs)
 
-def main():
-    print("开始生成示例数据...")
+
+def generate_normal_data(seed=42):
+    """生成所有9份正常数据，订单数据不少于1200条"""
+    set_seed(seed)
+    print("=" * 60)
+    print("开始生成正常数据...")
+    print("=" * 60)
     
     stores_df = generate_stores()
     dishes_df = generate_dishes()
     members_df = generate_members()
     promotions_df = generate_promotions()
-    orders_df, order_items_df = generate_orders_and_items(stores_df, members_df, promotions_df, dishes_df)
+    orders_df, order_items_df = generate_orders_and_items(stores_df, members_df, promotions_df, dishes_df, order_count=1200)
     refunds_df = generate_refunds(orders_df, order_items_df)
     business_hours_df = generate_business_hours(stores_df)
     ingredient_costs_df = generate_ingredient_costs(dishes_df)
     
-    print(f"门店数据: {len(stores_df)} 条")
-    print(f"菜品数据: {len(dishes_df)} 条")
-    print(f"会员数据: {len(members_df)} 条")
-    print(f"优惠活动: {len(promotions_df)} 条")
-    print(f"订单数据: {len(orders_df)} 条")
-    print(f"订单明细: {len(order_items_df)} 条")
-    print(f"退款数据: {len(refunds_df)} 条")
-    print(f"营业时段: {len(business_hours_df)} 条")
-    print(f"原料成本: {len(ingredient_costs_df)} 条")
+    dataframes = {
+        "stores.csv": stores_df,
+        "dishes.csv": dishes_df,
+        "members.csv": members_df,
+        "promotions.csv": promotions_df,
+        "orders.csv": orders_df,
+        "order_items.csv": order_items_df,
+        "refunds.csv": refunds_df,
+        "business_hours.csv": business_hours_df,
+        "ingredient_costs.csv": ingredient_costs_df
+    }
     
-    stores_df.to_csv(os.path.join(BASE_DIR, "stores.csv"), index=False, encoding="utf-8-sig")
-    dishes_df.to_csv(os.path.join(BASE_DIR, "dishes.csv"), index=False, encoding="utf-8-sig")
-    members_df.to_csv(os.path.join(BASE_DIR, "members.csv"), index=False, encoding="utf-8-sig")
-    promotions_df.to_csv(os.path.join(BASE_DIR, "promotions.csv"), index=False, encoding="utf-8-sig")
-    orders_df.to_csv(os.path.join(BASE_DIR, "orders.csv"), index=False, encoding="utf-8-sig")
-    order_items_df.to_csv(os.path.join(BASE_DIR, "order_items.csv"), index=False, encoding="utf-8-sig")
-    refunds_df.to_csv(os.path.join(BASE_DIR, "refunds.csv"), index=False, encoding="utf-8-sig")
-    business_hours_df.to_csv(os.path.join(BASE_DIR, "business_hours.csv"), index=False, encoding="utf-8-sig")
-    ingredient_costs_df.to_csv(os.path.join(BASE_DIR, "ingredient_costs.csv"), index=False, encoding="utf-8-sig")
+    stats = {}
+    for filename, df in dataframes.items():
+        filepath = os.path.join(BASE_DIR, filename)
+        df.to_csv(filepath, index=False, encoding="utf-8-sig")
+        stats[filename] = len(df)
+        print(f"[OK] 生成 {filename}: {len(df)} 条")
     
-    print("\n所有CSV文件已生成到 sample_data 目录！")
-    print("订单数据共计 1000 条。")
+    print(f"\n正常数据生成完成！订单数据: {len(orders_df)} 条")
+    return stats
+
+
+def generate_anomaly_data(seed=99):
+    """生成异常测试数据（约500条订单），包含各种数据质量问题"""
+    set_seed(seed)
+    print("\n" + "=" * 60)
+    print("开始生成异常测试数据...")
+    print("=" * 60)
+    
+    os.makedirs(ANOMALY_DIR, exist_ok=True)
+    
+    stores_df = generate_stores()
+    dishes_df = generate_dishes()
+    members_df = generate_members()
+    promotions_df = generate_promotions()
+    orders_df, order_items_df = generate_orders_and_items(stores_df, members_df, promotions_df, dishes_df, order_count=500)
+    refunds_df = generate_refunds(orders_df, order_items_df)
+    business_hours_df = generate_business_hours(stores_df)
+    ingredient_costs_df = generate_ingredient_costs(dishes_df)
+    
+    print("注入数据异常...")
+    
+    orders_df = orders_df.copy()
+    order_items_df = order_items_df.copy()
+    refunds_df = refunds_df.copy()
+    
+    # 先填充所有原始空值，确保缺失值统计准确
+    orders_df["member_id"] = orders_df["member_id"].fillna("M00000")
+    orders_df["member_name"] = orders_df["member_name"].fillna("散客")
+    orders_df["promotion_id"] = orders_df["promotion_id"].fillna("P0000")
+    orders_df["promotion_name"] = orders_df["promotion_name"].fillna("无促销")
+    
+    total_amount_99 = orders_df["total_amount"].quantile(0.99)
+    anomaly_large_value = total_amount_99 * 3
+    print(f"  99分位金额: {total_amount_99:.2f}, 异常大值阈值: {anomaly_large_value:.2f}")
+    
+    order_indices = list(range(len(orders_df)))
+    random.shuffle(order_indices)
+    
+    used_indices = set()
+    anomaly_count = 0
+    
+    # 1. 3个重复主键（order_id）- 创建3对重复，共6条记录
+    dup_pair_count = 0
+    for i in range(0, len(order_indices), 2):
+        if dup_pair_count >= 3 or i + 1 >= len(order_indices):
+            break
+        idx1 = order_indices[i]
+        idx2 = order_indices[i + 1]
+        if idx1 in used_indices or idx2 in used_indices:
+            continue
+        duplicate_id = orders_df.iloc[idx2]["order_id"]
+        orders_df.iloc[idx1, orders_df.columns.get_loc("order_id")] = duplicate_id
+        used_indices.add(idx1)
+        used_indices.add(idx2)
+        dup_pair_count += 1
+    print(f"  [OK] 注入 3 个重复主键(order_id) - {dup_pair_count} 对重复")
+    
+    # 2. 5个负数金额（total_amount 为负）
+    neg_count = 0
+    for idx in order_indices:
+        if neg_count >= 5:
+            break
+        if idx in used_indices:
+            continue
+        orders_df.iloc[idx, orders_df.columns.get_loc("total_amount")] = -abs(orders_df.iloc[idx]["total_amount"])
+        used_indices.add(idx)
+        neg_count += 1
+    print(f"  [OK] 注入 5 个负数金额(total_amount) - 实际 {neg_count} 个")
+    
+    # 3. 3个异常大值金额（超过99分位的3倍）
+    large_count = 0
+    for idx in order_indices:
+        if large_count >= 3:
+            break
+        if idx in used_indices:
+            continue
+        orders_df.iloc[idx, orders_df.columns.get_loc("total_amount")] = round(anomaly_large_value * random.uniform(1.1, 2.0), 2)
+        orders_df.iloc[idx, orders_df.columns.get_loc("pay_amount")] = round(anomaly_large_value * random.uniform(1.1, 2.0) * 0.9, 2)
+        used_indices.add(idx)
+        large_count += 1
+    print(f"  [OK] 注入 3 个异常大值金额(>99分位×3) - 实际 {large_count} 个")
+    
+    # 4. 2个无效日期
+    date_count = 0
+    invalid_dates = ['invalid-date', '2024-13-01']
+    for idx in order_indices:
+        if date_count >= 2:
+            break
+        if idx in used_indices:
+            continue
+        orders_df.iloc[idx, orders_df.columns.get_loc("order_datetime")] = invalid_dates[date_count]
+        used_indices.add(idx)
+        date_count += 1
+    print(f"  [OK] 注入 2 个无效日期(order_datetime) - 实际 {date_count} 个")
+    
+    # 5. 4个不存在的外键
+    fk_count = 0
+    invalid_fk_configs = [
+        ("store_id", "S999"),
+        ("member_id", "M9999"),
+        ("store_id", "S998"),
+        ("member_id", "M9998")
+    ]
+    for idx in order_indices:
+        if fk_count >= 4:
+            break
+        if idx in used_indices:
+            continue
+        col, value = invalid_fk_configs[fk_count]
+        orders_df.iloc[idx, orders_df.columns.get_loc(col)] = value
+        if col == "store_id":
+            orders_df.iloc[idx, orders_df.columns.get_loc("store_name")] = "未知门店"
+        if col == "member_id":
+            orders_df.iloc[idx, orders_df.columns.get_loc("member_name")] = "未知会员"
+        used_indices.add(idx)
+        fk_count += 1
+    print(f"  [OK] 注入 4 个不存在的外键(store_id/member_id) - 实际 {fk_count} 个")
+    
+    # 6. 3个退款订单号在订单表中不存在
+    if len(refunds_df) >= 3:
+        refund_indices = list(range(len(refunds_df)))
+        random.shuffle(refund_indices)
+        invalid_order_ids = ['O999999', 'O999998', 'O999997']
+        for i in range(3):
+            refunds_df.iloc[refund_indices[i], refunds_df.columns.get_loc("order_id")] = invalid_order_ids[i]
+        print(f"  [OK] 注入 3 个不存在的退款订单号")
+    
+    # 7. 10% 左右的缺失值 - 排除order_id和remarks字段
+    exclude_cols = ["order_id", "remarks"]
+    exclude_col_indices = [i for i, col in enumerate(orders_df.columns) if col in exclude_cols]
+    available_cols = [i for i in range(len(orders_df.columns)) if i not in exclude_col_indices]
+    available_col_names = [orders_df.columns[i] for i in available_cols]
+    
+    all_rows = list(range(len(orders_df)))
+    
+    # 先统计现有空值数量
+    def is_empty(x):
+        if pd.isna(x):
+            return True
+        if isinstance(x, str) and x.strip() == '':
+            return True
+        return False
+    
+    existing_missing = 0
+    for col in available_col_names:
+        existing_missing += orders_df[col].map(is_empty).sum()
+    
+    # 基于总单元格数（排除order_id和remarks）计算10%
+    total_cells = len(all_rows) * len(available_cols)
+    target_missing = int(total_cells * 0.1)
+    need_inject = max(0, target_missing - existing_missing)
+    
+    print(f"  现有空值: {existing_missing}, 目标: {target_missing}, 需注入: {need_inject}")
+    
+    missing_injected = 0
+    attempts = 0
+    while missing_injected < need_inject and attempts < need_inject * 10:
+        row = random.choice(all_rows)
+        col = random.choice(available_cols)
+        col_name = orders_df.columns[col]
+        # 避免覆盖已注入的特殊异常值（负数、大值、无效日期、无效外键）
+        if row in used_indices and col_name in ["total_amount", "order_datetime", "store_id", "member_id"]:
+            attempts += 1
+            continue
+        if not is_empty(orders_df.iloc[row, col]):
+            orders_df.iloc[row, col] = None
+            missing_injected += 1
+        attempts += 1
+    
+    # 在order_items中也注入一些缺失值
+    exclude_cols_items = ["order_item_id", "order_id"]
+    exclude_col_indices_items = [i for i, col in enumerate(order_items_df.columns) if col in exclude_cols_items]
+    available_cols_items = [i for i in range(len(order_items_df.columns)) if i not in exclude_col_indices_items]
+    available_rows_items = list(range(len(order_items_df)))
+    
+    total_cells_items = len(available_rows_items) * len(available_cols_items)
+    target_missing_items = int(total_cells_items * 0.05)
+    
+    existing_missing_items = 0
+    for col_idx in available_cols_items:
+        col_name = order_items_df.columns[col_idx]
+        existing_missing_items += order_items_df[col_name].map(is_empty).sum()
+    
+    need_inject_items = max(0, target_missing_items - existing_missing_items)
+    
+    missing_injected_items = 0
+    attempts = 0
+    while missing_injected_items < need_inject_items and attempts < need_inject_items * 10:
+        row = random.choice(available_rows_items)
+        col = random.choice(available_cols_items)
+        col_name = order_items_df.columns[col]
+        if not is_empty(order_items_df.iloc[row, col]):
+            order_items_df.iloc[row, col] = None
+            missing_injected_items += 1
+        attempts += 1
+    
+    # 计算实际缺失比例（不含remarks字段）
+    orders_for_pct = orders_df.drop(columns=['remarks'])
+    total_for_pct = len(orders_for_pct) * len(orders_for_pct.columns)
+    missing_for_pct = sum(orders_for_pct[col].map(is_empty).sum() for col in orders_for_pct.columns)
+    actual_missing_pct = (missing_for_pct / total_for_pct) * 100
+    print(f"  [OK] 注入约 10% 缺失值 (orders: 注入{missing_injected}, 总计{missing_for_pct}, {actual_missing_pct:.1f}%, order_items: 注入{missing_injected_items})")
+    
+    dataframes = {
+        "stores.csv": stores_df,
+        "dishes.csv": dishes_df,
+        "members.csv": members_df,
+        "promotions.csv": promotions_df,
+        "orders.csv": orders_df,
+        "order_items.csv": order_items_df,
+        "refunds.csv": refunds_df,
+        "business_hours.csv": business_hours_df,
+        "ingredient_costs.csv": ingredient_costs_df
+    }
+    
+    stats = {}
+    for filename, df in dataframes.items():
+        filepath = os.path.join(ANOMALY_DIR, filename)
+        df.to_csv(filepath, index=False, encoding="utf-8-sig")
+        stats[filename] = len(df)
+        print(f"[OK] 生成 anomaly/{filename}: {len(df)} 条")
+    
+    print(f"\n异常数据生成完成！订单数据: {len(orders_df)} 条")
+    return stats
+
+
+def main():
+    print("连锁餐饮数据分析平台 - 数据生成工具")
+    print("=" * 60)
+    
+    normal_stats = generate_normal_data(seed=42)
+    anomaly_stats = generate_anomaly_data(seed=99)
+    
+    print("\n" + "=" * 60)
+    print("生成数据统计")
+    print("=" * 60)
+    print("\n【正常数据】(sample_data/)")
+    print("-" * 40)
+    normal_total = 0
+    for filename, count in normal_stats.items():
+        print(f"  {filename:<25} {count:>6} 条")
+        normal_total += count
+    print(f"  {'-' * 40}")
+    print(f"  {'合计':<25} {normal_total:>6} 条")
+    
+    print("\n【异常数据】(sample_data/anomaly/)")
+    print("-" * 40)
+    anomaly_total = 0
+    for filename, count in anomaly_stats.items():
+        print(f"  {filename:<25} {count:>6} 条")
+        anomaly_total += count
+    print(f"  {'-' * 40}")
+    print(f"  {'合计':<25} {anomaly_total:>6} 条")
+    
+    print("\n" + "=" * 60)
+    print("数据生成完成！")
+    print(f"正常数据订单量: {normal_stats['orders.csv']} 条")
+    print(f"异常数据订单量: {anomaly_stats['orders.csv']} 条")
+    print("=" * 60)
+
 
 if __name__ == "__main__":
     main()

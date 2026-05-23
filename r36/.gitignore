@@ -55,6 +55,7 @@ desktop.ini
 uploads/
 *.csv
 !sample_data/*.csv
+sample_data/anomaly/
 
 # Project - Exports
 exports/

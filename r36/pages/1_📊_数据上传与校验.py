@@ -14,6 +14,8 @@ from core import (
     get_validation_summary,
     clean_data,
     merge_orders_with_details,
+    get_issues_dataframe,
+    get_issues_by_severity,
 )
 from config.schemas import REQUIRED_FILES, DATA_SCHEMAS
 
@@ -56,6 +58,7 @@ with tab1:
                 
                 validation_report = validate_all_datasets(data_dict)
                 st.session_state.validation_report = validation_report
+                st.session_state.issues = validation_report.issues
                 
                 if validation_report.overall_valid:
                     st.success(f"✅ 数据加载完成，共加载 {len(data_dict)} 份数据")
@@ -77,6 +80,7 @@ with tab2:
                 
                 validation_report = validate_all_datasets(data_dict)
                 st.session_state.validation_report = validation_report
+                st.session_state.issues = validation_report.issues
                 
                 st.success(f"✅ 示例数据加载完成，共加载 {len(data_dict)} 份数据（订单 {len(data_dict.get('orders', []))} 条）")
                 st.rerun()
@@ -94,68 +98,146 @@ with tab3:
     if st.session_state.validation_report:
         report = st.session_state.validation_report
         
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            score_color = "#2E7D32" if report.quality_score >= 80 else "#F57F17" if report.quality_score >= 60 else "#C62828"
-            st.markdown(
-                f"""
-                <div style='background: white; padding: 24px; border-radius: 12px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.08);'>
-                    <p style='font-size: 0.9rem; color: #666; margin-bottom: 8px;'>数据质量评分</p>
-                    <p style='font-size: 3rem; font-weight: bold; color: {score_color};'>{report.quality_score:.1f}</p>
-                    <p style='font-size: 0.85rem; color: #999;'>/ 100</p>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-        with col2:
-            st.metric("已加载数据表", f"{len(report.results)} / {len(REQUIRED_FILES)}")
-        with col3:
-            st.metric("整体状态", "✅ 有效" if report.overall_valid else "⚠️ 部分缺失")
+        report_tab1, report_tab2 = st.tabs(["📋 校验报告", "🔍 数据质量问题清单"])
         
-        if report.missing_files:
-            st.warning(
-                f"⚠️ 缺失以下数据表：{', '.join(report.missing_files)}。"
-                f"部分分析功能可能无法使用。"
-            )
+        with report_tab1:
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                score_color = "#2E7D32" if report.quality_score >= 80 else "#F57F17" if report.quality_score >= 60 else "#C62828"
+                st.markdown(
+                    f"""
+                    <div style='background: white; padding: 24px; border-radius: 12px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.08);'>
+                        <p style='font-size: 0.9rem; color: #666; margin-bottom: 8px;'>数据质量评分</p>
+                        <p style='font-size: 3rem; font-weight: bold; color: {score_color};'>{report.quality_score:.1f}</p>
+                        <p style='font-size: 0.85rem; color: #999;'>/ 100</p>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+            with col2:
+                st.metric("已加载数据表", f"{len(report.results)} / {len(REQUIRED_FILES)}")
+            with col3:
+                st.metric("整体状态", "✅ 有效" if report.overall_valid else "⚠️ 部分缺失")
+            
+            if report.missing_files:
+                st.warning(
+                    f"⚠️ 缺失以下数据表：{', '.join(report.missing_files)}。"
+                    f"部分分析功能可能无法使用。"
+                )
+            
+            st.markdown("---")
+            st.subheader("详细校验结果")
+            
+            validation_summary = get_validation_summary(report)
+            if not validation_summary.empty:
+                st.dataframe(validation_summary, use_container_width=True, hide_index=True)
+            
+            with st.expander("查看字段级校验详情"):
+                for name, result in report.results.items():
+                    st.markdown(f"**📄 {name}**")
+                    
+                    if result.missing_columns:
+                        st.error(f"❌ 缺失字段: {', '.join(result.missing_columns)}")
+                    
+                    if result.extra_columns:
+                        st.info(f"ℹ️ 额外字段: {', '.join(result.extra_columns)}")
+                    
+                    if result.type_mismatches:
+                        st.warning(f"⚠️ 类型不匹配: {result.type_mismatches}")
+                    
+                    missing_report = report.missing_reports.get(name)
+                    if missing_report and missing_report.total_missing > 0:
+                        st.warning(
+                            f"⚠️ 缺失 {missing_report.total_missing} 个值 "
+                            f"({missing_report.missing_percentage:.2f}%)，"
+                            f"影响 {missing_report.rows_with_missing} 行数据"
+                        )
+                        with st.expander("查看各字段缺失情况"):
+                            missing_df = pd.DataFrame(
+                                [{"字段": k, "缺失数": v} for k, v in missing_report.missing_by_column.items() if v > 0]
+                            )
+                            if not missing_df.empty:
+                                st.dataframe(missing_df, use_container_width=True, hide_index=True)
+                    
+                    if not result.errors and not result.warnings and missing_report.total_missing == 0:
+                        st.success("✅ 数据校验通过，无异常")
+                    
+                    st.markdown("---")
+        
+        with report_tab2:
+            st.subheader("数据质量问题清单")
+            
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric(
+                    "数据质量总分",
+                    f"{report.quality_score:.1f}",
+                    delta=f"{report.quality_score - 60:.1f}" if report.quality_score >= 60 else f"{report.quality_score - 60:.1f}",
+                    delta_color="normal" if report.quality_score >= 60 else "inverse",
+                )
+            with col2:
+                st.metric(
+                    "🔴 严重问题",
+                    report.critical_issues,
+                    delta_color="inverse",
+                )
+            with col3:
+                st.metric(
+                    "🟡 警告问题",
+                    report.warning_issues,
+                    delta_color="inverse",
+                )
+            
+            st.markdown("---")
+            
+            col_filter1, col_filter2 = st.columns([3, 1])
+            with col_filter1:
+                severity_filter = st.multiselect(
+                    "按严重程度过滤",
+                    options=["🔴 严重", "🟡 警告", "🔵 提示"],
+                    default=["🔴 严重", "🟡 警告", "🔵 提示"],
+                )
+            with col_filter2:
+                st.markdown("<div style='margin-top: 28px;'></div>", unsafe_allow_html=True)
+                if st.button("🧪 测试异常校验", type="secondary", use_container_width=True):
+                    st.info("🔧 功能开发中：即将加载异常数据并演示校验功能")
+            
+            issues_df = get_issues_dataframe(report)
+            if not issues_df.empty:
+                severity_map = {"critical": "🔴 严重", "warning": "🟡 警告", "info": "🔵 提示"}
+                filter_severity = []
+                if "🔴 严重" in severity_filter:
+                    filter_severity.append("🔴 严重")
+                if "🟡 警告" in severity_filter:
+                    filter_severity.append("🟡 警告")
+                if "🔵 提示" in severity_filter:
+                    filter_severity.append("🔵 提示")
+                
+                filtered_df = issues_df[issues_df["严重程度"].isin(filter_severity)]
+                
+                if not filtered_df.empty:
+                    st.dataframe(
+                        filtered_df,
+                        use_container_width=True,
+                        hide_index=True,
+                        column_config={
+                            "严重程度": st.column_config.TextColumn("严重程度", width="small"),
+                            "问题类型": st.column_config.TextColumn("问题类型", width="medium"),
+                            "数据表": st.column_config.TextColumn("数据表", width="small"),
+                            "字段": st.column_config.TextColumn("字段", width="small"),
+                            "描述": st.column_config.TextColumn("描述", width="large"),
+                            "影响行数": st.column_config.NumberColumn("影响行数", width="small"),
+                            "示例": st.column_config.TextColumn("示例", width="medium"),
+                        },
+                    )
+                    
+                    st.info(f"📊 共发现 {len(filtered_df)} 个问题（已过滤），总计 {len(issues_df)} 个问题")
+                else:
+                    st.success("✅ 没有符合过滤条件的问题")
+            else:
+                st.success("🎉 数据质量优秀，未发现任何问题！")
         
         st.markdown("---")
-        st.subheader("详细校验结果")
-        
-        validation_summary = get_validation_summary(report)
-        if not validation_summary.empty:
-            st.dataframe(validation_summary, use_container_width=True, hide_index=True)
-        
-        with st.expander("查看字段级校验详情"):
-            for name, result in report.results.items():
-                st.markdown(f"**📄 {name}**")
-                
-                if result.missing_columns:
-                    st.error(f"❌ 缺失字段: {', '.join(result.missing_columns)}")
-                
-                if result.extra_columns:
-                    st.info(f"ℹ️ 额外字段: {', '.join(result.extra_columns)}")
-                
-                if result.type_mismatches:
-                    st.warning(f"⚠️ 类型不匹配: {result.type_mismatches}")
-                
-                missing_report = report.missing_reports.get(name)
-                if missing_report and missing_report.total_missing > 0:
-                    st.warning(
-                        f"⚠️ 缺失 {missing_report.total_missing} 个值 "
-                        f"({missing_report.missing_percentage:.2f}%)，"
-                        f"影响 {missing_report.rows_with_missing} 行数据"
-                    )
-                    with st.expander("查看各字段缺失情况"):
-                        missing_df = pd.DataFrame(
-                            [{"字段": k, "缺失数": v} for k, v in missing_report.missing_by_column.items() if v > 0]
-                        )
-                        if not missing_df.empty:
-                            st.dataframe(missing_df, use_container_width=True, hide_index=True)
-                
-                if not result.errors and not result.warnings and missing_report.total_missing == 0:
-                    st.success("✅ 数据校验通过，无异常")
-                
-                st.markdown("---")
         
         if st.button("✨ 清洗数据并开始分析", type="primary", use_container_width=True):
             with st.spinner("正在清洗和处理数据..."):

@@ -1,14 +1,19 @@
 import os
 import io
 import pandas as pd
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, TYPE_CHECKING
 from datetime import datetime
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.chart import BarChart, LineChart, Reference
+from openpyxl.formatting.rule import CellIsRule, ColorScaleRule
 import plotly.graph_objects as go
 import json
+
+if TYPE_CHECKING:
+    from .validation import ValidationReport
+    from .alerting import AlertReport
 
 
 def _create_excel_style(workbook: Workbook) -> Dict[str, Any]:
@@ -90,9 +95,261 @@ def _write_dataframe_to_sheet(
     return current_row
 
 
+def _write_data_quality_sheet(ws, validation_report: "ValidationReport", styles: Dict[str, Any]) -> None:
+    ws.sheet_view.showGridLines = False
+    
+    current_row = 1
+    ws.cell(row=current_row, column=1, value="📊 数据质量摘要")
+    ws.cell(row=current_row, column=1).font = Font(name="微软雅黑", size=18, bold=True, color="1976D2")
+    ws.merge_cells(start_row=current_row, start_column=1, end_row=current_row, end_column=6)
+    current_row += 2
+
+    quality_score = validation_report.quality_score
+    score_fill = PatternFill(start_color="FFC8E6C9", end_color="FFC8E6C9", fill_type="solid") if quality_score >= 80 else \
+                  PatternFill(start_color="FFFFECB3", end_color="FFFFECB3", fill_type="solid") if quality_score >= 60 else \
+                  PatternFill(start_color="FFFFCDD2", end_color="FFFFCDD2", fill_type="solid")
+    
+    ws.cell(row=current_row, column=1, value="数据质量评分")
+    ws.cell(row=current_row, column=1).font = styles["header_font"]
+    ws.cell(row=current_row, column=1).fill = styles["header_fill"]
+    ws.cell(row=current_row, column=1).alignment = styles["center"]
+    ws.cell(row=current_row, column=1).border = styles["border"]
+    
+    ws.cell(row=current_row, column=2, value=f"{quality_score:.1f} / 100")
+    ws.cell(row=current_row, column=2).font = Font(name="微软雅黑", size=14, bold=True, color="1B5E20" if quality_score >= 80 else "F57F17" if quality_score >= 60 else "C62828")
+    ws.cell(row=current_row, column=2).fill = score_fill
+    ws.cell(row=current_row, column=2).alignment = styles["center"]
+    ws.cell(row=current_row, column=2).border = styles["border"]
+    current_row += 1
+
+    summary_data = [
+        ("问题总数", validation_report.total_issues),
+        ("严重问题数", validation_report.critical_issues),
+        ("警告问题数", validation_report.warning_issues),
+        ("整体有效性", "✅ 有效" if validation_report.overall_valid else "❌ 无效"),
+    ]
+    
+    for label, value in summary_data:
+        ws.cell(row=current_row, column=1, value=label)
+        ws.cell(row=current_row, column=1).font = styles["normal_font"]
+        ws.cell(row=current_row, column=1).border = styles["border"]
+        ws.cell(row=current_row, column=1).alignment = styles["left"]
+        
+        cell = ws.cell(row=current_row, column=2, value=value)
+        cell.font = styles["normal_font"]
+        cell.border = styles["border"]
+        cell.alignment = styles["center"]
+        
+        if label == "严重问题数" and value > 0:
+            cell.fill = PatternFill(start_color="FFFFCDD2", end_color="FFFFCDD2", fill_type="solid")
+        elif label == "警告问题数" and value > 0:
+            cell.fill = PatternFill(start_color="FFFFECB3", end_color="FFFFECB3", fill_type="solid")
+        elif label == "整体有效性" and "有效" in str(value):
+            cell.fill = PatternFill(start_color="FFC8E6C9", end_color="FFC8E6C9", fill_type="solid")
+        elif label == "整体有效性" and "无效" in str(value):
+            cell.fill = PatternFill(start_color="FFFFCDD2", end_color="FFFFCDD2", fill_type="solid")
+        
+        current_row += 1
+    
+    current_row += 1
+    
+    from .validation import get_issues_dataframe
+    issues_df = get_issues_dataframe(validation_report)
+    current_row = _write_dataframe_to_sheet(ws, issues_df, current_row, styles, "问题清单")
+    
+    if not issues_df.empty:
+        last_row = current_row - 1
+        first_data_row = current_row - len(issues_df)
+        
+        red_fill = PatternFill(start_color="FFFFCDD2", end_color="FFFFCDD2", fill_type="solid")
+        yellow_fill = PatternFill(start_color="FFFFECB3", end_color="FFFFECB3", fill_type="solid")
+        blue_fill = PatternFill(start_color="FFB3E5FC", end_color="FFB3E5FC", fill_type="solid")
+        
+        for row in range(first_data_row, last_row + 1):
+            cell_value = ws.cell(row=row, column=1).value
+            if cell_value and "🔴" in str(cell_value):
+                for col in range(1, len(issues_df.columns) + 1):
+                    ws.cell(row=row, column=col).fill = red_fill
+            elif cell_value and "🟡" in str(cell_value):
+                for col in range(1, len(issues_df.columns) + 1):
+                    ws.cell(row=row, column=col).fill = yellow_fill
+            elif cell_value and "🔵" in str(cell_value):
+                for col in range(1, len(issues_df.columns) + 1):
+                    ws.cell(row=row, column=col).fill = blue_fill
+    
+    for col_idx in range(1, 7):
+        ws.column_dimensions[get_column_letter(col_idx)].width = 20
+    ws.column_dimensions['E'].width = 50
+
+
+def _write_alert_sheet(ws, alert_report: "AlertReport", styles: Dict[str, Any]) -> None:
+    ws.sheet_view.showGridLines = False
+    
+    current_row = 1
+    ws.cell(row=current_row, column=1, value="⚠️ 预警摘要")
+    ws.cell(row=current_row, column=1).font = Font(name="微软雅黑", size=18, bold=True, color="1976D2")
+    ws.merge_cells(start_row=current_row, start_column=1, end_row=current_row, end_column=6)
+    current_row += 2
+
+    health_score = alert_report.overall_health_score
+    score_fill = PatternFill(start_color="FFC8E6C9", end_color="FFC8E6C9", fill_type="solid") if health_score >= 80 else \
+                  PatternFill(start_color="FFFFECB3", end_color="FFFFECB3", fill_type="solid") if health_score >= 60 else \
+                  PatternFill(start_color="FFFFCDD2", end_color="FFFFCDD2", fill_type="solid")
+    
+    ws.cell(row=current_row, column=1, value="整体健康评分")
+    ws.cell(row=current_row, column=1).font = styles["header_font"]
+    ws.cell(row=current_row, column=1).fill = styles["header_fill"]
+    ws.cell(row=current_row, column=1).alignment = styles["center"]
+    ws.cell(row=current_row, column=1).border = styles["border"]
+    
+    ws.cell(row=current_row, column=2, value=f"{health_score:.1f} / 100")
+    ws.cell(row=current_row, column=2).font = Font(name="微软雅黑", size=14, bold=True, color="1B5E20" if health_score >= 80 else "F57F17" if health_score >= 60 else "C62828")
+    ws.cell(row=current_row, column=2).fill = score_fill
+    ws.cell(row=current_row, column=2).alignment = styles["center"]
+    ws.cell(row=current_row, column=2).border = styles["border"]
+    current_row += 1
+
+    summary_data = [
+        ("预警总数", alert_report.total_alerts),
+        ("🔴 严重预警", alert_report.critical_alerts),
+        ("🟡 警告预警", alert_report.warning_alerts),
+        ("🔵 提示预警", alert_report.info_alerts),
+    ]
+    
+    for label, value in summary_data:
+        ws.cell(row=current_row, column=1, value=label)
+        ws.cell(row=current_row, column=1).font = styles["normal_font"]
+        ws.cell(row=current_row, column=1).border = styles["border"]
+        ws.cell(row=current_row, column=1).alignment = styles["left"]
+        
+        cell = ws.cell(row=current_row, column=2, value=value)
+        cell.font = styles["normal_font"]
+        cell.border = styles["border"]
+        cell.alignment = styles["center"]
+        
+        if "严重" in label and value > 0:
+            cell.fill = PatternFill(start_color="FFFFCDD2", end_color="FFFFCDD2", fill_type="solid")
+        elif "警告" in label and value > 0:
+            cell.fill = PatternFill(start_color="FFFFECB3", end_color="FFFFECB3", fill_type="solid")
+        
+        current_row += 1
+    
+    current_row += 1
+    
+    from .alerting import get_alert_summary
+    type_summary_df = get_alert_summary(alert_report)
+    if not type_summary_df.empty:
+        current_row = _write_dataframe_to_sheet(ws, type_summary_df, current_row, styles, "各类型预警数")
+    
+    current_row += 1
+    
+    alerts_df = alert_report.to_dataframe()
+    current_row = _write_dataframe_to_sheet(ws, alerts_df, current_row, styles, "预警清单")
+    
+    if not alerts_df.empty:
+        last_row = current_row - 1
+        first_data_row = current_row - len(alerts_df)
+        
+        red_fill = PatternFill(start_color="FFFFCDD2", end_color="FFFFCDD2", fill_type="solid")
+        yellow_fill = PatternFill(start_color="FFFFECB3", end_color="FFFFECB3", fill_type="solid")
+        blue_fill = PatternFill(start_color="FFB3E5FC", end_color="FFB3E5FC", fill_type="solid")
+        
+        for row in range(first_data_row, last_row + 1):
+            cell_value = ws.cell(row=row, column=1).value
+            if cell_value and "🔴" in str(cell_value):
+                for col in range(1, len(alerts_df.columns) + 1):
+                    ws.cell(row=row, column=col).fill = red_fill
+            elif cell_value and "🟡" in str(cell_value):
+                for col in range(1, len(alerts_df.columns) + 1):
+                    ws.cell(row=row, column=col).fill = yellow_fill
+            elif cell_value and "🔵" in str(cell_value):
+                for col in range(1, len(alerts_df.columns) + 1):
+                    ws.cell(row=row, column=col).fill = blue_fill
+    
+    for col_idx in range(1, 7):
+        ws.column_dimensions[get_column_letter(col_idx)].width = 18
+    ws.column_dimensions['C'].width = 25
+    ws.column_dimensions['G'].width = 25
+    ws.column_dimensions['I'].width = 30
+
+
+def _write_kpi_sheet(ws, analysis_results: Dict[str, Any], styles: Dict[str, Any]) -> None:
+    ws.sheet_view.showGridLines = False
+    
+    current_row = 1
+    ws.cell(row=current_row, column=1, value="🎯 核心指标")
+    ws.cell(row=current_row, column=1).font = Font(name="微软雅黑", size=18, bold=True, color="1976D2")
+    ws.merge_cells(start_row=current_row, start_column=1, end_row=current_row, end_column=5)
+    current_row += 2
+
+    kpi_data = analysis_results.get("kpi_metrics", {})
+    
+    if kpi_data:
+        kpi_items = list(kpi_data.items())
+        for i in range(0, len(kpi_items), 3):
+            for j in range(3):
+                if i + j < len(kpi_items):
+                    label, value = kpi_items[i + j]
+                    col = j * 2 + 1
+                    
+                    ws.cell(row=current_row, column=col, value=label)
+                    ws.cell(row=current_row, column=col).font = styles["normal_font"]
+                    ws.cell(row=current_row, column=col).fill = styles["header_fill"]
+                    ws.cell(row=current_row, column=col).font = styles["header_font"]
+                    ws.cell(row=current_row, column=col).alignment = styles["center"]
+                    ws.cell(row=current_row, column=col).border = styles["border"]
+                    ws.merge_cells(start_row=current_row, start_column=col, end_row=current_row, end_column=col + 1)
+                    
+                    display_value = f"{value:,.2f}" if isinstance(value, float) else f"{value:,}"
+                    if "率" in label or "比" in label:
+                        display_value += "%"
+                    elif "金额" in label or "营业额" in label or "毛利" in label or "单价" in label:
+                        display_value = "¥" + display_value
+                    
+                    ws.cell(row=current_row + 1, column=col, value=display_value)
+                    ws.cell(row=current_row + 1, column=col).font = Font(name="微软雅黑", size=16, bold=True, color="1976D2")
+                    ws.cell(row=current_row + 1, column=col).fill = PatternFill(start_color="FFE3F2FD", end_color="FFE3F2FD", fill_type="solid")
+                    ws.cell(row=current_row + 1, column=col).alignment = styles["center"]
+                    ws.cell(row=current_row + 1, column=col).border = styles["border"]
+                    ws.merge_cells(start_row=current_row + 1, start_column=col, end_row=current_row + 1, end_column=col + 1)
+            
+            current_row += 3
+        
+        current_row += 1
+        
+        from .metrics import calculate_period_comparison
+        if "merged_df" in analysis_results:
+            merged_df = analysis_results["merged_df"]
+            try:
+                comparison = calculate_period_comparison(merged_df)
+                if comparison:
+                    comparison_df = pd.DataFrame([
+                        {"指标": k, "本期值": v.get("current", 0), "上期值": v.get("previous", 0), "同比变化": f"{v.get('change_percent', 0):+.1f}%"}
+                        for k, v in comparison.items()
+                    ])
+                    current_row = _write_dataframe_to_sheet(ws, comparison_df, current_row, styles, "📈 同比环比分析")
+                    
+                    if not comparison_df.empty:
+                        last_row = current_row - 1
+                        first_data_row = current_row - len(comparison_df)
+                        for row in range(first_data_row, last_row + 1):
+                            cell_value = str(ws.cell(row=row, column=4).value)
+                            if "-" in cell_value:
+                                ws.cell(row=row, column=4).font = Font(name="微软雅黑", size=10, bold=True, color="C62828")
+                            elif "+" in cell_value:
+                                ws.cell(row=row, column=4).font = Font(name="微软雅黑", size=10, bold=True, color="2E7D32")
+            except Exception:
+                pass
+    
+    for col_idx in range(1, 7):
+        ws.column_dimensions[get_column_letter(col_idx)].width = 20
+
+
 def generate_excel_report(
     analysis_results: Dict[str, Any],
     output_path: Optional[str] = None,
+    validation_report: Optional["ValidationReport"] = None,
+    alert_report: Optional["AlertReport"] = None,
 ) -> bytes:
     wb = Workbook()
     styles = _create_excel_style(wb)
@@ -123,6 +380,18 @@ def generate_excel_report(
         current_row += 1
         kpi_df = pd.DataFrame([{"指标": k, "数值": v} for k, v in kpi_data.items()])
         current_row = _write_dataframe_to_sheet(ws, kpi_df, current_row, styles)
+
+    if validation_report is not None:
+        ws_quality = wb.create_sheet("📊 数据质量摘要")
+        _write_data_quality_sheet(ws_quality, validation_report, styles)
+
+    if alert_report is not None:
+        ws_alert = wb.create_sheet("⚠️ 预警摘要")
+        _write_alert_sheet(ws_alert, alert_report, styles)
+
+    if kpi_data:
+        ws_kpi = wb.create_sheet("🎯 核心指标")
+        _write_kpi_sheet(ws_kpi, analysis_results, styles)
 
     if "store_metrics" in analysis_results:
         ws_store = wb.create_sheet("门店分析")
@@ -176,6 +445,8 @@ def generate_excel_report(
 def generate_html_report(
     analysis_results: Dict[str, Any],
     template_path: Optional[str] = None,
+    validation_report: Optional["ValidationReport"] = None,
+    alert_report: Optional["AlertReport"] = None,
 ) -> str:
     date_range = analysis_results.get("date_range", ("未指定", "未指定"))
     kpi_data = analysis_results.get("kpi_metrics", {})
@@ -272,6 +543,130 @@ def generate_html_report(
         .badge-warning {{ background: #FFECB3; color: #F57F17; }}
         .badge-danger {{ background: #FFCDD2; color: #C62828; }}
         .badge-info {{ background: #B3E5FC; color: #01579B; }}
+        .quality-card {{
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+        }}
+        .quality-score {{
+            text-align: center;
+        }}
+        .quality-score .number {{
+            font-size: 48px;
+            font-weight: bold;
+        }}
+        .quality-score .label {{
+            font-size: 14px;
+            opacity: 0.9;
+        }}
+        .quality-details {{
+            display: flex;
+            gap: 30px;
+        }}
+        .quality-detail {{
+            text-align: center;
+        }}
+        .quality-detail .value {{
+            font-size: 24px;
+            font-weight: bold;
+        }}
+        .quality-detail .label {{
+            font-size: 12px;
+            opacity: 0.8;
+        }}
+        .alert-section {{
+            background: #FFF8E1;
+            border-left: 5px solid #FF9800;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }}
+        .alert-header {{
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 15px;
+        }}
+        .alert-header h3 {{
+            color: #E65100;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }}
+        .alert-stats {{
+            display: flex;
+            gap: 20px;
+        }}
+        .alert-stat {{
+            background: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            text-align: center;
+            min-width: 80px;
+        }}
+        .alert-stat .count {{
+            font-size: 24px;
+            font-weight: bold;
+        }}
+        .alert-stat .label {{
+            font-size: 12px;
+            color: #666;
+        }}
+        .alert-critical .count {{ color: #C62828; }}
+        .alert-warning .count {{ color: #F57F17; }}
+        .alert-info .count {{ color: #01579B; }}
+        .kpi-summary {{
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }}
+        .kpi-summary-card {{
+            background: linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%);
+            padding: 25px;
+            border-radius: 12px;
+            border-left: 5px solid #1976D2;
+            position: relative;
+            overflow: hidden;
+        }}
+        .kpi-summary-card::before {{
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, rgba(25,118,210,0.1) 0%, transparent 70%);
+        }}
+        .kpi-summary-card .label {{
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 8px;
+            position: relative;
+        }}
+        .kpi-summary-card .value {{
+            font-size: 32px;
+            font-weight: bold;
+            color: #1976D2;
+            position: relative;
+        }}
+        .kpi-summary-card .change {{
+            font-size: 13px;
+            margin-top: 8px;
+            position: relative;
+        }}
+        .change-positive {{ color: #2E7D32; }}
+        .change-negative {{ color: #C62828; }}
+        .health-score-good {{ background: linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%); }}
+        .health-score-medium {{ background: linear-gradient(135deg, #FF9800 0%, #E65100 100%); }}
+        .health-score-poor {{ background: linear-gradient(135deg, #f44336 0%, #C62828 100%); }}
     </style>
 </head>
 <body>
@@ -283,6 +678,119 @@ def generate_html_report(
         </div>
         <div class="content">
 """
+
+    if validation_report is not None:
+        quality_score = validation_report.quality_score
+        quality_class = "health-score-good" if quality_score >= 80 else "health-score-medium" if quality_score >= 60 else "health-score-poor"
+        
+        html_content += f"""
+            <div class="quality-card {quality_class}">
+                <div class="quality-score">
+                    <div class="number">{quality_score:.1f}</div>
+                    <div class="label">📊 数据质量评分</div>
+                </div>
+                <div class="quality-details">
+                    <div class="quality-detail">
+                        <div class="value">{validation_report.total_issues}</div>
+                        <div class="label">问题总数</div>
+                    </div>
+                    <div class="quality-detail">
+                        <div class="value">{validation_report.critical_issues}</div>
+                        <div class="label">🔴 严重问题</div>
+                    </div>
+                    <div class="quality-detail">
+                        <div class="value">{validation_report.warning_issues}</div>
+                        <div class="label">🟡 警告问题</div>
+                    </div>
+                    <div class="quality-detail">
+                        <div class="value">{"✅" if validation_report.overall_valid else "❌"}</div>
+                        <div class="label">数据有效性</div>
+                    </div>
+                </div>
+            </div>
+"""
+
+    if alert_report is not None:
+        html_content += f"""
+            <div class="alert-section">
+                <div class="alert-header">
+                    <h3>⚠️ 预警信息摘要</h3>
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <div style="text-align: center;">
+                            <div style="font-size: 28px; font-weight: bold; color: white; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 8px 20px; border-radius: 10px;">
+                                {alert_report.overall_health_score:.1f}
+                            </div>
+                            <div style="font-size: 12px; color: #666; margin-top: 4px;">整体健康分</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="alert-stats">
+                    <div class="alert-stat alert-critical">
+                        <div class="count">{alert_report.critical_alerts}</div>
+                        <div class="label">🔴 严重预警</div>
+                    </div>
+                    <div class="alert-stat alert-warning">
+                        <div class="count">{alert_report.warning_alerts}</div>
+                        <div class="label">🟡 警告预警</div>
+                    </div>
+                    <div class="alert-stat alert-info">
+                        <div class="count">{alert_report.info_alerts}</div>
+                        <div class="label">🔵 提示预警</div>
+                    </div>
+                    <div class="alert-stat">
+                        <div class="count">{alert_report.total_alerts}</div>
+                        <div class="label">预警总数</div>
+                    </div>
+                </div>
+            </div>
+"""
+
+    if kpi_data:
+        try:
+            from .metrics import calculate_period_comparison
+            comparison = None
+            if "merged_df" in analysis_results:
+                comparison = calculate_period_comparison(analysis_results["merged_df"])
+            
+            html_content += """
+            <div class="section">
+                <h2 class="section-title">🎯 核心指标摘要</h2>
+                <div class="kpi-summary">
+"""
+            kpi_items = list(kpi_data.items())[:8]
+            for i, (label, value) in enumerate(kpi_items):
+                display_value = f"{value:,.2f}" if isinstance(value, float) else f"{value:,}"
+                if "率" in label or "比" in label:
+                    display_value += "%"
+                elif "金额" in label or "营业额" in label or "毛利" in label or "单价" in label:
+                    display_value = "¥" + display_value
+                
+                change_html = ""
+                if comparison:
+                    comp_key = None
+                    for key in comparison.keys():
+                        if key in label or label in key:
+                            comp_key = key
+                            break
+                    if comp_key:
+                        change_pct = comparison[comp_key].get("change_percent", 0)
+                        change_class = "change-positive" if change_pct >= 0 else "change-negative"
+                        change_icon = "↑" if change_pct >= 0 else "↓"
+                        change_html = f'<div class="change {change_class}">{change_icon} {change_pct:+.1f}% 较上期</div>'
+                
+                html_content += f"""
+                    <div class="kpi-summary-card">
+                        <div class="label">{label}</div>
+                        <div class="value">{display_value}</div>
+                        {change_html}
+                    </div>
+"""
+            html_content += """
+                </div>
+            </div>
+"""
+        except Exception:
+            pass
 
     if kpi_data:
         html_content += """
