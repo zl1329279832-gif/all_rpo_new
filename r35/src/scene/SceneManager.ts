@@ -82,43 +82,77 @@ export class SceneManager {
   private setupRenderer(): void {
     const { clientWidth, clientHeight } = this.container!;
 
+    const canvas = document.createElement('canvas');
+    const gl = canvas.getContext('webgl2', {
+      powerPreference: 'high-performance',
+      antialias: false,
+      alpha: false,
+      preserveDrawingBuffer: false,
+    });
+
+    this.renderer = new THREE.WebGLRenderer({
+      canvas: gl ? canvas : undefined,
+      context: gl || undefined,
+      powerPreference: 'high-performance',
+      antialias: false,
+      alpha: false,
+      preserveDrawingBuffer: false,
+    });
+
     this.renderer.setSize(clientWidth, clientHeight);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    const pixelRatio = this.getOptimalPixelRatio();
+    this.renderer.setPixelRatio(pixelRatio);
     this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.renderer.shadowMap.type = THREE.PCFShadowMap;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.2;
+    this.renderer.toneMappingExposure = 1.0;
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+    this.renderer.info.autoReset = true;
 
     this.renderer.domElement.style.position = 'absolute';
     this.renderer.domElement.style.top = '0';
     this.renderer.domElement.style.left = '0';
     this.renderer.domElement.style.width = '100%';
     this.renderer.domElement.style.height = '100%';
+    this.renderer.domElement.style.touchAction = 'none';
 
     this.container!.appendChild(this.renderer.domElement);
   }
 
+  private getOptimalPixelRatio(): number {
+    const dpr = window.devicePixelRatio || 1;
+    const width = window.innerWidth * dpr;
+    const height = window.innerHeight * dpr;
+    const totalPixels = width * height;
+
+    if (totalPixels > 4000000) return 1;
+    if (totalPixels > 2000000) return 1.5;
+    return Math.min(dpr, 2);
+  }
+
   private setupLights(): void {
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
     this.scene.add(ambientLight);
 
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 1.0);
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.9);
     directionalLight.position.set(50, 80, 50);
     directionalLight.castShadow = true;
-    directionalLight.shadow.mapSize.set(2048, 2048);
-    directionalLight.shadow.camera.near = 0.5;
-    directionalLight.shadow.camera.far = 500;
-    directionalLight.shadow.camera.left = -100;
-    directionalLight.shadow.camera.right = 100;
-    directionalLight.shadow.camera.top = 100;
-    directionalLight.shadow.camera.bottom = -100;
+    directionalLight.shadow.mapSize.set(1024, 1024);
+    directionalLight.shadow.camera.near = 10;
+    directionalLight.shadow.camera.far = 200;
+    directionalLight.shadow.camera.left = -80;
+    directionalLight.shadow.camera.right = 80;
+    directionalLight.shadow.camera.top = 80;
+    directionalLight.shadow.camera.bottom = -80;
+    directionalLight.shadow.bias = -0.0001;
+    directionalLight.shadow.normalBias = 0.02;
     this.scene.add(directionalLight);
 
     const hemisphereLight = new THREE.HemisphereLight(0x87ceeb, 0x363636, 0.3);
     this.scene.add(hemisphereLight);
 
-    const fillLight = new THREE.DirectionalLight(0x40a9ff, 0.3);
+    const fillLight = new THREE.DirectionalLight(0x40a9ff, 0.2);
     fillLight.position.set(-50, 30, -50);
     this.scene.add(fillLight);
   }

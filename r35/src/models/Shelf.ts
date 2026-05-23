@@ -4,9 +4,15 @@ import type { ShelfData } from '@/types';
 import { getUtilizationColor } from '@/utils';
 
 export class ShelfBuilder {
-  private static shelfGeometry: THREE.BoxGeometry | null = null;
+  private static frameGeometry: THREE.BoxGeometry | null = null;
   private static levelGeometry: THREE.BoxGeometry | null = null;
   private static frameMaterial: THREE.MeshStandardMaterial | null = null;
+  private static boxGeometry: THREE.BoxGeometry | null = null;
+  private static edgeGeometry: THREE.BoxGeometry | null = null;
+
+  private static readonly LOW_POLY_SEGMENTS = 1;
+  private static readonly BOX_SIZE = 0.8;
+  private static readonly BOX_GAP = 0.2;
 
   static createShelf(data: ShelfData): THREE.Group {
     const shelfGroup = new THREE.Group();
@@ -29,127 +35,164 @@ export class ShelfBuilder {
       });
     }
 
-    const leftFrame = new THREE.Mesh(
-      new THREE.BoxGeometry(frameThickness, shelfHeight, shelfDepth),
-      ShelfBuilder.frameMaterial
-    );
+    if (!ShelfBuilder.frameGeometry) {
+      ShelfBuilder.frameGeometry = new THREE.BoxGeometry(
+        frameThickness,
+        shelfHeight,
+        shelfDepth,
+        ShelfBuilder.LOW_POLY_SEGMENTS,
+        ShelfBuilder.LOW_POLY_SEGMENTS,
+        ShelfBuilder.LOW_POLY_SEGMENTS
+      );
+    }
+
+    if (!ShelfBuilder.levelGeometry) {
+      ShelfBuilder.levelGeometry = new THREE.BoxGeometry(
+        shelfWidth,
+        frameThickness,
+        shelfDepth,
+        ShelfBuilder.LOW_POLY_SEGMENTS,
+        ShelfBuilder.LOW_POLY_SEGMENTS,
+        ShelfBuilder.LOW_POLY_SEGMENTS
+      );
+    }
+
+    if (!ShelfBuilder.boxGeometry) {
+      ShelfBuilder.boxGeometry = new THREE.BoxGeometry(
+        ShelfBuilder.BOX_SIZE * 0.9,
+        ShelfBuilder.BOX_SIZE * 0.9,
+        ShelfBuilder.BOX_SIZE * 0.9,
+        ShelfBuilder.LOW_POLY_SEGMENTS,
+        ShelfBuilder.LOW_POLY_SEGMENTS,
+        ShelfBuilder.LOW_POLY_SEGMENTS
+      );
+    }
+
+    const leftFrame = new THREE.Mesh(ShelfBuilder.frameGeometry, ShelfBuilder.frameMaterial);
     leftFrame.position.set(-shelfWidth / 2 + frameThickness / 2, shelfHeight / 2, 0);
-    leftFrame.castShadow = true;
+    leftFrame.castShadow = false;
     leftFrame.receiveShadow = true;
+    leftFrame.frustumCulled = true;
     shelfGroup.add(leftFrame);
 
-    const rightFrame = new THREE.Mesh(
-      new THREE.BoxGeometry(frameThickness, shelfHeight, shelfDepth),
-      ShelfBuilder.frameMaterial
-    );
+    const rightFrame = new THREE.Mesh(ShelfBuilder.frameGeometry, ShelfBuilder.frameMaterial);
     rightFrame.position.set(shelfWidth / 2 - frameThickness / 2, shelfHeight / 2, 0);
-    rightFrame.castShadow = true;
+    rightFrame.castShadow = false;
     rightFrame.receiveShadow = true;
+    rightFrame.frustumCulled = true;
     shelfGroup.add(rightFrame);
 
     for (let i = 0; i <= levels; i++) {
       const levelY = i * levelHeight;
-      const level = new THREE.Mesh(
-        new THREE.BoxGeometry(shelfWidth, frameThickness, shelfDepth),
-        ShelfBuilder.frameMaterial
-      );
+      const level = new THREE.Mesh(ShelfBuilder.levelGeometry, ShelfBuilder.frameMaterial);
       level.position.y = levelY;
-      level.castShadow = true;
+      level.castShadow = false;
       level.receiveShadow = true;
+      level.frustumCulled = true;
       shelfGroup.add(level);
     }
 
     const usedRatio = data.usedSlots / data.capacity;
+    const boxesPerRow = Math.floor(shelfWidth / (ShelfBuilder.BOX_SIZE + ShelfBuilder.BOX_GAP));
+    const boxesPerDepth = Math.floor(shelfDepth / (ShelfBuilder.BOX_SIZE + ShelfBuilder.BOX_GAP));
+    const totalBoxesPerLevel = boxesPerRow * boxesPerDepth;
     const filledLevels = Math.floor(usedRatio * levels);
     const partialFill = (usedRatio * levels) - filledLevels;
+    const partialBoxes = Math.floor(totalBoxesPerLevel * partialFill);
 
-    const boxSize = 0.8;
-    const boxGap = 0.2;
-    const boxesPerRow = Math.floor(shelfWidth / (boxSize + boxGap));
-    const boxesPerDepth = Math.floor(shelfDepth / (boxSize + boxGap));
+    const totalBoxCount = filledLevels * totalBoxesPerLevel + (partialFill > 0.1 ? partialBoxes : 0);
 
-    for (let level = 0; level < filledLevels; level++) {
-      for (let row = 0; row < boxesPerDepth; row++) {
-        for (let col = 0; col < boxesPerRow; col++) {
-          const box = ShelfBuilder.createBox(
-            boxSize,
-            boxSize,
-            boxSize,
-            data.utilization
-          );
-          box.position.set(
-            -shelfWidth / 2 + (boxSize + boxGap) * col + boxSize / 2 + frameThickness,
-            level * levelHeight + frameThickness + boxSize / 2,
-            -shelfDepth / 2 + (boxSize + boxGap) * row + boxSize / 2
-          );
-          shelfGroup.add(box);
+    if (totalBoxCount > 0) {
+      const boxColor = new THREE.Color(getUtilizationColor(data.utilization));
+
+      const instancedMesh = new THREE.InstancedMesh(
+        ShelfBuilder.boxGeometry,
+        ShelfBuilder.createBoxMaterial(boxColor),
+        totalBoxCount
+      );
+      instancedMesh.name = 'boxes_instanced';
+      instancedMesh.castShadow = true;
+      instancedMesh.receiveShadow = false;
+      instancedMesh.frustumCulled = true;
+      instancedMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+
+      const dummy = new THREE.Object3D();
+      let boxIndex = 0;
+
+      for (let level = 0; level < filledLevels; level++) {
+        for (let row = 0; row < boxesPerDepth; row++) {
+          for (let col = 0; col < boxesPerRow; col++) {
+            dummy.position.set(
+              -shelfWidth / 2 + (ShelfBuilder.BOX_SIZE + ShelfBuilder.BOX_GAP) * col + ShelfBuilder.BOX_SIZE / 2 + frameThickness,
+              level * levelHeight + frameThickness + ShelfBuilder.BOX_SIZE / 2,
+              -shelfDepth / 2 + (ShelfBuilder.BOX_SIZE + ShelfBuilder.BOX_GAP) * row + ShelfBuilder.BOX_SIZE / 2
+            );
+            dummy.updateMatrix();
+            instancedMesh.setMatrixAt(boxIndex++, dummy.matrix);
+          }
         }
       }
-    }
 
-    if (partialFill > 0.1 && filledLevels < levels) {
-      const totalBoxes = Math.floor(boxesPerRow * boxesPerDepth * partialFill);
-      for (let i = 0; i < totalBoxes; i++) {
-        const row = Math.floor(i / boxesPerRow);
-        const col = i % boxesPerRow;
-        const box = ShelfBuilder.createBox(
-          boxSize,
-          boxSize,
-          boxSize,
-          data.utilization
-        );
-        box.position.set(
-          -shelfWidth / 2 + (boxSize + boxGap) * col + boxSize / 2 + frameThickness,
-          filledLevels * levelHeight + frameThickness + boxSize / 2,
-          -shelfDepth / 2 + (boxSize + boxGap) * row + boxSize / 2
-        );
-        shelfGroup.add(box);
+      if (partialFill > 0.1 && partialBoxes > 0) {
+        for (let i = 0; i < partialBoxes; i++) {
+          const row = Math.floor(i / boxesPerRow);
+          const col = i % boxesPerRow;
+          dummy.position.set(
+            -shelfWidth / 2 + (ShelfBuilder.BOX_SIZE + ShelfBuilder.BOX_GAP) * col + ShelfBuilder.BOX_SIZE / 2 + frameThickness,
+            filledLevels * levelHeight + frameThickness + ShelfBuilder.BOX_SIZE / 2,
+            -shelfDepth / 2 + (ShelfBuilder.BOX_SIZE + ShelfBuilder.BOX_GAP) * row + ShelfBuilder.BOX_SIZE / 2
+          );
+          dummy.updateMatrix();
+          instancedMesh.setMatrixAt(boxIndex++, dummy.matrix);
+        }
       }
+
+      instancedMesh.instanceMatrix.needsUpdate = true;
+      shelfGroup.add(instancedMesh);
     }
 
-    const edgeMaterial = new THREE.MeshStandardMaterial({
-      color: data.status === 'alarm' ? COLORS.danger : data.status === 'warning' ? COLORS.warning : COLORS.primary,
-      emissive: data.status === 'alarm' ? COLORS.danger : data.status === 'warning' ? COLORS.warning : COLORS.primary,
-      emissiveIntensity: data.status === 'normal' ? 0.2 : 0.5,
-      transparent: true,
-      opacity: 0.8,
-    });
-
-    const edges = new THREE.EdgesGeometry(
-      new THREE.BoxGeometry(shelfWidth, shelfHeight, shelfDepth)
-    );
-    const edgeLines = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({
-      color: edgeMaterial.color,
-      transparent: true,
-      opacity: 0.9,
-    }));
-    edgeLines.position.y = shelfHeight / 2;
+    const edgeColor = data.status === 'alarm' ? COLORS.danger : data.status === 'warning' ? COLORS.warning : COLORS.primary;
+    const edgeLines = ShelfBuilder.createEdgeLines(shelfWidth, shelfHeight, shelfDepth, edgeColor);
     edgeLines.name = 'shelf_edges';
     shelfGroup.add(edgeLines);
 
     shelfGroup.position.set(data.position.x, data.floor * SCENE_CONFIG.floorHeight, data.position.z);
+    shelfGroup.frustumCulled = true;
 
     return shelfGroup;
   }
 
-  private static createBox(width: number, height: number, depth: number, utilization: number): THREE.Mesh {
-    const color = new THREE.Color(getUtilizationColor(utilization));
-    const material = new THREE.MeshStandardMaterial({
+  private static createBoxMaterial(color: THREE.Color): THREE.MeshStandardMaterial {
+    return new THREE.MeshStandardMaterial({
       color: color,
       roughness: 0.5,
       metalness: 0.3,
       transparent: true,
       opacity: 0.9,
       emissive: color,
-      emissiveIntensity: 0.1,
+      emissiveIntensity: 0.05,
     });
+  }
 
-    const geometry = new THREE.BoxGeometry(width * 0.9, height * 0.9, depth * 0.9);
-    const box = new THREE.Mesh(geometry, material);
-    box.castShadow = true;
-    box.receiveShadow = true;
+  private static createEdgeLines(width: number, height: number, depth: number, color: string): THREE.LineSegments {
+    if (!ShelfBuilder.edgeGeometry) {
+      ShelfBuilder.edgeGeometry = new THREE.BoxGeometry(1, 1, 1);
+    }
 
-    return box;
+    const edges = new THREE.EdgesGeometry(ShelfBuilder.edgeGeometry);
+    const edgeLines = new THREE.LineSegments(
+      edges,
+      new THREE.LineBasicMaterial({
+        color: color,
+        transparent: true,
+        opacity: 0.9,
+      })
+    );
+    edgeLines.scale.set(width, height, depth);
+    edgeLines.position.y = height / 2;
+    edgeLines.frustumCulled = true;
+
+    return edgeLines;
   }
 
   static updateShelf(shelfGroup: THREE.Group, data: ShelfData): void {
@@ -166,16 +209,13 @@ export class ShelfBuilder {
       material.color.copy(newColor);
     }
 
-    const boxes = shelfGroup.children.filter(child =>
-      child instanceof THREE.Mesh && child.geometry instanceof THREE.BoxGeometry && child !== shelfGroup.children[0] && child !== shelfGroup.children[1]
-    );
-
-    boxes.forEach(box => {
-      const material = (box as THREE.Mesh).material as THREE.MeshStandardMaterial;
+    const instancedBoxes = shelfGroup.getObjectByName('boxes_instanced') as THREE.InstancedMesh;
+    if (instancedBoxes) {
+      const material = instancedBoxes.material as THREE.MeshStandardMaterial;
       const newColor = new THREE.Color(getUtilizationColor(data.utilization));
       material.color.copy(newColor);
       material.emissive.copy(newColor);
-    });
+    }
   }
 
   static createShelvesInstanced(shelvesData: ShelfData[]): THREE.InstancedMesh {
@@ -191,8 +231,9 @@ export class ShelfBuilder {
 
     const instancedMesh = new THREE.InstancedMesh(geometry, material, shelvesData.length);
     instancedMesh.name = 'shelves_instanced';
-    instancedMesh.castShadow = true;
+    instancedMesh.castShadow = false;
     instancedMesh.receiveShadow = true;
+    instancedMesh.frustumCulled = true;
 
     const dummy = new THREE.Object3D();
     const colors = new Float32Array(shelvesData.length * 3);
@@ -218,9 +259,9 @@ export class ShelfBuilder {
   }
 
   static dispose(): void {
-    if (ShelfBuilder.shelfGeometry) {
-      ShelfBuilder.shelfGeometry.dispose();
-      ShelfBuilder.shelfGeometry = null;
+    if (ShelfBuilder.frameGeometry) {
+      ShelfBuilder.frameGeometry.dispose();
+      ShelfBuilder.frameGeometry = null;
     }
     if (ShelfBuilder.levelGeometry) {
       ShelfBuilder.levelGeometry.dispose();
@@ -229,6 +270,14 @@ export class ShelfBuilder {
     if (ShelfBuilder.frameMaterial) {
       ShelfBuilder.frameMaterial.dispose();
       ShelfBuilder.frameMaterial = null;
+    }
+    if (ShelfBuilder.boxGeometry) {
+      ShelfBuilder.boxGeometry.dispose();
+      ShelfBuilder.boxGeometry = null;
+    }
+    if (ShelfBuilder.edgeGeometry) {
+      ShelfBuilder.edgeGeometry.dispose();
+      ShelfBuilder.edgeGeometry = null;
     }
   }
 }

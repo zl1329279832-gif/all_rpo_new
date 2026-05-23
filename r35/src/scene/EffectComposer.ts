@@ -10,15 +10,26 @@ export class PostProcessingManager {
   private sceneManager: SceneManager;
   public composer: EffectComposer | null = null;
   public bloomPass: UnrealBloomPass | null = null;
-  private isEnabled: boolean = true;
+  private isEnabled: boolean = false;
   private bloomParams = {
-    threshold: 0.3,
-    strength: 0.6,
-    radius: 0.5,
+    threshold: 0.5,
+    strength: 0.3,
+    radius: 0.3,
   };
 
   private constructor() {
     this.sceneManager = SceneManager.getInstance();
+  }
+
+  private getOptimalPixelRatio(): number {
+    const dpr = window.devicePixelRatio || 1;
+    const width = window.innerWidth * dpr;
+    const height = window.innerHeight * dpr;
+    const totalPixels = width * height;
+
+    if (totalPixels > 4000000) return 0.75;
+    if (totalPixels > 2000000) return 1;
+    return Math.min(dpr, 1.5);
   }
 
   static getInstance(): PostProcessingManager {
@@ -35,9 +46,11 @@ export class PostProcessingManager {
 
     const { clientWidth, clientHeight } = container;
 
+    const pixelRatio = this.getOptimalPixelRatio();
+
     this.composer = new EffectComposer(this.sceneManager.renderer);
     this.composer.setSize(clientWidth, clientHeight);
-    this.composer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.composer.setPixelRatio(pixelRatio);
 
     const renderPass = new RenderPass(this.sceneManager.scene, this.sceneManager.camera);
     this.composer.addPass(renderPass);
