@@ -1,26 +1,34 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch } from 'vue';
+import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue';
 import * as echarts from 'echarts';
 import { useWarehouseStore } from '@/data/warehouseStore';
 import { TrendingUp } from 'lucide-vue-next';
+import { debounce, throttle } from '@/utils';
 
 const store = useWarehouseStore();
 const chartContainer = ref<HTMLElement | null>(null);
 let chartInstance: echarts.ECharts | null = null;
+let isChartVisible = true;
+let lastDataHash = '';
 
 function initChart() {
-  if (!chartContainer.value) return;
+  if (!chartContainer.value || chartInstance) return;
 
-  chartInstance = echarts.init(chartContainer.value, 'dark');
-  updateChart();
+  chartInstance = echarts.init(chartContainer.value, 'dark', {
+    renderer: 'canvas',
+    useDirtyRect: true,
+  });
+
+  chartInstance.setOption(getChartOption(store.historicalUtilization));
 }
 
-function updateChart() {
-  if (!chartInstance) return;
-
-  const data = store.historicalUtilization;
-
-  const option: echarts.EChartsOption = {
+function getChartOption(data: any[]) {
+  return {
+    animation: true,
+    animationDuration: 500,
+    animationEasing: 'cubicOut' as const,
+    progressive: 500,
+    progressiveThreshold: 1000,
     grid: {
       left: 50,
       right: 20,
@@ -136,30 +144,71 @@ function updateChart() {
       },
     ],
   };
-
-  chartInstance.setOption(option);
 }
 
-function handleResize() {
-  chartInstance?.resize();
+function getDataHash(data: any[]): string {
+  return data.map(d => `${d.date}-${d.value}`).join('|');
+}
+
+const throttledUpdateChart = throttle(() => {
+  if (!chartInstance || !isChartVisible) return;
+
+  const data = store.historicalUtilization;
+  const newHash = getDataHash(data);
+
+  if (newHash === lastDataHash) return;
+  lastDataHash = newHash;
+
+  chartInstance.setOption({
+    series: [{
+      data: data.map(d => d.value),
+    }],
+  }, {
+    notMerge: false,
+    lazyUpdate: true,
+  });
+}, 2000);
+
+const debouncedHandleResize = debounce(() => {
+  if (chartInstance && isChartVisible) {
+    chartInstance.resize();
+  }
+}, 150);
+
+function handleVisibilityChange() {
+  isChartVisible = !document.hidden;
+  if (isChartVisible && chartInstance) {
+    nextTick(() => {
+      chartInstance?.resize();
+    });
+  }
 }
 
 watch(
   () => store.historicalUtilization,
   () => {
-    updateChart();
+    throttledUpdateChart();
   },
-  { deep: true }
+  { deep: false }
 );
 
 onMounted(() => {
-  initChart();
-  window.addEventListener('resize', handleResize);
+  setTimeout(() => {
+    initChart();
+  }, 200);
+
+  window.addEventListener('resize', debouncedHandleResize, { passive: true });
+  document.addEventListener('visibilitychange', handleVisibilityChange, { passive: true });
 });
 
 onUnmounted(() => {
-  window.removeEventListener('resize', handleResize);
-  chartInstance?.dispose();
+  window.removeEventListener('resize', debouncedHandleResize);
+  document.removeEventListener('visibilitychange', handleVisibilityChange);
+
+  if (chartInstance) {
+    chartInstance.dispose();
+    chartInstance = null;
+  }
 });
 </script>
 

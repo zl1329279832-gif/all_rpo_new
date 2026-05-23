@@ -12,30 +12,96 @@ const stats = computed(() => store.stats);
 const utilizationColor = computed(() => getUtilizationColor(stats.value.utilizationRate));
 
 const avgTemperature = computed(() => {
-  const sensors = store.sensors.filter(s => s.type === 'temperature' && s.status !== 'offline');
-  if (sensors.length === 0) return 0;
-  return sensors.reduce((sum, s) => sum + s.value, 0) / sensors.length;
+  let sum = 0;
+  let count = 0;
+  const sensors = store.sensors;
+  for (let i = 0; i < sensors.length; i++) {
+    const s = sensors[i];
+    if (s.type === 'temperature' && s.status !== 'offline') {
+      sum += s.value;
+      count++;
+    }
+  }
+  return count > 0 ? sum / count : 0;
 });
 
 const avgHumidity = computed(() => {
-  const sensors = store.sensors.filter(s => s.type === 'humidity' && s.status !== 'offline');
-  if (sensors.length === 0) return 0;
-  return sensors.reduce((sum, s) => sum + s.value, 0) / sensors.length;
+  let sum = 0;
+  let count = 0;
+  const sensors = store.sensors;
+  for (let i = 0; i < sensors.length; i++) {
+    const s = sensors[i];
+    if (s.type === 'humidity' && s.status !== 'offline') {
+      sum += s.value;
+      count++;
+    }
+  }
+  return count > 0 ? sum / count : 0;
 });
 
 const floorUtilization = computed(() => {
-  const floorShelves = store.shelves.filter(s => s.floor === store.currentFloor);
-  if (floorShelves.length === 0) return 0;
-  const totalCapacity = floorShelves.reduce((sum, s) => sum + s.capacity, 0);
-  const usedCapacity = floorShelves.reduce((sum, s) => sum + s.usedSlots, 0);
+  let totalCapacity = 0;
+  let usedCapacity = 0;
+  const shelves = store.shelves;
+  const currentFloor = store.currentFloor;
+  for (let i = 0; i < shelves.length; i++) {
+    const s = shelves[i];
+    if (s.floor === currentFloor) {
+      totalCapacity += s.capacity;
+      usedCapacity += s.usedSlots;
+    }
+  }
   return totalCapacity > 0 ? usedCapacity / totalCapacity : 0;
 });
+
+const sensorCounts = computed(() => {
+  const counts = { temperature: 0, humidity: 0, smoke: 0, door: 0 };
+  const sensors = store.sensors;
+  for (let i = 0; i < sensors.length; i++) {
+    const type = sensors[i].type;
+    if (type in counts) {
+      counts[type as keyof typeof counts]++;
+    }
+  }
+  return counts;
+});
+
+const displayedForklifts = computed(() => {
+  return store.forklifts.slice(0, 6);
+});
+
+function getForkliftMemoKey(forklift: any): string {
+  return `${forklift.id}-${forklift.status}-${forklift.battery}`;
+}
+
+function getChannelMemoKey(channel: any): string {
+  return `${channel.id}-${channel.congestionLevel}`;
+}
 
 function getStatusClass(status: string): string {
   if (status === 'normal' || status === 'working' || status === 'available') return 'status-normal';
   if (status === 'warning' || status === 'reserved' || status === 'idle') return 'status-warning';
   if (status === 'alarm' || status === 'error' || status === 'occupied') return 'status-danger';
   return 'status-offline';
+}
+
+function getForkliftStatusLabel(status: string): string {
+  if (status === 'working') return '作业中';
+  if (status === 'idle') return '空闲';
+  if (status === 'offline') return '离线';
+  return '故障';
+}
+
+function getChannelValueClass(level: number): string {
+  if (level >= 90) return 'text-red-400';
+  if (level >= 70) return 'text-yellow-400';
+  return 'text-green-400';
+}
+
+function getChannelBarColor(level: number): string {
+  if (level >= 90) return 'var(--color-danger)';
+  if (level >= 70) return 'var(--color-warning)';
+  return 'var(--color-success)';
 }
 </script>
 
@@ -133,13 +199,14 @@ function getStatusClass(status: string): string {
       </div>
       <div class="forklift-list">
         <div
-          v-for="forklift in store.forklifts.slice(0, 6)"
+          v-for="forklift in displayedForklifts"
           :key="forklift.id"
+          v-memo="[getForkliftMemoKey(forklift)]"
           class="forklift-item"
         >
           <span :class="['status-dot', getStatusClass(forklift.status)]"></span>
           <span class="forklift-code">{{ forklift.code }}</span>
-          <span class="forklift-status">{{ forklift.status === 'working' ? '作业中' : forklift.status === 'idle' ? '空闲' : forklift.status === 'offline' ? '离线' : '故障' }}</span>
+          <span class="forklift-status">{{ getForkliftStatusLabel(forklift.status) }}</span>
           <span class="forklift-battery font-mono">{{ formatNumber(forklift.battery, 0) }}%</span>
         </div>
       </div>
@@ -154,24 +221,24 @@ function getStatusClass(status: string): string {
         <span class="section-count">{{ stats.totalSensors - stats.offlineSensors }}/{{ stats.totalSensors }} 在线</span>
       </div>
       <div class="sensor-grid">
-        <div class="sensor-type-item">
+        <div class="sensor-type-item" v-memo="[sensorCounts.temperature]">
           <span class="sensor-icon temp">🌡️</span>
-          <span class="sensor-count">{{ store.sensors.filter(s => s.type === 'temperature').length }}</span>
+          <span class="sensor-count">{{ sensorCounts.temperature }}</span>
           <span class="sensor-label">温度</span>
         </div>
-        <div class="sensor-type-item">
+        <div class="sensor-type-item" v-memo="[sensorCounts.humidity]">
           <span class="sensor-icon humidity">💧</span>
-          <span class="sensor-count">{{ store.sensors.filter(s => s.type === 'humidity').length }}</span>
+          <span class="sensor-count">{{ sensorCounts.humidity }}</span>
           <span class="sensor-label">湿度</span>
         </div>
-        <div class="sensor-type-item">
+        <div class="sensor-type-item" v-memo="[sensorCounts.smoke]">
           <span class="sensor-icon smoke">🚨</span>
-          <span class="sensor-count">{{ store.sensors.filter(s => s.type === 'smoke').length }}</span>
+          <span class="sensor-count">{{ sensorCounts.smoke }}</span>
           <span class="sensor-label">烟雾</span>
         </div>
-        <div class="sensor-type-item">
+        <div class="sensor-type-item" v-memo="[sensorCounts.door]">
           <span class="sensor-icon door">🚪</span>
-          <span class="sensor-count">{{ store.sensors.filter(s => s.type === 'door').length }}</span>
+          <span class="sensor-count">{{ sensorCounts.door }}</span>
           <span class="sensor-label">门禁</span>
         </div>
       </div>
@@ -188,6 +255,7 @@ function getStatusClass(status: string): string {
         <div
           v-for="channel in store.channels"
           :key="channel.id"
+          v-memo="[getChannelMemoKey(channel)]"
           class="channel-item"
         >
           <span class="channel-code">{{ channel.code }}</span>
@@ -196,15 +264,11 @@ function getStatusClass(status: string): string {
               class="channel-bar-fill"
               :style="{
                 width: `${channel.congestionLevel}%`,
-                background: channel.congestionLevel >= 90 ? 'var(--color-danger)' : channel.congestionLevel >= 70 ? 'var(--color-warning)' : 'var(--color-success)'
+                background: getChannelBarColor(channel.congestionLevel)
               }"
             ></div>
           </div>
-          <span class="channel-value font-mono" :class="{
-            'text-red-400': channel.congestionLevel >= 90,
-            'text-yellow-400': channel.congestionLevel >= 70 && channel.congestionLevel < 90,
-            'text-green-400': channel.congestionLevel < 70
-          }">
+          <span class="channel-value font-mono" :class="getChannelValueClass(channel.congestionLevel)">
             {{ formatNumber(channel.congestionLevel, 0) }}%
           </span>
         </div>

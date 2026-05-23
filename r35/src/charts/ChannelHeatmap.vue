@@ -1,33 +1,40 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch } from 'vue';
+import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue';
 import * as echarts from 'echarts';
 import { useWarehouseStore } from '@/data/warehouseStore';
 import { MapPin } from 'lucide-vue-next';
+import { debounce, throttle } from '@/utils';
 
 const store = useWarehouseStore();
 const chartContainer = ref<HTMLElement | null>(null);
 let chartInstance: echarts.ECharts | null = null;
+let isChartVisible = true;
+let lastDataHash = '';
 
 function initChart() {
-  if (!chartContainer.value) return;
+  if (!chartContainer.value || chartInstance) return;
 
-  chartInstance = echarts.init(chartContainer.value, 'dark');
-  updateChart();
+  chartInstance = echarts.init(chartContainer.value, 'dark', {
+    renderer: 'canvas',
+    useDirtyRect: true,
+  });
+
+  chartInstance.setOption(getChartOption(store.channels));
 }
 
-function updateChart() {
-  if (!chartInstance) return;
-
-  const channels = store.channels;
-  const maxCongestion = Math.max(...channels.map(c => c.congestionLevel), 100);
-
+function getChartOption(channels: any[]) {
   const data = channels.map(ch => ({
     name: ch.code,
     value: ch.congestionLevel,
     vehicleCount: ch.vehicleCount,
   }));
 
-  const option: echarts.EChartsOption = {
+  return {
+    animation: true,
+    animationDuration: 500,
+    animationEasing: 'cubicOut' as const,
+    progressive: 500,
+    progressiveThreshold: 1000,
     grid: {
       left: 70,
       right: 40,
@@ -137,30 +144,80 @@ function updateChart() {
       },
     ],
   };
-
-  chartInstance.setOption(option);
 }
 
-function handleResize() {
-  chartInstance?.resize();
+function getDataHash(channels: any[]): string {
+  return channels.map(ch => `${ch.code}-${ch.congestionLevel}-${ch.vehicleCount}`).join('|');
+}
+
+const throttledUpdateChart = throttle(() => {
+  if (!chartInstance || !isChartVisible) return;
+
+  const channels = store.channels;
+  const newHash = getDataHash(channels);
+
+  if (newHash === lastDataHash) return;
+  lastDataHash = newHash;
+
+  const data = channels.map(ch => ({
+    name: ch.code,
+    value: ch.congestionLevel,
+    vehicleCount: ch.vehicleCount,
+  }));
+
+  chartInstance.setOption({
+    yAxis: {
+      data: data.map(d => d.name),
+    },
+    series: [{
+      data: data,
+    }],
+  }, {
+    notMerge: false,
+    lazyUpdate: true,
+  });
+}, 3000);
+
+const debouncedHandleResize = debounce(() => {
+  if (chartInstance && isChartVisible) {
+    chartInstance.resize();
+  }
+}, 150);
+
+function handleVisibilityChange() {
+  isChartVisible = !document.hidden;
+  if (isChartVisible && chartInstance) {
+    nextTick(() => {
+      chartInstance?.resize();
+    });
+  }
 }
 
 watch(
   () => store.channels,
   () => {
-    updateChart();
+    throttledUpdateChart();
   },
-  { deep: true }
+  { deep: false }
 );
 
 onMounted(() => {
-  initChart();
-  window.addEventListener('resize', handleResize);
+  setTimeout(() => {
+    initChart();
+  }, 400);
+
+  window.addEventListener('resize', debouncedHandleResize, { passive: true });
+  document.addEventListener('visibilitychange', handleVisibilityChange, { passive: true });
 });
 
 onUnmounted(() => {
-  window.removeEventListener('resize', handleResize);
-  chartInstance?.dispose();
+  window.removeEventListener('resize', debouncedHandleResize);
+  document.removeEventListener('visibilitychange', handleVisibilityChange);
+
+  if (chartInstance) {
+    chartInstance.dispose();
+    chartInstance = null;
+  }
 });
 </script>
 

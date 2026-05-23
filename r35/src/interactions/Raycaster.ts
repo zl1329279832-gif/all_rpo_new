@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { SceneManager } from '@/scene/SceneManager';
 import type { PickedObject, ObjectType } from '@/types';
-import { debounce } from '@/utils';
+import { debounce, throttle } from '@/utils';
 
 export class RaycasterManager {
   private static instance: RaycasterManager;
@@ -13,6 +13,10 @@ export class RaycasterManager {
   private onHoverCallback: ((obj: PickedObject | null) => void) | null = null;
   private onClickCallback: ((obj: PickedObject | null) => void) | null = null;
   private isEnabled: boolean = true;
+  private containerRect: DOMRect | null = null;
+  private lastRectUpdate: number = 0;
+  private readonly RECT_UPDATE_INTERVAL = 1000;
+  private lastHoverObjectId: string | null = null;
 
   private readonly interactiveTypes: ObjectType[] = ['shelf', 'forklift', 'sensor', 'dock', 'channel'];
 
@@ -20,6 +24,8 @@ export class RaycasterManager {
     this.sceneManager = SceneManager.getInstance();
     this.raycaster = new THREE.Raycaster();
     this.mouse = new THREE.Vector2();
+    this.raycaster.params.Line = { threshold: 2 };
+    this.raycaster.params.Points = { threshold: 2 };
   }
 
   static getInstance(): RaycasterManager {
@@ -32,10 +38,33 @@ export class RaycasterManager {
   init(): void {
     const domElement = this.sceneManager.renderer.domElement;
 
-    domElement.addEventListener('mousemove', this.handleMouseMove);
-    domElement.addEventListener('click', this.handleClick);
-    domElement.addEventListener('mouseleave', this.handleMouseLeave);
+    this.updateRect();
+
+    domElement.addEventListener('mousemove', this.throttledMouseMove, { passive: true });
+    domElement.addEventListener('click', this.handleClick, { passive: true });
+    domElement.addEventListener('mouseleave', this.handleMouseLeave, { passive: true });
+    domElement.addEventListener('mouseenter', this.handleMouseEnter, { passive: true });
   }
+
+  private updateRect(): void {
+    if (this.sceneManager.renderer?.domElement) {
+      this.containerRect = this.sceneManager.renderer.domElement.getBoundingClientRect();
+      this.lastRectUpdate = performance.now();
+    }
+  }
+
+  private ensureRectUpdated(): void {
+    const now = performance.now();
+    if (!this.containerRect || now - this.lastRectUpdate > this.RECT_UPDATE_INTERVAL) {
+      this.updateRect();
+    }
+  }
+
+  private throttledMouseMove = throttle((event: MouseEvent) => {
+    if (!this.isEnabled) return;
+    this.updateMousePosition(event);
+    this.checkIntersection('hover');
+  }, 24);
 
   private handleMouseMove = debounce((event: MouseEvent) => {
     if (!this.isEnabled) return;
@@ -49,10 +78,15 @@ export class RaycasterManager {
     this.checkIntersection('click');
   };
 
+  private handleMouseEnter = (): void => {
+    this.updateRect();
+  };
+
   private handleMouseLeave = (): void => {
     if (this.hoveredObject) {
       this.resetHoverState();
       this.hoveredObject = null;
+      this.lastHoverObjectId = null;
       if (this.onHoverCallback) {
         this.onHoverCallback(null);
       }
@@ -60,7 +94,10 @@ export class RaycasterManager {
   };
 
   private updateMousePosition(event: MouseEvent): void {
-    const rect = this.sceneManager.renderer.domElement.getBoundingClientRect();
+    this.ensureRectUpdated();
+    if (!this.containerRect) return;
+
+    const rect = this.containerRect;
     this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
     this.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
   }
@@ -75,8 +112,13 @@ export class RaycasterManager {
       const intersectedObject = this.findParentWithUserData(intersects[0].object);
 
       if (intersectedObject && intersectedObject.userData.type) {
+        const objectId = intersectedObject.userData.id;
+
         if (type === 'hover') {
-          this.handleHover(intersectedObject);
+          if (this.lastHoverObjectId !== objectId) {
+            this.handleHover(intersectedObject);
+            this.lastHoverObjectId = objectId;
+          }
         } else {
           this.handleClickObject(intersectedObject);
         }
@@ -87,6 +129,7 @@ export class RaycasterManager {
     if (type === 'hover' && this.hoveredObject) {
       this.resetHoverState();
       this.hoveredObject = null;
+      this.lastHoverObjectId = null;
       if (this.onHoverCallback) {
         this.onHoverCallback(null);
       }
@@ -112,11 +155,15 @@ export class RaycasterManager {
 
   private findParentWithUserData(object: THREE.Object3D): THREE.Object3D | null {
     let current: THREE.Object3D | null = object;
-    while (current) {
+    let iterations = 0;
+    const maxIterations = 10;
+
+    while (current && iterations < maxIterations) {
       if (current.userData && this.interactiveTypes.includes(current.userData.type)) {
         return current;
       }
       current = current.parent;
+      iterations++;
     }
     return null;
   }
@@ -167,16 +214,18 @@ export class RaycasterManager {
       const mesh = child as THREE.Mesh;
       if (mesh.material) {
         const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
-        materials.forEach((material: any) => {
+        const len = materials.length;
+        for (let i = 0; i < len; i++) {
+          const material = materials[i] as any;
           if (material.emissive && !material._originalEmissive) {
             material._originalEmissive = material.emissive.clone();
-            material.emissive.multiplyScalar(1.5);
+            material.emissive.multiplyScalar(1.3);
           }
-          if (!material._originalOpacity) {
+          if (material._originalOpacity === undefined) {
             material._originalOpacity = material.opacity;
-            material.opacity = Math.min(1, material.opacity + 0.2);
+            material.opacity = Math.min(1, material.opacity + 0.15);
           }
-        });
+        }
       }
     });
   }
@@ -188,7 +237,9 @@ export class RaycasterManager {
       const mesh = child as THREE.Mesh;
       if (mesh.material) {
         const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
-        materials.forEach((material: any) => {
+        const len = materials.length;
+        for (let i = 0; i < len; i++) {
+          const material = materials[i] as any;
           if (material._originalEmissive) {
             material.emissive.copy(material._originalEmissive);
             delete material._originalEmissive;
@@ -197,7 +248,7 @@ export class RaycasterManager {
             material.opacity = material._originalOpacity;
             delete material._originalOpacity;
           }
-        });
+        }
       }
     });
 
@@ -205,20 +256,26 @@ export class RaycasterManager {
   }
 
   private applyClickEffect(object: THREE.Object3D): void {
-    const originalScale = object.scale.clone();
+    const originalScaleX = object.scale.x;
+    const originalScaleY = object.scale.y;
+    const originalScaleZ = object.scale.z;
     let progress = 0;
-    const duration = 300;
+    const duration = 200;
     const startTime = performance.now();
 
     const animateClick = () => {
       progress = Math.min(1, (performance.now() - startTime) / duration);
-      const pulse = 1 + Math.sin(progress * Math.PI) * 0.1;
-      object.scale.setScalar(originalScale.x * pulse);
+      const pulse = 1 + Math.sin(progress * Math.PI) * 0.08;
+      object.scale.set(
+        originalScaleX * pulse,
+        originalScaleY * pulse,
+        originalScaleZ * pulse
+      );
 
       if (progress < 1) {
         requestAnimationFrame(animateClick);
       } else {
-        object.scale.copy(originalScale);
+        object.scale.set(originalScaleX, originalScaleY, originalScaleZ);
       }
     };
 

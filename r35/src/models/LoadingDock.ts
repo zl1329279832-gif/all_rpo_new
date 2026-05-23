@@ -3,6 +3,28 @@ import type { LoadingDockData, SensorData, ChannelData } from '@/types';
 import { COLORS } from '@/config';
 import { getStatusColor } from '@/utils';
 
+const LOW_POLY_SEGMENTS = 8;
+
+const sharedMaterials = {
+  base: null as THREE.MeshStandardMaterial | null,
+  doorFrame: null as THREE.MeshStandardMaterial | null,
+  wheel: null as THREE.MeshStandardMaterial | null,
+  trailer: null as THREE.MeshStandardMaterial | null,
+  sensorBase: null as THREE.MeshStandardMaterial | null,
+  bumper: null as THREE.MeshStandardMaterial | null,
+};
+
+function getSharedMaterial(key: keyof typeof sharedMaterials, options: Partial<THREE.MeshStandardMaterialParameters> = {}): THREE.MeshStandardMaterial {
+  if (!sharedMaterials[key]) {
+    sharedMaterials[key] = new THREE.MeshStandardMaterial({
+      roughness: 0.7,
+      metalness: 0.3,
+      ...options,
+    });
+  }
+  return sharedMaterials[key]!;
+}
+
 export class LoadingDockBuilder {
   static createDock(data: LoadingDockData): THREE.Group {
     const dockGroup = new THREE.Group();
@@ -13,11 +35,8 @@ export class LoadingDockBuilder {
       data: data,
     };
 
-    const baseMaterial = new THREE.MeshStandardMaterial({
-      color: 0x444444,
-      roughness: 0.8,
-      metalness: 0.2,
-    });
+    const baseMaterial = getSharedMaterial('base', { color: 0x444444, roughness: 0.8, metalness: 0.2 });
+    const doorFrameMaterial = getSharedMaterial('doorFrame', { color: 0x666666, roughness: 0.5, metalness: 0.5 });
 
     const statusColor = getStatusColor(data.status);
     const indicatorMaterial = new THREE.MeshStandardMaterial({
@@ -26,25 +45,24 @@ export class LoadingDockBuilder {
       emissiveIntensity: 0.5,
     });
 
-    const base = new THREE.Mesh(
-      new THREE.BoxGeometry(10, 0.3, 8),
-      baseMaterial
-    );
+    const baseGeometry = new THREE.BoxGeometry(10, 0.3, 8, 1, 1, 1);
+    const base = new THREE.Mesh(baseGeometry, baseMaterial);
     base.position.y = 0.15;
     base.receiveShadow = true;
+    base.castShadow = false;
+    base.frustumCulled = true;
     dockGroup.add(base);
 
-    const backWall = new THREE.Mesh(
-      new THREE.BoxGeometry(10, 5, 0.3),
-      baseMaterial
-    );
+    const backWallGeometry = new THREE.BoxGeometry(10, 5, 0.3, 1, 1, 1);
+    const backWall = new THREE.Mesh(backWallGeometry, baseMaterial);
     backWall.position.set(0, 2.5, -4);
-    backWall.castShadow = true;
+    backWall.castShadow = false;
     backWall.receiveShadow = true;
+    backWall.frustumCulled = true;
     dockGroup.add(backWall);
 
     const doorOpening = new THREE.Mesh(
-      new THREE.BoxGeometry(4.5, 4, 0.1),
+      new THREE.BoxGeometry(4.5, 4, 0.1, 1, 1, 1),
       new THREE.MeshStandardMaterial({
         color: 0x111111,
         transparent: true,
@@ -52,51 +70,42 @@ export class LoadingDockBuilder {
       })
     );
     doorOpening.position.set(0, 2, -3.8);
+    doorOpening.frustumCulled = true;
     dockGroup.add(doorOpening);
 
-    const doorFrameMaterial = new THREE.MeshStandardMaterial({
-      color: 0x666666,
-      roughness: 0.5,
-      metalness: 0.5,
-    });
-
-    const doorFrameLeft = new THREE.Mesh(
-      new THREE.BoxGeometry(0.3, 4.2, 0.3),
-      doorFrameMaterial
-    );
+    const doorFrameGeometry = new THREE.BoxGeometry(0.3, 4.2, 0.3, 1, 1, 1);
+    const doorFrameLeft = new THREE.Mesh(doorFrameGeometry, doorFrameMaterial);
     doorFrameLeft.position.set(-2.4, 2.1, -3.8);
+    doorFrameLeft.frustumCulled = true;
     dockGroup.add(doorFrameLeft);
 
-    const doorFrameRight = new THREE.Mesh(
-      new THREE.BoxGeometry(0.3, 4.2, 0.3),
-      doorFrameMaterial
-    );
+    const doorFrameRight = new THREE.Mesh(doorFrameGeometry, doorFrameMaterial);
     doorFrameRight.position.set(2.4, 2.1, -3.8);
+    doorFrameRight.frustumCulled = true;
     dockGroup.add(doorFrameRight);
 
     const doorFrameTop = new THREE.Mesh(
-      new THREE.BoxGeometry(5.1, 0.3, 0.3),
+      new THREE.BoxGeometry(5.1, 0.3, 0.3, 1, 1, 1),
       doorFrameMaterial
     );
     doorFrameTop.position.set(0, 4.15, -3.8);
+    doorFrameTop.frustumCulled = true;
     dockGroup.add(doorFrameTop);
 
-    const lightStrip = new THREE.Mesh(
-      new THREE.BoxGeometry(8, 0.2, 0.1),
-      indicatorMaterial
-    );
+    const lightStripGeometry = new THREE.BoxGeometry(8, 0.2, 0.1, 1, 1, 1);
+    const lightStrip = new THREE.Mesh(lightStripGeometry, indicatorMaterial);
     lightStrip.position.set(0, 4.5, -3.7);
     lightStrip.name = 'status_strip';
+    lightStrip.frustumCulled = true;
     dockGroup.add(lightStrip);
 
+    const bumperMaterial = getSharedMaterial('bumper', { color: 0x222222, roughness: 0.9 });
     const bumper = new THREE.Mesh(
-      new THREE.BoxGeometry(5, 0.5, 0.5),
-      new THREE.MeshStandardMaterial({
-        color: 0x222222,
-        roughness: 0.9,
-      })
+      new THREE.BoxGeometry(5, 0.5, 0.5, 1, 1, 1),
+      bumperMaterial
     );
     bumper.position.set(0, 0.5, 3.5);
+    bumper.frustumCulled = true;
     dockGroup.add(bumper);
 
     if (data.status === 'occupied' && data.currentVehicle) {
@@ -112,9 +121,11 @@ export class LoadingDockBuilder {
     );
     edgeLines.position.y = 2.5;
     edgeLines.name = 'dock_edges';
+    edgeLines.frustumCulled = true;
     dockGroup.add(edgeLines);
 
     dockGroup.position.set(data.position.x, data.position.y, data.position.z);
+    dockGroup.frustumCulled = true;
 
     return dockGroup;
   }
@@ -122,37 +133,35 @@ export class LoadingDockBuilder {
   private static createTruck(): THREE.Group {
     const truckGroup = new THREE.Group();
 
-    const trailerMaterial = new THREE.MeshStandardMaterial({
-      color: 0xcccccc,
-      roughness: 0.7,
-      metalness: 0.3,
-    });
+    const trailerMaterial = getSharedMaterial('trailer', { color: 0xcccccc, roughness: 0.7, metalness: 0.3 });
+    const wheelMaterial = getSharedMaterial('wheel', { color: 0x222222 });
 
-    const trailer = new THREE.Mesh(
-      new THREE.BoxGeometry(8, 4, 12),
-      trailerMaterial
-    );
+    const trailerGeometry = new THREE.BoxGeometry(8, 4, 12, 1, 1, 1);
+    const trailer = new THREE.Mesh(trailerGeometry, trailerMaterial);
     trailer.position.y = 2.2;
     trailer.castShadow = true;
+    trailer.receiveShadow = false;
+    trailer.frustumCulled = true;
     truckGroup.add(trailer);
 
     const wheelRadius = 0.5;
     const wheelThickness = 0.3;
+    const wheelGeometry = new THREE.CylinderGeometry(wheelRadius, wheelRadius, wheelThickness, LOW_POLY_SEGMENTS);
     const wheelPositions = [
       { x: -3, z: -4 }, { x: 3, z: -4 },
       { x: -3, z: 4 }, { x: 3, z: 4 },
     ];
 
     wheelPositions.forEach(pos => {
-      const wheel = new THREE.Mesh(
-        new THREE.CylinderGeometry(wheelRadius, wheelRadius, wheelThickness, 16),
-        new THREE.MeshStandardMaterial({ color: 0x222222 })
-      );
+      const wheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
       wheel.rotation.z = Math.PI / 2;
       wheel.position.set(pos.x, wheelRadius, pos.z);
+      wheel.castShadow = false;
+      wheel.frustumCulled = true;
       truckGroup.add(wheel);
     });
 
+    truckGroup.frustumCulled = true;
     return truckGroup;
   }
 
@@ -175,6 +184,47 @@ export class LoadingDockBuilder {
 }
 
 export class SensorBuilder {
+  private static baseGeometry: THREE.CylinderGeometry | null = null;
+  private static sensorGeometry: THREE.SphereGeometry | null = null;
+  private static ringGeometry: THREE.RingGeometry | null = null;
+  private static crossGeometry: THREE.BoxGeometry | null = null;
+  private static domeGeometry: THREE.SphereGeometry | null = null;
+
+  static getBaseGeometry(): THREE.CylinderGeometry {
+    if (!SensorBuilder.baseGeometry) {
+      SensorBuilder.baseGeometry = new THREE.CylinderGeometry(0.2, 0.25, 0.15, LOW_POLY_SEGMENTS);
+    }
+    return SensorBuilder.baseGeometry;
+  }
+
+  static getSensorGeometry(): THREE.SphereGeometry {
+    if (!SensorBuilder.sensorGeometry) {
+      SensorBuilder.sensorGeometry = new THREE.SphereGeometry(0.15, LOW_POLY_SEGMENTS, LOW_POLY_SEGMENTS);
+    }
+    return SensorBuilder.sensorGeometry;
+  }
+
+  static getRingGeometry(): THREE.RingGeometry {
+    if (!SensorBuilder.ringGeometry) {
+      SensorBuilder.ringGeometry = new THREE.RingGeometry(0.25, 0.35, LOW_POLY_SEGMENTS * 2);
+    }
+    return SensorBuilder.ringGeometry;
+  }
+
+  static getCrossGeometry(): THREE.BoxGeometry {
+    if (!SensorBuilder.crossGeometry) {
+      SensorBuilder.crossGeometry = new THREE.BoxGeometry(0.4, 0.05, 0.05, 1, 1, 1);
+    }
+    return SensorBuilder.crossGeometry;
+  }
+
+  static getDomeGeometry(): THREE.SphereGeometry {
+    if (!SensorBuilder.domeGeometry) {
+      SensorBuilder.domeGeometry = new THREE.SphereGeometry(0.2, LOW_POLY_SEGMENTS, LOW_POLY_SEGMENTS, 0, Math.PI * 2, 0, Math.PI / 2);
+    }
+    return SensorBuilder.domeGeometry;
+  }
+
   static createSensor(data: SensorData): THREE.Group {
     const sensorGroup = new THREE.Group();
     sensorGroup.name = `sensor_${data.id}`;
@@ -190,17 +240,13 @@ export class SensorBuilder {
                       data.type === 'smoke' ? COLORS.warning :
                       data.type === 'door' ? COLORS.purple : COLORS.info;
 
-    const baseGeometry = new THREE.CylinderGeometry(0.2, 0.25, 0.15, 16);
-    const baseMaterial = new THREE.MeshStandardMaterial({
-      color: 0x444444,
-      roughness: 0.5,
-      metalness: 0.5,
-    });
-    const base = new THREE.Mesh(baseGeometry, baseMaterial);
-    base.castShadow = true;
+    const baseMaterial = getSharedMaterial('sensorBase', { color: 0x444444, roughness: 0.5, metalness: 0.5 });
+    const base = new THREE.Mesh(SensorBuilder.getBaseGeometry(), baseMaterial);
+    base.castShadow = false;
+    base.receiveShadow = false;
+    base.frustumCulled = true;
     sensorGroup.add(base);
 
-    const sensorGeometry = new THREE.SphereGeometry(0.15, 16, 16);
     const sensorMaterial = new THREE.MeshStandardMaterial({
       color: baseColor,
       emissive: baseColor,
@@ -208,55 +254,96 @@ export class SensorBuilder {
       transparent: true,
       opacity: 0.9,
     });
-    const sensor = new THREE.Mesh(sensorGeometry, sensorMaterial);
+    const sensor = new THREE.Mesh(SensorBuilder.getSensorGeometry(), sensorMaterial);
     sensor.position.y = 0.2;
     sensor.name = 'sensor_body';
+    sensor.frustumCulled = true;
     sensorGroup.add(sensor);
 
     if (data.status !== 'normal' && data.status !== 'offline') {
-      const ringGeometry = new THREE.RingGeometry(0.25, 0.35, 32);
       const ringMaterial = new THREE.MeshBasicMaterial({
         color: statusColor,
         side: THREE.DoubleSide,
         transparent: true,
         opacity: 0.8,
       });
-      const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+      const ring = new THREE.Mesh(SensorBuilder.getRingGeometry(), ringMaterial);
       ring.rotation.x = -Math.PI / 2;
       ring.position.y = 0.08;
       ring.name = 'status_ring';
+      ring.frustumCulled = true;
       sensorGroup.add(ring);
     }
 
     if (data.status === 'offline') {
-      const crossGeometry1 = new THREE.BoxGeometry(0.4, 0.05, 0.05);
       const crossMaterial = new THREE.MeshBasicMaterial({ color: 0x666666 });
-      const cross1 = new THREE.Mesh(crossGeometry1, crossMaterial);
+      const cross1 = new THREE.Mesh(SensorBuilder.getCrossGeometry(), crossMaterial);
       cross1.rotation.z = Math.PI / 4;
       cross1.position.y = 0.2;
+      cross1.frustumCulled = true;
       sensorGroup.add(cross1);
 
-      const cross2 = new THREE.Mesh(crossGeometry1, crossMaterial);
+      const cross2 = new THREE.Mesh(SensorBuilder.getCrossGeometry(), crossMaterial);
       cross2.rotation.z = -Math.PI / 4;
       cross2.position.y = 0.2;
+      cross2.frustumCulled = true;
       sensorGroup.add(cross2);
     }
 
     if (data.type === 'smoke') {
-      const domeGeometry = new THREE.SphereGeometry(0.2, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2);
       const domeMaterial = new THREE.MeshStandardMaterial({
         color: 0xffffff,
         transparent: true,
         opacity: 0.6,
       });
-      const dome = new THREE.Mesh(domeGeometry, domeMaterial);
+      const dome = new THREE.Mesh(SensorBuilder.getDomeGeometry(), domeMaterial);
       dome.position.y = 0.2;
+      dome.frustumCulled = true;
       sensorGroup.add(dome);
     }
 
     sensorGroup.position.set(data.position.x, data.position.y, data.position.z);
+    sensorGroup.frustumCulled = true;
 
     return sensorGroup;
+  }
+
+  static createSensorsInstanced(sensorsData: SensorData[]): THREE.InstancedMesh {
+    const geometry = SensorBuilder.getSensorGeometry();
+    const material = new THREE.MeshStandardMaterial({
+      color: 0xffffff,
+      transparent: true,
+      opacity: 0.9,
+    });
+
+    const instancedMesh = new THREE.InstancedMesh(geometry, material, sensorsData.length);
+    instancedMesh.name = 'sensors_instanced';
+    instancedMesh.castShadow = false;
+    instancedMesh.receiveShadow = false;
+    instancedMesh.frustumCulled = true;
+
+    const dummy = new THREE.Object3D();
+    const colors = new Float32Array(sensorsData.length * 3);
+
+    sensorsData.forEach((data, index) => {
+      const baseColor = data.type === 'temperature' ? COLORS.danger :
+                        data.type === 'humidity' ? COLORS.primary :
+                        data.type === 'smoke' ? COLORS.warning :
+                        data.type === 'door' ? COLORS.purple : COLORS.info;
+
+      dummy.position.set(data.position.x, data.position.y + 0.2, data.position.z);
+      dummy.updateMatrix();
+      instancedMesh.setMatrixAt(index, dummy.matrix);
+
+      const color = new THREE.Color(baseColor);
+      colors[index * 3] = color.r;
+      colors[index * 3 + 1] = color.g;
+      colors[index * 3 + 2] = color.b;
+    });
+
+    instancedMesh.instanceColor = new THREE.InstancedBufferAttribute(colors, 3);
+
+    return instancedMesh;
   }
 
   static updateSensor(sensorGroup: THREE.Group, data: SensorData): void {
@@ -273,15 +360,30 @@ export class SensorBuilder {
       if (statusRing) {
         const pulse = Math.sin(Date.now() * 0.005) * 0.2 + 0.8;
         statusRing.scale.setScalar(pulse);
-        (statusRing as THREE.Mesh).material = new THREE.MeshBasicMaterial({
-          color: new THREE.Color(getStatusColor(data.status)),
-          side: THREE.DoubleSide,
-          transparent: true,
-          opacity: 0.8,
-        });
       }
-    } else if (statusRing) {
-      sensorGroup.remove(statusRing);
+    }
+  }
+
+  static dispose(): void {
+    if (SensorBuilder.baseGeometry) {
+      SensorBuilder.baseGeometry.dispose();
+      SensorBuilder.baseGeometry = null;
+    }
+    if (SensorBuilder.sensorGeometry) {
+      SensorBuilder.sensorGeometry.dispose();
+      SensorBuilder.sensorGeometry = null;
+    }
+    if (SensorBuilder.ringGeometry) {
+      SensorBuilder.ringGeometry.dispose();
+      SensorBuilder.ringGeometry = null;
+    }
+    if (SensorBuilder.crossGeometry) {
+      SensorBuilder.crossGeometry.dispose();
+      SensorBuilder.crossGeometry = null;
+    }
+    if (SensorBuilder.domeGeometry) {
+      SensorBuilder.domeGeometry.dispose();
+      SensorBuilder.domeGeometry = null;
     }
   }
 }
@@ -304,7 +406,7 @@ export class ChannelBuilder {
     const congestionColor = data.congestionLevel >= 90 ? COLORS.danger :
                             data.congestionLevel >= 70 ? COLORS.warning : COLORS.success;
 
-    const pathGeometry = new THREE.PlaneGeometry(3, distance);
+    const pathGeometry = new THREE.PlaneGeometry(3, distance, 1, 1);
     const pathMaterial = new THREE.MeshStandardMaterial({
       color: congestionColor,
       transparent: true,
@@ -318,6 +420,7 @@ export class ChannelBuilder {
     path.lookAt(end);
     path.rotateY(Math.PI / 2);
     path.name = 'channel_path';
+    path.frustumCulled = true;
     channelGroup.add(path);
 
     const lineGeometry = new THREE.BufferGeometry().setFromPoints([
@@ -334,18 +437,10 @@ export class ChannelBuilder {
     const line = new THREE.Line(lineGeometry, lineMaterial);
     line.computeLineDistances();
     line.name = 'channel_line';
+    line.frustumCulled = true;
     channelGroup.add(line);
 
-    const arrowHelper = new THREE.ArrowHelper(
-      new THREE.Vector3().subVectors(end, start).normalize(),
-      start.clone().setY(0.1),
-      distance * 0.95,
-      congestionColor,
-      1,
-      0.5
-    );
-    arrowHelper.name = 'channel_arrow';
-    channelGroup.add(arrowHelper);
+    channelGroup.frustumCulled = true;
 
     return channelGroup;
   }
@@ -368,11 +463,6 @@ export class ChannelBuilder {
     const line = channelGroup.getObjectByName('channel_line') as THREE.Line;
     if (line) {
       (line.material as THREE.LineDashedMaterial).color.copy(congestionColor);
-    }
-
-    const arrow = channelGroup.getObjectByName('channel_arrow') as THREE.ArrowHelper;
-    if (arrow) {
-      arrow.setColor(congestionColor);
     }
   }
 }
