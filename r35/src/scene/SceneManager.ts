@@ -153,13 +153,13 @@ export class SceneManager {
   }
 
   private setupEventListeners(): void {
-    this.resizeObserver = new ResizeObserver(() => this.onResize());
+    this.resizeObserver = new ResizeObserver(() => this.handleResize());
     this.resizeObserver.observe(this.container!);
 
     this.renderer.domElement.addEventListener('webglcontextlost', this.onContextLost);
   }
 
-  private onResize(): void {
+  handleResize(): void {
     if (!this.container) return;
     const { clientWidth, clientHeight } = this.container;
     this.camera.aspect = clientWidth / clientHeight;

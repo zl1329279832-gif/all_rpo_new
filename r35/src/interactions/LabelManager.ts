@@ -3,7 +3,7 @@ import { SceneManager } from '@/scene/SceneManager';
 import { RenderLoop } from '@/scene/RenderLoop';
 import type { PickedObject } from '@/types';
 import { LABEL_VISIBLE_DISTANCE } from '@/config';
-import { getStatusColor } from '@/utils';
+import { getStatusColor, debounce, throttle } from '@/utils';
 
 export interface LabelData {
   id: string;
@@ -14,15 +14,30 @@ export interface LabelData {
   object3D: THREE.Object3D;
 }
 
+interface LabelState {
+  element: HTMLElement;
+  data: LabelData;
+  lastContentUpdate: number;
+  lastPositionUpdate: number;
+  visible: boolean;
+}
+
 export class LabelManager {
   private static instance: LabelManager;
   private sceneManager: SceneManager;
   private renderLoop: RenderLoop;
   private labelsContainer: HTMLElement | null = null;
-  private labels: Map<string, HTMLElement> = new Map();
-  private labelData: Map<string, LabelData> = new Map();
+  private labels: Map<string, LabelState> = new Map();
   private hoveredLabel: string | null = null;
   private updateCallback: (() => void) | null = null;
+  private containerRect: DOMRect | null = null;
+  private lastRectUpdate: number = 0;
+  private readonly RECT_UPDATE_INTERVAL = 500;
+  private readonly POSITION_UPDATE_INTERVAL = 16;
+  private readonly CONTENT_UPDATE_INTERVAL = 500;
+
+  private tempVector = new THREE.Vector3();
+  private tempPosition = new THREE.Vector3();
 
   private constructor() {
     this.sceneManager = SceneManager.getInstance();
@@ -46,11 +61,33 @@ export class LabelManager {
     this.labelsContainer.style.pointerEvents = 'none';
     this.labelsContainer.style.overflow = 'hidden';
     this.labelsContainer.style.zIndex = '10';
+    this.labelsContainer.style.contain = 'strict';
 
     container.appendChild(this.labelsContainer);
 
+    this.updateRect();
     this.updateCallback = () => this.updateLabels();
     this.renderLoop.addCallback(this.updateCallback);
+
+    window.addEventListener('resize', this.debouncedRectUpdate, { passive: true });
+  }
+
+  private debouncedRectUpdate = debounce(() => {
+    this.updateRect();
+  }, 100);
+
+  private updateRect(): void {
+    if (this.sceneManager.renderer?.domElement) {
+      this.containerRect = this.sceneManager.renderer.domElement.getBoundingClientRect();
+      this.lastRectUpdate = performance.now();
+    }
+  }
+
+  private ensureRectUpdated(): void {
+    const now = performance.now();
+    if (!this.containerRect || now - this.lastRectUpdate > this.RECT_UPDATE_INTERVAL) {
+      this.updateRect();
+    }
   }
 
   addLabel(data: LabelData): void {
@@ -62,71 +99,95 @@ export class LabelManager {
 
     const labelElement = this.createLabelElement(data);
     this.labelsContainer.appendChild(labelElement);
-    this.labels.set(data.id, labelElement);
-    this.labelData.set(data.id, data);
+    this.labels.set(data.id, {
+      element: labelElement,
+      data,
+      lastContentUpdate: 0,
+      lastPositionUpdate: 0,
+      visible: true,
+    });
   }
 
   updateLabel(data: LabelData): void {
-    const labelElement = this.labels.get(data.id);
-    if (!labelElement) {
+    const labelState = this.labels.get(data.id);
+    if (!labelState) {
       this.addLabel(data);
       return;
     }
 
+    const now = performance.now();
+    if (now - labelState.lastContentUpdate < this.CONTENT_UPDATE_INTERVAL &&
+        labelState.data.title === data.title &&
+        labelState.data.content === data.content &&
+        labelState.data.status === data.status) {
+      return;
+    }
+
+    const labelElement = labelState.element;
     const titleEl = labelElement.querySelector('.label-title') as HTMLElement;
     const contentEl = labelElement.querySelector('.label-content') as HTMLElement;
     const statusDot = labelElement.querySelector('.status-dot') as HTMLElement;
 
-    if (titleEl) titleEl.textContent = data.title;
-    if (contentEl) contentEl.textContent = data.content;
-    if (statusDot && data.status) {
+    if (titleEl && labelState.data.title !== data.title) {
+      titleEl.textContent = data.title;
+    }
+    if (contentEl && labelState.data.content !== data.content) {
+      contentEl.textContent = data.content;
+    }
+    if (statusDot && data.status && labelState.data.status !== data.status) {
       statusDot.style.backgroundColor = getStatusColor(data.status);
       statusDot.style.boxShadow = `0 0 8px ${getStatusColor(data.status)}`;
     }
 
-    this.labelData.set(data.id, data);
+    labelState.data = data;
+    labelState.lastContentUpdate = now;
   }
 
   removeLabel(id: string): void {
-    const labelElement = this.labels.get(id);
-    if (labelElement && this.labelsContainer) {
-      this.labelsContainer.removeChild(labelElement);
+    const labelState = this.labels.get(id);
+    if (labelState && this.labelsContainer) {
+      this.labelsContainer.removeChild(labelState.element);
     }
     this.labels.delete(id);
-    this.labelData.delete(id);
   }
 
   showLabel(id: string): void {
-    const labelElement = this.labels.get(id);
-    if (labelElement) {
-      labelElement.style.display = 'block';
+    const labelState = this.labels.get(id);
+    if (labelState) {
+      labelState.element.style.display = 'block';
+      labelState.visible = true;
     }
   }
 
   hideLabel(id: string): void {
-    const labelElement = this.labels.get(id);
-    if (labelElement) {
-      labelElement.style.display = 'none';
+    const labelState = this.labels.get(id);
+    if (labelState) {
+      labelState.element.style.display = 'none';
+      labelState.visible = false;
     }
   }
 
   showAllLabels(): void {
-    this.labels.forEach(label => {
-      label.style.display = 'block';
+    this.labels.forEach(state => {
+      state.element.style.display = 'block';
+      state.visible = true;
     });
   }
 
   hideAllLabels(): void {
-    this.labels.forEach(label => {
-      label.style.display = 'none';
+    this.labels.forEach(state => {
+      state.element.style.display = 'none';
+      state.visible = false;
     });
   }
 
   setHoveredLabel(id: string | null): void {
+    if (this.hoveredLabel === id) return;
+
     if (this.hoveredLabel) {
       const prevLabel = this.labels.get(this.hoveredLabel);
       if (prevLabel) {
-        prevLabel.classList.remove('label-hovered');
+        prevLabel.element.classList.remove('label-hovered');
       }
     }
 
@@ -135,17 +196,17 @@ export class LabelManager {
     if (id) {
       const currentLabel = this.labels.get(id);
       if (currentLabel) {
-        currentLabel.classList.add('label-hovered');
+        currentLabel.element.classList.add('label-hovered');
       }
     }
   }
 
   highlightSearchedLabel(id: string): void {
-    const labelElement = this.labels.get(id);
-    if (labelElement) {
-      labelElement.classList.add('label-highlighted');
+    const labelState = this.labels.get(id);
+    if (labelState) {
+      labelState.element.classList.add('label-highlighted');
       setTimeout(() => {
-        labelElement.classList.remove('label-highlighted');
+        labelState?.element.classList.remove('label-highlighted');
       }, 3000);
     }
   }
@@ -163,7 +224,9 @@ export class LabelManager {
     label.style.fontSize = '12px';
     label.style.color = '#fff';
     label.style.pointerEvents = 'auto';
-    label.style.transition = 'all 0.2s ease';
+    label.style.transition = 'transform 0.15s ease, opacity 0.15s ease';
+    label.style.willChange = 'transform, opacity';
+    label.style.contain = 'layout style paint';
 
     const bgColor = data.status === 'alarm' ? 'rgba(255, 77, 79, 0.9)' :
                     data.status === 'warning' ? 'rgba(250, 173, 20, 0.9)' :
@@ -206,6 +269,7 @@ export class LabelManager {
       content.style.fontSize = '11px';
       content.style.opacity = '0.9';
       content.style.lineHeight = '1.4';
+      content.style.whiteSpace = 'pre-line';
       content.textContent = data.content;
       label.appendChild(content);
     }
@@ -221,6 +285,15 @@ export class LabelManager {
     arrow.style.borderRight = '6px solid transparent';
     arrow.style.borderTop = `6px solid ${bgColor}`;
     label.appendChild(arrow);
+
+    this.ensureStylesAdded();
+
+    return label;
+  }
+
+  private stylesAdded = false;
+  private ensureStylesAdded(): void {
+    if (this.stylesAdded) return;
 
     const style = document.createElement('style');
     style.textContent = `
@@ -240,51 +313,61 @@ export class LabelManager {
         50% { box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6), 0 0 20px rgba(24, 144, 255, 0.8); }
       }
     `;
-    if (!document.querySelector('style[data-labels]')) {
-      style.dataset.labels = 'true';
-      document.head.appendChild(style);
-    }
-
-    return label;
+    style.dataset.labels = 'true';
+    document.head.appendChild(style);
+    this.stylesAdded = true;
   }
 
   private updateLabels(): void {
-    if (!this.labelsContainer) return;
+    if (!this.labelsContainer || this.labels.size === 0) return;
+
+    const now = performance.now();
+    this.ensureRectUpdated();
+    if (!this.containerRect) return;
 
     const camera = this.sceneManager.camera;
-    const renderer = this.sceneManager.renderer;
-    const rect = renderer.domElement.getBoundingClientRect();
+    const rect = this.containerRect;
+    const width = rect.width;
+    const height = rect.height;
 
-    this.labelData.forEach((data, id) => {
-      const labelElement = this.labels.get(id);
-      if (!labelElement) return;
+    this.labels.forEach((state, id) => {
+      if (now - state.lastPositionUpdate < this.POSITION_UPDATE_INTERVAL) {
+        return;
+      }
+      state.lastPositionUpdate = now;
 
-      const position = new THREE.Vector3();
-      data.object3D.getWorldPosition(position);
+      const labelElement = state.element;
+      const data = state.data;
 
-      const distance = position.distanceTo(camera.position);
+      data.object3D.getWorldPosition(this.tempPosition);
+
+      const distance = this.tempPosition.distanceTo(camera.position);
 
       if (distance > LABEL_VISIBLE_DISTANCE) {
-        labelElement.style.display = 'none';
+        if (state.visible) {
+          labelElement.style.display = 'none';
+          state.visible = false;
+        }
         return;
       }
 
-      labelElement.style.display = 'block';
+      if (!state.visible) {
+        labelElement.style.display = 'block';
+        state.visible = true;
+      }
 
       const opacity = Math.max(0.3, 1 - distance / LABEL_VISIBLE_DISTANCE);
       labelElement.style.opacity = String(opacity);
 
-      position.y += 3;
-      position.project(camera);
+      this.tempVector.copy(this.tempPosition);
+      this.tempVector.y += 3;
+      this.tempVector.project(camera);
 
-      const x = (position.x * 0.5 + 0.5) * rect.width;
-      const y = (-position.y * 0.5 + 0.5) * rect.height;
-
-      labelElement.style.left = `${x}px`;
-      labelElement.style.top = `${y}px`;
+      const x = (this.tempVector.x * 0.5 + 0.5) * width;
+      const y = (-this.tempVector.y * 0.5 + 0.5) * height;
 
       const scale = Math.max(0.7, 1 - distance / LABEL_VISIBLE_DISTANCE * 0.5);
-      labelElement.style.transform = `translate(-50%, -100%) scale(${scale})`;
+      labelElement.style.transform = `translate(${x}px, ${y}px) translate(-50%, -100%) scale(${scale})`;
     });
   }
 
@@ -361,13 +444,12 @@ export class LabelManager {
   }
 
   clearAll(): void {
-    this.labels.forEach(label => {
+    this.labels.forEach(labelState => {
       if (this.labelsContainer) {
-        this.labelsContainer.removeChild(label);
+        this.labelsContainer.removeChild(labelState.element);
       }
     });
     this.labels.clear();
-    this.labelData.clear();
     this.hoveredLabel = null;
   }
 
@@ -377,11 +459,14 @@ export class LabelManager {
       this.updateCallback = null;
     }
 
+    window.removeEventListener('resize', this.debouncedRectUpdate);
+
     this.clearAll();
 
     if (this.labelsContainer && this.labelsContainer.parentNode) {
       this.labelsContainer.parentNode.removeChild(this.labelsContainer);
     }
     this.labelsContainer = null;
+    this.containerRect = null;
   }
 }

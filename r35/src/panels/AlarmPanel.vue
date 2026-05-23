@@ -1,15 +1,86 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref, shallowRef, onMounted, onUnmounted } from 'vue';
 import { useWarehouseStore } from '@/data/warehouseStore';
 import type { AlarmData, AlarmLevel } from '@/types';
 import { Bell, AlertTriangle, AlertCircle, Info, CheckCircle, Clock, User } from 'lucide-vue-next';
-import { formatDateTime, getAlarmLevelColor } from '@/utils';
+import { formatDateTime, getAlarmLevelColor, debounce } from '@/utils';
 
 const store = useWarehouseStore();
 
 const emit = defineEmits<{
   (e: 'locateAlarm', alarm: AlarmData): void;
 }>();
+
+const scrollContainer = ref<HTMLElement | null>(null);
+const scrollTop = ref(0);
+const visibleStart = ref(0);
+const visibleEnd = ref(20);
+const itemHeight = 72;
+const overscan = 5;
+const maxVisibleItems = 20;
+
+const criticalCount = computed(() => {
+  const alarms = store.alarms;
+  let count = 0;
+  for (let i = 0; i < alarms.length; i++) {
+    const a = alarms[i];
+    if (a.level === 'critical' && a.status !== 'resolved') count++;
+  }
+  return count;
+});
+
+const warningCount = computed(() => {
+  const alarms = store.alarms;
+  let count = 0;
+  for (let i = 0; i < alarms.length; i++) {
+    const a = alarms[i];
+    if (a.level === 'warning' && a.status !== 'resolved') count++;
+  }
+  return count;
+});
+
+const infoCount = computed(() => {
+  const alarms = store.alarms;
+  let count = 0;
+  for (let i = 0; i < alarms.length; i++) {
+    const a = alarms[i];
+    if (a.level === 'info' && a.status !== 'resolved') count++;
+  }
+  return count;
+});
+
+const displayedAlarms = computed(() => {
+  const alarms = store.filteredAlarms;
+  const end = Math.min(visibleEnd.value, alarms.length);
+  return alarms.slice(visibleStart.value, end);
+});
+
+const totalHeight = computed(() => {
+  return store.filteredAlarms.length * itemHeight;
+});
+
+const offsetY = computed(() => {
+  return visibleStart.value * itemHeight;
+});
+
+const handleScroll = debounce(() => {
+  if (!scrollContainer.value) return;
+
+  const container = scrollContainer.value;
+  const top = container.scrollTop;
+  const height = container.clientHeight;
+
+  const start = Math.max(0, Math.floor(top / itemHeight) - overscan);
+  const end = Math.min(
+    store.filteredAlarms.length,
+    Math.ceil((top + height) / itemHeight) + overscan
+  );
+
+  if (start !== visibleStart.value || end !== visibleEnd.value) {
+    visibleStart.value = start;
+    visibleEnd.value = end;
+  }
+}, 16);
 
 function getAlarmIcon(level: AlarmLevel) {
   switch (level) {
@@ -52,9 +123,21 @@ function locateAlarm(alarm: AlarmData) {
   emit('locateAlarm', alarm);
 }
 
-const criticalCount = computed(() => store.alarms.filter(a => a.level === 'critical' && a.status !== 'resolved').length);
-const warningCount = computed(() => store.alarms.filter(a => a.level === 'warning' && a.status !== 'resolved').length);
-const infoCount = computed(() => store.alarms.filter(a => a.level === 'info' && a.status !== 'resolved').length);
+function getAlarmMemoKey(alarm: AlarmData) {
+  return `${alarm.id}-${alarm.status}-${alarm.timestamp}`;
+}
+
+onMounted(() => {
+  if (scrollContainer.value) {
+    scrollContainer.value.addEventListener('scroll', handleScroll, { passive: true });
+  }
+});
+
+onUnmounted(() => {
+  if (scrollContainer.value) {
+    scrollContainer.value.removeEventListener('scroll', handleScroll);
+  }
+});
 </script>
 
 <template>
@@ -94,14 +177,16 @@ const infoCount = computed(() => store.alarms.filter(a => a.level === 'info' && 
       </button>
     </div>
 
-    <div class="alarm-list">
-      <TransitionGroup name="alarm">
-        <div
-          v-for="alarm in store.filteredAlarms.slice(0, 20)"
-          :key="alarm.id"
-          :class="['alarm-item', `level-${alarm.level}`]"
-        >
-          <div class="alarm-icon">
+    <div class="alarm-list" ref="scrollContainer">
+      <div class="alarm-list-spacer" :style="{ height: `${totalHeight}px` }">
+        <div class="alarm-list-viewport" :style="{ transform: `translateY(${offsetY}px)` }">
+          <div
+            v-for="alarm in displayedAlarms"
+            :key="alarm.id"
+            v-memo="[getAlarmMemoKey(alarm)]"
+            :class="['alarm-item', `level-${alarm.level}`]"
+          >
+            <div class="alarm-icon">
             <component
               :is="getAlarmIcon(alarm.level)"
               :size="20"
@@ -158,12 +243,13 @@ const infoCount = computed(() => store.alarms.filter(a => a.level === 'info' && 
             </button>
           </div>
         </div>
-      </TransitionGroup>
-
-      <div v-if="store.filteredAlarms.length === 0" class="empty-state">
-        <CheckCircle :size="48" class="empty-icon" />
-        <p>暂无告警信息</p>
       </div>
+    </div>
+
+    <div v-if="store.filteredAlarms.length === 0" class="empty-state">
+      <CheckCircle :size="48" class="empty-icon" />
+      <p>暂无告警信息</p>
+    </div>
     </div>
   </div>
 </template>
@@ -289,9 +375,30 @@ const infoCount = computed(() => store.alarms.filter(a => a.level === 'info' && 
 }
 
 .alarm-list {
+  position: relative;
+  overflow-y: auto;
+  overflow-x: hidden;
   display: flex;
   flex-direction: column;
   gap: 8px;
+  scroll-behavior: smooth;
+  will-change: transform;
+
+  .alarm-list-spacer {
+    position: relative;
+    width: 100%;
+  }
+
+  .alarm-list-viewport {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    will-change: transform;
+  }
 }
 
 .alarm-item {

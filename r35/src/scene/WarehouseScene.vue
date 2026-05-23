@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch } from 'vue';
+import { ref, onMounted, onUnmounted, watch, markRaw, shallowRef } from 'vue';
 import { useWarehouseStore } from '@/data/warehouseStore';
 import { SceneManager } from '@/scene/SceneManager';
 import { RenderLoop } from '@/scene/RenderLoop';
@@ -14,7 +14,9 @@ import { CameraController } from '@/interactions/CameraController';
 import { SearchLocator } from '@/interactions/SearchLocator';
 import { PlaybackController } from '@/interactions/PlaybackController';
 import type { PickedObject, AlarmData, ShelfData, ForkliftData, SensorData, LoadingDockData } from '@/types';
-import { COLORS, SCENE_CONFIG } from '@/config';
+import { COLORS, SCENE_CONFIG, DATA_REFRESH_INTERVAL } from '@/config';
+import { debounce, throttle } from '@/utils';
+import * as THREE from 'three';
 
 const store = useWarehouseStore();
 const sceneContainer = ref<HTMLElement | null>(null);
@@ -30,6 +32,18 @@ const playbackController = PlaybackController.getInstance();
 
 let isInitialized = false;
 let animationUpdateCallback: ((delta: number, elapsed: number) => void) | null = null;
+
+const shelfIdToIndex = new Map<string, number>();
+const objectUpdateThrottleInterval = 100;
+let lastForkliftUpdate = 0;
+let lastShelfUpdate = 0;
+let lastSensorUpdate = 0;
+let lastChannelUpdate = 0;
+let lastDockUpdate = 0;
+
+const tempVector = new THREE.Vector3();
+
+const renderStats = shallowRef({ fps: 0, drawCalls: 0, triangles: 0, frameTime: 0, memory: 0 as number | undefined });
 
 const emit = defineEmits<{
   (e: 'objectPicked', obj: PickedObject | null): void;
@@ -59,6 +73,7 @@ function initScene() {
   animationUpdateCallback = (delta: number, elapsed: number) => {
     updateAnimations(elapsed);
     postProcessing.render();
+    updateRenderStats();
   };
 
   renderLoop.addCallback(animationUpdateCallback);
@@ -70,9 +85,10 @@ function initScene() {
 }
 
 function buildShelves() {
-  store.shelves.forEach(shelf => {
+  store.shelves.forEach((shelf, index) => {
     const shelfGroup = ShelfBuilder.createShelf(shelf);
     sceneManager.shelvesGroup.add(shelfGroup);
+    shelfIdToIndex.set(shelf.id, index);
 
     const labelData = labelManager.createLabelFromPickedObject(
       { type: 'shelf', id: shelf.id, data: shelf },
@@ -144,67 +160,162 @@ function setupInteractions() {
   });
 }
 
-function updateAnimations(elapsedTime: number) {
-  sceneManager.forkliftsGroup.children.forEach((group, index) => {
-    const forkliftData = store.forklifts[index];
-    if (forkliftData) {
-      ForkliftBuilder.updateForklift(group as THREE.Group, forkliftData);
+function updateRenderStats() {
+  const stats = renderLoop.getStats();
+  renderStats.value = {
+    fps: stats.fps,
+    drawCalls: stats.drawCalls,
+    triangles: stats.triangles,
+    frameTime: stats.frameTime,
+    memory: stats.memory,
+  };
+}
+
+const throttledForkliftUpdate = throttle((now: number) => {
+  const forklifts = sceneManager.forkliftsGroup.children;
+  const forkliftData = store.forklifts;
+  const len = Math.min(forklifts.length, forkliftData.length);
+
+  for (let i = 0; i < len; i++) {
+    const group = forklifts[i] as THREE.Group;
+    const data = forkliftData[i];
+    if (data) {
+      ForkliftBuilder.updateForklift(group, data);
 
       const labelData = labelManager.createLabelFromPickedObject(
-        { type: 'forklift', id: forkliftData.id, data: forkliftData },
-        group as THREE.Group
+        { type: 'forklift', id: data.id, data },
+        group
       );
       if (labelData) {
         labelManager.updateLabel(labelData);
       }
     }
-  });
+  }
+}, objectUpdateThrottleInterval);
 
-  sceneManager.sensorsGroup.children.forEach((group, index) => {
-    const sensorData = store.sensors[index];
-    if (sensorData) {
-      SensorBuilder.updateSensor(group as THREE.Group, sensorData);
-    }
-  });
+const throttledShelfUpdate = throttle((now: number, time: number) => {
+  const shelves = sceneManager.shelvesGroup.children;
+  const shelfData = store.shelves;
 
-  sceneManager.channelsGroup.children.forEach((group, index) => {
-    const channelData = store.channels[index];
-    if (channelData) {
-      ChannelBuilder.updateChannel(group as THREE.Group, channelData);
-    }
-  });
+  for (let i = 0; i < shelves.length; i++) {
+    const group = shelves[i] as THREE.Group;
+    const shelfId = group.name.replace('shelf_', '');
+    const dataIndex = shelfIdToIndex.get(shelfId);
 
-  sceneManager.docksGroup.children.forEach((group, index) => {
-    const dockData = store.loadingDocks[index];
-    if (dockData) {
-      LoadingDockBuilder.updateDock(group as THREE.Group, dockData);
-    }
-  });
+    if (dataIndex !== undefined) {
+      const data = shelfData[dataIndex];
+      if (data) {
+        ShelfBuilder.updateShelf(group, data);
 
-  const time = Date.now() * 0.001;
-  sceneManager.shelvesGroup.children.forEach((group, index) => {
-    const shelfData = store.shelves.find(s => `shelf_${s.id}` === group.name);
-    if (shelfData) {
-      ShelfBuilder.updateShelf(group as THREE.Group, shelfData);
+        const labelData = labelManager.createLabelFromPickedObject(
+          { type: 'shelf', id: data.id, data },
+          group
+        );
+        if (labelData) {
+          labelManager.updateLabel(labelData);
+        }
 
-      const labelData = labelManager.createLabelFromPickedObject(
-        { type: 'shelf', id: shelfData.id, data: shelfData },
-        group as THREE.Group
-      );
-      if (labelData) {
-        labelManager.updateLabel(labelData);
-      }
-
-      if (shelfData.status === 'alarm') {
-        const edges = group.getObjectByName('shelf_edges') as THREE.LineSegments;
-        if (edges) {
-          const pulse = Math.sin(time * 4) * 0.3 + 0.7;
-          (edges.material as THREE.LineBasicMaterial).opacity = pulse;
+        if (data.status === 'alarm') {
+          const edges = group.getObjectByName('shelf_edges') as THREE.LineSegments;
+          if (edges) {
+            const pulse = Math.sin(time * 4) * 0.3 + 0.7;
+            (edges.material as THREE.LineBasicMaterial).opacity = pulse;
+          }
         }
       }
     }
-  });
+  }
+}, objectUpdateThrottleInterval);
+
+const throttledSensorUpdate = throttle((now: number) => {
+  const sensors = sceneManager.sensorsGroup.children;
+  const sensorData = store.sensors;
+  const len = Math.min(sensors.length, sensorData.length);
+
+  for (let i = 0; i < len; i++) {
+    const group = sensors[i] as THREE.Group;
+    const data = sensorData[i];
+    if (data) {
+      SensorBuilder.updateSensor(group, data);
+    }
+  }
+}, objectUpdateThrottleInterval * 2);
+
+const throttledChannelUpdate = throttle((now: number) => {
+  const channels = sceneManager.channelsGroup.children;
+  const channelData = store.channels;
+  const len = Math.min(channels.length, channelData.length);
+
+  for (let i = 0; i < len; i++) {
+    const group = channels[i] as THREE.Group;
+    const data = channelData[i];
+    if (data) {
+      ChannelBuilder.updateChannel(group, data);
+    }
+  }
+}, objectUpdateThrottleInterval * 3);
+
+const throttledDockUpdate = throttle((now: number) => {
+  const docks = sceneManager.docksGroup.children;
+  const dockData = store.loadingDocks;
+  const len = Math.min(docks.length, dockData.length);
+
+  for (let i = 0; i < len; i++) {
+    const group = docks[i] as THREE.Group;
+    const data = dockData[i];
+    if (data) {
+      LoadingDockBuilder.updateDock(group, data);
+    }
+  }
+}, objectUpdateThrottleInterval * 5);
+
+function updateAnimations(elapsedTime: number) {
+  const now = performance.now();
+  const time = now * 0.001;
+
+  throttledForkliftUpdate(now);
+  throttledShelfUpdate(now, time);
+  throttledSensorUpdate(now);
+  throttledChannelUpdate(now);
+  throttledDockUpdate(now);
 }
+
+function formatTriangles(count: number): string {
+  if (count >= 1000000) {
+    return (count / 1000000).toFixed(1) + 'M';
+  }
+  if (count >= 1000) {
+    return (count / 1000).toFixed(1) + 'K';
+  }
+  return String(count);
+}
+
+function formatMemory(bytes: number): string {
+  if (bytes >= 1024 * 1024 * 1024) {
+    return (bytes / (1024 * 1024 * 1024)).toFixed(1) + 'GB';
+  }
+  if (bytes >= 1024 * 1024) {
+    return (bytes / (1024 * 1024)).toFixed(1) + 'MB';
+  }
+  if (bytes >= 1024) {
+    return (bytes / 1024).toFixed(1) + 'KB';
+  }
+  return bytes + 'B';
+}
+
+function handleVisibilityChange() {
+  if (document.hidden) {
+    renderLoop.pause();
+  } else {
+    renderLoop.resume();
+  }
+}
+
+const debouncedHandleResize = debounce(() => {
+  if (isInitialized && sceneManager) {
+    sceneManager.handleResize();
+  }
+}, 100);
 
 function handleSearch(query: string) {
   const results = searchLocator.search(query, store.shelves);
@@ -277,12 +388,18 @@ watch(
 
 onMounted(() => {
   initScene();
+  document.addEventListener('visibilitychange', handleVisibilityChange, { passive: true });
+  window.addEventListener('resize', debouncedHandleResize, { passive: true });
 });
 
 onUnmounted(() => {
   if (animationUpdateCallback) {
     renderLoop.removeCallback(animationUpdateCallback);
+    animationUpdateCallback = null;
   }
+
+  document.removeEventListener('visibilitychange', handleVisibilityChange);
+  window.removeEventListener('resize', debouncedHandleResize);
 
   store.stopDataRefresh();
   renderLoop.dispose();
@@ -293,6 +410,8 @@ onUnmounted(() => {
   playbackController.dispose();
   ShelfBuilder.dispose();
   sceneManager.dispose();
+
+  shelfIdToIndex.clear();
 });
 
 defineExpose({
@@ -312,15 +431,27 @@ defineExpose({
     <div class="scene-stats">
       <div class="stat-item">
         <span class="stat-label">FPS</span>
-        <span class="stat-value font-mono">{{ renderLoop.getFps() }}</span>
+        <span class="stat-value font-mono" :class="{ 'text-green-400': renderStats.fps >= 45, 'text-yellow-400': renderStats.fps >= 30 && renderStats.fps < 45, 'text-red-400': renderStats.fps < 30 }">
+          {{ renderStats.fps }}
+        </span>
       </div>
       <div class="stat-item">
-        <span class="stat-label">对象数</span>
-        <span class="stat-value font-mono">{{ sceneManager.scene.children.length }}</span>
+        <span class="stat-label">帧耗时</span>
+        <span class="stat-value font-mono">{{ renderStats.frameTime.toFixed(1) }}ms</span>
       </div>
       <div class="stat-item">
-        <span class="stat-label">绘制调用</span>
-        <span class="stat-value font-mono">-</span>
+        <span class="stat-label">Draw Call</span>
+        <span class="stat-value font-mono">{{ renderStats.drawCalls }}</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">三角面</span>
+        <span class="stat-value font-mono">{{ formatTriangles(renderStats.triangles) }}</span>
+      </div>
+      <div class="stat-item" v-if="renderStats.memory > 0">
+        <span class="stat-label">内存</span>
+        <span class="stat-value font-mono" :class="{ 'text-yellow-400': renderStats.memory > 500 * 1024 * 1024, 'text-red-400': renderStats.memory > 1024 * 1024 * 1024 }">
+          {{ formatMemory(renderStats.memory) }}
+        </span>
       </div>
     </div>
 
