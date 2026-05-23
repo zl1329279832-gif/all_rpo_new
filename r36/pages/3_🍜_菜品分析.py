@@ -6,6 +6,8 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from core import (
+    init_session_state,
+    check_data_loaded,
     filter_by_date_and_store,
     get_date_range,
     get_store_list,
@@ -20,10 +22,11 @@ from core import (
 
 st.set_page_config(page_title="菜品分析", page_icon="🍜", layout="wide")
 
+init_session_state()
+
 st.title("🍜 菜品分析")
 
-if st.session_state.merged_df is None:
-    st.warning("⚠️ 请先在 '数据上传与校验' 页面加载并清洗数据")
+if not check_data_loaded(require_merged=True):
     st.stop()
 
 merged_df = st.session_state.merged_df

@@ -4,6 +4,8 @@ import os
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+from core import init_session_state
+
 st.set_page_config(
     page_title="连锁餐饮数据分析平台",
     page_icon="🍜",
@@ -115,26 +117,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-if "data_dict" not in st.session_state:
-    st.session_state.data_dict = {}
-
-if "cleaned_data" not in st.session_state:
-    st.session_state.cleaned_data = {}
-
-if "merged_df" not in st.session_state:
-    st.session_state.merged_df = None
-
-if "validation_report" not in st.session_state:
-    st.session_state.validation_report = None
-
-if "date_range" not in st.session_state:
-    st.session_state.date_range = None
-
-if "selected_stores" not in st.session_state:
-    st.session_state.selected_stores = None
-
-if "analysis_results" not in st.session_state:
-    st.session_state.analysis_results = {}
+init_session_state()
 
 with st.sidebar:
     st.markdown(

@@ -6,6 +6,7 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from core import (
+    init_session_state,
     load_csv_files,
     load_sample_data,
     get_data_summary,
@@ -17,6 +18,8 @@ from core import (
 from config.schemas import REQUIRED_FILES, DATA_SCHEMAS
 
 st.set_page_config(page_title="数据上传与校验", page_icon="📊", layout="wide")
+
+init_session_state()
 
 st.title("📊 数据上传与校验")
 st.markdown("上传连锁餐饮业务数据，系统将自动进行字段校验和数据质量评估")
@@ -68,17 +71,14 @@ with tab2:
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         if st.button("🎲 加载示例数据", type="primary", use_container_width=True, icon="📊"):
-            with st.spinner("正在生成示例数据..."):
-                from sample_data.generate_data import generate_all_data
-                generate_all_data()
-                
+            with st.spinner("正在加载示例数据..."):
                 data_dict = load_sample_data()
                 st.session_state.data_dict = data_dict
                 
                 validation_report = validate_all_datasets(data_dict)
                 st.session_state.validation_report = validation_report
                 
-                st.success(f"✅ 示例数据加载完成，共加载 {len(data_dict)} 份数据")
+                st.success(f"✅ 示例数据加载完成，共加载 {len(data_dict)} 份数据（订单 {len(data_dict.get('orders', []))} 条）")
                 st.rerun()
     
     if st.session_state.data_dict:

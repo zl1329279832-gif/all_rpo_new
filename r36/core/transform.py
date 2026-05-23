@@ -43,16 +43,23 @@ def _clean_single_dataframe(df: pd.DataFrame, name: str) -> pd.DataFrame:
 
 
 def _clean_orders(df: pd.DataFrame) -> pd.DataFrame:
-    if "order_time" in df.columns:
+    if "order_datetime" in df.columns:
+        df["order_time"] = pd.to_datetime(df["order_datetime"], errors="coerce")
+    elif "order_time" in df.columns:
         df["order_time"] = pd.to_datetime(df["order_time"], errors="coerce")
+    
+    if "order_time" in df.columns:
         df["order_date"] = df["order_time"].dt.date
         df["order_hour"] = df["order_time"].dt.hour
         df["day_of_week"] = df["order_time"].dt.dayofweek
         df["is_weekend"] = df["day_of_week"].isin([5, 6])
 
-    for col in ["total_amount", "discount_amount", "pay_amount"]:
+    for col in ["total_amount", "discount_amount", "pay_amount", "subtotal"]:
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
+    
+    if "pay_amount" not in df.columns and "total_amount" in df.columns:
+        df["pay_amount"] = df["total_amount"]
 
     if "member_id" in df.columns:
         df["is_member"] = df["member_id"].notna() & (df["member_id"] != "")
@@ -76,8 +83,13 @@ def _clean_members(df: pd.DataFrame) -> pd.DataFrame:
     if "register_date" in df.columns:
         df["register_date"] = pd.to_datetime(df["register_date"], errors="coerce")
 
-    if "level" in df.columns:
+    if "member_level" in df.columns:
+        df["level"] = df["member_level"].fillna("普通会员")
+    elif "level" in df.columns:
         df["level"] = df["level"].fillna("普通会员")
+    
+    if "member_name" in df.columns and "name" not in df.columns:
+        df["name"] = df["member_name"]
 
     return df
 
@@ -115,8 +127,16 @@ def _clean_promotions(df: pd.DataFrame) -> pd.DataFrame:
         if col in df.columns:
             df[col] = pd.to_datetime(df[col], errors="coerce")
 
-    if "discount_rate" in df.columns:
+    if "promotion_type" in df.columns and "type" not in df.columns:
+        df["type"] = df["promotion_type"]
+    
+    if "discount_value" in df.columns and "discount_rate" not in df.columns:
+        df["discount_rate"] = pd.to_numeric(df["discount_value"], errors="coerce").fillna(1)
+    elif "discount_rate" in df.columns:
         df["discount_rate"] = pd.to_numeric(df["discount_rate"], errors="coerce").fillna(1)
+    
+    if "promotion_name" in df.columns:
+        pass
 
     return df
 
@@ -128,7 +148,9 @@ def _clean_refunds(df: pd.DataFrame) -> pd.DataFrame:
     if "refund_amount" in df.columns:
         df["refund_amount"] = pd.to_numeric(df["refund_amount"], errors="coerce").fillna(0)
 
-    if "reason" in df.columns:
+    if "refund_reason" in df.columns and "reason" not in df.columns:
+        df["reason"] = df["refund_reason"].fillna("其他原因")
+    elif "reason" in df.columns:
         df["reason"] = df["reason"].fillna("其他原因")
 
     return df
@@ -154,39 +176,60 @@ def merge_orders_with_details(data_dict: Dict[str, pd.DataFrame]) -> Optional[pd
 
     if "dishes" in data_dict:
         dishes = data_dict["dishes"].copy()
+        dishes_to_merge = dishes[["dish_id", "category", "cost", "gross_margin", "gross_margin_rate"]].copy()
+        dishes_to_merge = dishes_to_merge.rename(columns={"cost": "dish_cost"})
         order_items = order_items.merge(
-            dishes[["dish_id", "dish_name", "category", "cost", "gross_margin", "gross_margin_rate"]],
+            dishes_to_merge,
             on="dish_id",
             how="left",
         )
-        order_items["item_cost"] = order_items["quantity"] * order_items["cost"]
+        
+        if "dish_cost" in order_items.columns:
+            order_items["item_cost"] = order_items["quantity"] * order_items["dish_cost"]
+        elif "cost" in order_items.columns:
+            order_items["item_cost"] = order_items["quantity"] * order_items["cost"]
+        else:
+            order_items["item_cost"] = 0
+            
         order_items["item_gross_margin"] = order_items["subtotal"] - order_items["item_cost"]
 
-    merged = orders.merge(order_items, on="order_id", how="left")
+    merged = orders.merge(order_items, on="order_id", how="left", suffixes=("", "_item"))
 
     if "stores" in data_dict:
         stores = data_dict["stores"].copy()
-        merged = merged.merge(
-            stores[["store_id", "store_name", "city", "area"]],
-            on="store_id",
-            how="left",
-        )
+        stores_cols = ["store_id", "store_name", "city", "area"]
+        stores_cols = [c for c in stores_cols if c in stores.columns]
+        if stores_cols:
+            merged = merged.merge(
+                stores[stores_cols],
+                on="store_id",
+                how="left",
+                suffixes=("", "_store")
+            )
 
     if "members" in data_dict:
         members = data_dict["members"].copy()
-        merged = merged.merge(
-            members[["member_id", "name", "level", "register_date"]],
-            on="member_id",
-            how="left",
-        )
+        members_cols = ["member_id", "name", "level", "register_date"]
+        members_cols = [c for c in members_cols if c in members.columns]
+        if members_cols:
+            merged = merged.merge(
+                members[members_cols],
+                on="member_id",
+                how="left",
+                suffixes=("", "_member")
+            )
 
     if "promotions" in data_dict:
         promotions = data_dict["promotions"].copy()
-        merged = merged.merge(
-            promotions[["promotion_id", "promotion_name", "type", "discount_rate"]],
-            on="promotion_id",
-            how="left",
-        )
+        promo_cols = ["promotion_id", "promotion_name", "type", "discount_rate"]
+        promo_cols = [c for c in promo_cols if c in promotions.columns]
+        if promo_cols:
+            merged = merged.merge(
+                promotions[promo_cols],
+                on="promotion_id",
+                how="left",
+                suffixes=("", "_promo")
+            )
 
     return merged
 

@@ -10,8 +10,21 @@ def calculate_kpi_metrics(df: pd.DataFrame) -> Dict[str, float]:
     if df.empty:
         return {}
 
-    total_revenue = df["pay_amount"].sum() if "pay_amount" in df.columns else 0
-    order_count = df["order_id"].nunique() if "order_id" in df.columns else 0
+    order_ids = df["order_id"].unique() if "order_id" in df.columns else []
+    order_count = len(order_ids)
+    
+    order_fields = ["pay_amount", "total_amount", "subtotal"]
+    revenue_field = None
+    for field in order_fields:
+        if field in df.columns:
+            revenue_field = field
+            break
+    
+    if revenue_field and "order_id" in df.columns:
+        order_revenue = df.drop_duplicates("order_id")[revenue_field].sum()
+        total_revenue = order_revenue
+    else:
+        total_revenue = 0
 
     if "item_gross_margin" in df.columns:
         total_gross_margin = df["item_gross_margin"].sum()
@@ -29,7 +42,15 @@ def calculate_kpi_metrics(df: pd.DataFrame) -> Dict[str, float]:
     if "refund_amount" in df.columns:
         refund_amount = df["refund_amount"].sum()
 
-    discount_amount = df["discount_amount"].sum() if "discount_amount" in df.columns else 0
+    discount_field = None
+    for field in ["discount_amount"]:
+        if field in df.columns:
+            discount_field = field
+            break
+    if discount_field and "order_id" in df.columns:
+        discount_amount = df.drop_duplicates("order_id")[discount_field].sum()
+    else:
+        discount_amount = 0
 
     item_qty = df["quantity"].sum() if "quantity" in df.columns else 0
     items_per_order = item_qty / order_count if order_count > 0 else 0

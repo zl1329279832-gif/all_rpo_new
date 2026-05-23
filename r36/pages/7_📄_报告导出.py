@@ -6,11 +6,21 @@ from datetime import datetime
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from core import generate_excel_report, generate_html_report
+from core import (
+    init_session_state,
+    check_data_loaded,
+    generate_excel_report,
+    generate_html_report,
+)
 
 st.set_page_config(page_title="报告导出", page_icon="📄", layout="wide")
 
+init_session_state()
+
 st.title("📄 报告导出")
+
+if not check_data_loaded(require_merged=True):
+    st.stop()
 
 if not st.session_state.analysis_results:
     st.warning("⚠️ 请先在各分析页面点击'保存分析结果到报告'按钮，收集需要导出的数据")

@@ -14,23 +14,23 @@ import json
 def _create_excel_style(workbook: Workbook) -> Dict[str, Any]:
     styles = {}
     styles["header_font"] = Font(name="微软雅黑", size=12, bold=True, color="FFFFFF")
-    styles["title_font"] = Font(name="微软雅黑", size=16, bold=True, color="#1976D2")
+    styles["title_font"] = Font(name="微软雅黑", size=16, bold=True, color="1976D2")
     styles["normal_font"] = Font(name="微软雅黑", size=10)
-    styles["highlight_font"] = Font(name="微软雅黑", size=11, bold=True, color="#FF9800")
+    styles["highlight_font"] = Font(name="微软雅黑", size=11, bold=True, color="FF9800")
 
-    styles["header_fill"] = PatternFill(start_color="1976D2", end_color="1976D2", fill_type="solid")
-    styles["title_fill"] = PatternFill(start_color="E3F2FD", end_color="E3F2FD", fill_type="solid")
-    styles["alternate_fill"] = PatternFill(start_color="F5F5F5", end_color="F5F5F5", fill_type="solid")
+    styles["header_fill"] = PatternFill(start_color="FF1976D2", end_color="FF1976D2", fill_type="solid")
+    styles["title_fill"] = PatternFill(start_color="FFE3F2FD", end_color="FFE3F2FD", fill_type="solid")
+    styles["alternate_fill"] = PatternFill(start_color="FFF5F5F5", end_color="FFF5F5F5", fill_type="solid")
 
     styles["center"] = Alignment(horizontal="center", vertical="center", wrap_text=True)
     styles["left"] = Alignment(horizontal="left", vertical="center", wrap_text=True)
     styles["right"] = Alignment(horizontal="right", vertical="center", wrap_text=True)
 
     thin_border = Border(
-        left=Side(style="thin", color="#CCCCCC"),
-        right=Side(style="thin", color="#CCCCCC"),
-        top=Side(style="thin", color="#CCCCCC"),
-        bottom=Side(style="thin", color="#CCCCCC"),
+        left=Side(style="thin", color="FFCCCCCC"),
+        right=Side(style="thin", color="FFCCCCCC"),
+        top=Side(style="thin", color="FFCCCCCC"),
+        bottom=Side(style="thin", color="FFCCCCCC"),
     )
     styles["border"] = thin_border
 
@@ -103,7 +103,7 @@ def generate_excel_report(
 
     current_row = 1
     ws.cell(row=current_row, column=1, value="连锁餐饮数据分析报告")
-    ws.cell(row=current_row, column=1).font = Font(name="微软雅黑", size=20, bold=True, color="#1976D2")
+    ws.cell(row=current_row, column=1).font = Font(name="微软雅黑", size=20, bold=True, color="1976D2")
     ws.merge_cells(start_row=current_row, start_column=1, end_row=current_row, end_column=5)
     current_row += 2
 
