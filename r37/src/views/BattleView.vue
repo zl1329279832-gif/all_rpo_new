@@ -93,7 +93,7 @@ const activeName = computed(() => {
   if (store.activePlayer === 0) return store.player?.name
   return store.enemy?.name
 })
-const canEnd = computed(() => store.activePlayer === 0 && !store.aiThinking)
+const canEnd = computed(() => !store.aiThinking && (store.activePlayer === 0 || !store.enemy?.isAI))
 const playerStunned = computed(
   () => !!store.player?.statuses.find((s) => s.kind === 'stun')
 )
@@ -120,7 +120,7 @@ watch(selectedUid, (uid) => {
 })
 
 function onPlayCard(uid: string) {
-  if (store.activePlayer !== 0 || store.aiThinking) return
+  if (store.activePlayer !== 0) return
   const inst = store.player?.hand.find((c) => c.uid === uid)
   if (!inst) return
   const def = getCardDef(inst.defId)
@@ -139,37 +139,61 @@ function onPlayEnemy(uid: string) {
   const inst = store.enemy?.hand.find((c) => c.uid === uid)
   if (!inst) return
   const def = getCardDef(inst.defId)
-  doPlay(uid, def.target === 'self' ? 1 : 0)
+  if (def.target === 'self' || def.effects.every((e) => (e.target ?? def.target) === 'self')) {
+    doPlay(uid, 1)
+  } else {
+    doPlay(uid, 0)
+  }
 }
 
 function onDropOnEnemy(uid: string) {
-  doPlay(uid, 1)
+  // 对敌方的拖放：当前出牌者是谁，对"对手"目标使用
+  const actor = store.activePlayer
+  const enemyId: PlayerId = actor === 0 ? 1 : 0
+  doPlay(uid, enemyId)
 }
 function onDropOnSelf(uid: string) {
-  doPlay(uid, 0)
+  // 拖放到自己面板：对自身使用
+  const actor = store.activePlayer
+  doPlay(uid, actor as PlayerId)
 }
 
 function doPlay(uid: string, target: PlayerId) {
-  if (store.activePlayer !== 0) return
-  const info = store.player?.hand.find((c) => c.uid === uid)
+  const actor = store.activePlayer
+  if (actor !== 0 && actor !== 1) return
+  const ctrl = store.controller
+  if (!ctrl) return
+  if (ctrl.state.phase !== 'player-turn') return
+  if (ctrl.state.activePlayer !== actor) return
+  const selfHand = actor === 0 ? ctrl.player.hand : ctrl.enemy.hand
+  const info = selfHand.find((c) => c.uid === uid)
   if (!info) return
   const def = getCardDef(info.defId)
+  // 目标必须与实际出牌者一致
+  const realTarget = target === actor ? actor : (actor === 0 ? 1 : 0)
   sfx.playCard()
   if (def.type === 'attack') sfx.attack()
   else if (def.type === 'heal') sfx.heal()
   else if (def.type === 'defense') sfx.shield()
   else sfx.status()
-  store.playCard(uid, target)
+  ctrl.playCard(uid, realTarget as PlayerId)
+  store.refresh()
   selectedUid.value = null
   pendingEnemyTarget.value = false
-  nextTick(() => store.refresh())
 }
 
 function onEndTurn() {
-  if (store.activePlayer !== 0) return
+  if (store.aiThinking) return
+  const ctrl = store.controller
+  if (!ctrl) return
+  if (ctrl.state.phase !== 'player-turn') return
   sfx.turn()
-  store.endTurn()
-  nextTick(() => store.refresh())
+  ctrl.endTurn()
+  store.refresh()
+  // 若切换到 AI 回合，自动触发 AI 行动
+  if (ctrl.enemy.isAI && ctrl.state.activePlayer === 1) {
+    ;(store as any).runAITurn?.()
+  }
 }
 
 function onRematch() {
@@ -301,24 +325,50 @@ onBeforeUnmount(() => {
   position: relative;
   padding: 14px 18px;
   display: grid;
-  grid-template-rows: 1fr auto 1fr;
+  grid-template-columns: 1fr;
+  grid-template-rows: auto 1fr auto auto 1fr auto;
+  grid-template-areas:
+    'enemy-panel'
+    'enemy-hand'
+    'vs'
+    'player-hand'
+    'player-panel'
+    '.';
   gap: 10px;
   z-index: 2;
+  min-height: 0;
 }
 .side {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  justify-content: center;
+  display: contents;
 }
 .enemy-side {
-  justify-content: flex-start;
+  /* handled via grid areas */
 }
 .player-side {
-  justify-content: flex-end;
+  /* handled via grid areas */
+}
+.enemy-side > :first-child {
+  grid-area: enemy-panel;
+  justify-self: center;
+}
+.enemy-side > :nth-child(2) {
+  grid-area: enemy-hand;
+  align-self: end;
+  justify-self: center;
+  min-width: 100%;
+}
+.player-side > :first-child {
+  grid-area: player-panel;
+  justify-self: center;
+}
+.player-side > :nth-child(2) {
+  grid-area: player-hand;
+  align-self: end;
+  justify-self: center;
+  min-width: 100%;
 }
 .vs {
+  grid-area: vs;
   text-align: center;
   font-size: 22px;
   color: var(--gold);
