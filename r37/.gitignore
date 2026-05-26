@@ -1,0 +1,58 @@
+# ====== Node ======
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ====== Build output ======
+dist/
+dist-ssr/
+output/
+build/
+*.local
+
+# ====== Cache ======
+.cache/
+.parcel-cache/
+.vite/
+.turbo/
+.cache-loader/
+.eslintcache
+.stylelintcache
+
+# ====== Editor / IDE ======
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.vscode-test/
+*.sublime-workspace
+*.sublime-project
+
+# ====== OS ======
+.DS_Store
+Thumbs.db
+Desktop.ini
+ehthumbs.db
+
+# ====== Env ======
+.env
+.env.local
+.env.*.local
+
+# ====== Local records (generated at runtime, not in source control) ======
+records.json
+records/
+local-records.json
+
+# ====== Logs ======
+logs/
+*.log
+runtime.log
+vite.log
+
+# ====== Temp ======
+tmp/
+temp/
+*.tmp
