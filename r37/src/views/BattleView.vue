@@ -20,20 +20,22 @@
           :targetable="pendingEnemyTarget"
           @drop-card="onDropOnEnemy"
         />
-        <HandArea
-          v-if="!store.enemy!.isAI"
-          :cards="store.enemy!.hand"
-          :energy="store.enemy!.energy"
-          :hidden="store.activePlayer !== 1"
-          :stun="enemyStunned"
-          @play="onPlayEnemy"
-        />
-        <div v-else class="enemy-hand-fan">
-          <div
-            v-for="c in store.enemy!.hand"
-            :key="c.uid"
-            class="hidden-card"
-          ></div>
+        <div class="hand-container">
+          <HandArea
+            v-if="!store.enemy!.isAI"
+            :cards="store.enemy!.hand"
+            :energy="store.enemy!.energy"
+            :hidden="store.activePlayer !== 1"
+            :stun="enemyStunned"
+            @play="onPlayEnemy"
+          />
+          <div v-else class="enemy-hand-fan">
+            <div
+              v-for="c in store.enemy!.hand"
+              :key="c.uid"
+              class="hidden-card"
+            ></div>
+          </div>
         </div>
       </div>
 
@@ -46,14 +48,16 @@
           :targetable="false"
           @drop-card="onDropOnSelf"
         />
-        <HandArea
-          :cards="store.player!.hand"
-          :energy="store.player!.energy"
-          :selected-uid="selectedUid"
-          :stun="playerStunned"
-          :hidden="false"
-          @play="onPlayCard"
-        />
+        <div class="hand-container">
+          <HandArea
+            :cards="store.player!.hand"
+            :energy="store.player!.energy"
+            :selected-uid="selectedUid"
+            :stun="playerStunned"
+            :hidden="false"
+            @play="onPlayCard"
+          />
+        </div>
       </div>
     </div>
 
@@ -178,6 +182,7 @@ function doPlay(uid: string, target: PlayerId) {
   else sfx.status()
   ctrl.playCard(uid, realTarget as PlayerId)
   store.refresh()
+  if (ctrl.state.result) store.saveResult()
   selectedUid.value = null
   pendingEnemyTarget.value = false
 }
@@ -188,12 +193,8 @@ function onEndTurn() {
   if (!ctrl) return
   if (ctrl.state.phase !== 'player-turn') return
   sfx.turn()
-  ctrl.endTurn()
-  store.refresh()
-  // 若切换到 AI 回合，自动触发 AI 行动
-  if (ctrl.enemy.isAI && ctrl.state.activePlayer === 1) {
-    ;(store as any).runAITurn?.()
-  }
+  store.endTurn()
+  // endTurn 内部会自动触发 AI 行动（如需要）
 }
 
 function onRematch() {
@@ -326,59 +327,55 @@ onBeforeUnmount(() => {
   padding: 14px 18px;
   display: grid;
   grid-template-columns: 1fr;
-  grid-template-rows: auto 1fr auto auto 1fr auto;
+  grid-template-rows: minmax(0, 1fr) auto auto minmax(0, 1fr);
   grid-template-areas:
-    'enemy-panel'
-    'enemy-hand'
+    'enemy-area'
     'vs'
-    'player-hand'
-    'player-panel'
-    '.';
-  gap: 10px;
+    'player-area';
+  gap: 8px;
   z-index: 2;
   min-height: 0;
 }
 .side {
-  display: contents;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  min-height: 0;
 }
 .enemy-side {
-  /* handled via grid areas */
+  grid-area: enemy-area;
+  justify-content: flex-start;
+  padding-top: 4px;
+  max-height: 100%;
 }
 .player-side {
-  /* handled via grid areas */
+  grid-area: player-area;
+  justify-content: flex-end;
+  padding-bottom: 4px;
+  max-height: 100%;
 }
-.enemy-side > :first-child {
-  grid-area: enemy-panel;
-  justify-self: center;
+.hand-container {
+  width: 100%;
+  height: 240px;
+  min-height: 240px;
+  max-height: 240px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  overflow: hidden;
 }
-.enemy-side > :nth-child(2) {
-  grid-area: enemy-hand;
-  align-self: end;
-  justify-self: center;
-  min-width: 100%;
-}
-.player-side > :first-child {
-  grid-area: player-panel;
-  justify-self: center;
-}
-.player-side > :nth-child(2) {
-  grid-area: player-hand;
-  align-self: end;
-  justify-self: center;
-  min-width: 100%;
-}
-.vs {
-  grid-area: vs;
-  text-align: center;
-  font-size: 22px;
-  color: var(--gold);
-  letter-spacing: 4px;
-  opacity: 0.6;
+.hand-container > .hand-area {
+  width: 100%;
+  height: 100%;
+  min-height: 240px;
 }
 .enemy-hand-fan {
   display: flex;
   justify-content: center;
-  gap: -10px;
+  align-items: flex-end;
+  height: 100%;
+  padding-bottom: 20px;
 }
 .hidden-card {
   width: 40px;

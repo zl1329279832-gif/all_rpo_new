@@ -49,8 +49,13 @@ export const useBattleStore = defineStore('battle', () => {
     aiThinking.value = true
     const steps = controller.value.aiTurn()
     refresh()
+    // 如果 AI 出牌后游戏直接结束，立即保存
+    if (controller.value.state.result) {
+      saveResult()
+      aiThinking.value = false
+      return
+    }
     if (steps.length > 0) {
-      // 依次展示每张 AI 出牌
       let i = 0
       const tick = () => {
         if (!controller.value) return
@@ -61,11 +66,9 @@ export const useBattleStore = defineStore('battle', () => {
           if (controller.value.state.result) saveResult()
           return
         }
-        const uid = steps[i++]
+        i++
         refresh()
         setTimeout(tick, 450)
-        // 引用 uid 避免未使用告警
-        void uid
       }
       setTimeout(tick, 400)
     } else {
@@ -107,6 +110,8 @@ export const useBattleStore = defineStore('battle', () => {
     start,
     playCard,
     endTurn,
+    runAITurn,
+    saveResult,
     reset,
     refresh
   }

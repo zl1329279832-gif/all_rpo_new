@@ -71,7 +71,9 @@ function onDragEnd(uid: string) {
   align-items: flex-end;
   gap: 8px;
   padding: 12px 14px;
+  height: 100%;
   min-height: 240px;
   overflow-x: auto;
+  overflow-y: hidden;
 }
 </style>
