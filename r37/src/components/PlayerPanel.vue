@@ -97,6 +97,9 @@ function onDrop(e: DragEvent) {
   box-shadow: var(--shadow);
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
   min-width: 320px;
+  min-height: 92px;
+  max-height: 92px;
+  overflow: hidden;
 }
 .player-panel.active {
   border-color: var(--accent);
@@ -190,8 +193,15 @@ function onDrop(e: DragEvent) {
 .statuses {
   display: flex;
   gap: 6px;
-  flex-wrap: wrap;
+  overflow-x: auto;
+  overflow-y: hidden;
   margin-top: 4px;
+  max-width: 100%;
+  scrollbar-width: thin;
+  padding-bottom: 2px;
+}
+.statuses::-webkit-scrollbar {
+  height: 3px;
 }
 .status-chip {
   display: inline-flex;

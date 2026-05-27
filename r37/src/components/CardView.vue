@@ -125,7 +125,9 @@ function onClick() {
 .card {
   position: relative;
   width: 150px;
-  height: 220px;
+  height: clamp(170px, 25vh, 220px);
+  min-height: 170px;
+  max-height: 220px;
   border-radius: 12px;
   border: 1px solid var(--card-edge);
   background: linear-gradient(160deg, #2a2f5c 0%, #161a36 100%);

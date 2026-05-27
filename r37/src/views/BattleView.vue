@@ -13,13 +13,18 @@
     </div>
 
     <div class="arena">
-      <div class="side enemy-side">
+      <!-- Enemy Panel (top) -->
+      <div class="panel-wrapper enemy-panel-wrapper">
         <PlayerPanel
           :player="store.enemy!"
           :active="store.activePlayer === 1"
           :targetable="pendingEnemyTarget"
           @drop-card="onDropOnEnemy"
         />
+      </div>
+
+      <!-- Enemy Hand -->
+      <div class="hand-wrapper enemy-hand-wrapper">
         <div class="hand-container">
           <HandArea
             v-if="!store.enemy!.isAI"
@@ -27,27 +32,31 @@
             :energy="store.enemy!.energy"
             :hidden="store.activePlayer !== 1"
             :stun="enemyStunned"
+            :max-visible="5"
             @play="onPlayEnemy"
+            @show-all="() => openCardModal(1)"
           />
           <div v-else class="enemy-hand-fan">
             <div
-              v-for="c in store.enemy!.hand"
+              v-for="c in store.enemy!.hand.slice(0, 8)"
               :key="c.uid"
               class="hidden-card"
             ></div>
+            <button
+              v-if="store.enemy!.hand.length > 8"
+              class="more-btn"
+              @click="openCardModal(1)"
+            >
+              +{{ store.enemy!.hand.length - 8 }}
+            </button>
           </div>
         </div>
       </div>
 
       <div class="vs">VS</div>
 
-      <div class="side player-side">
-        <PlayerPanel
-          :player="store.player!"
-          :active="store.activePlayer === 0"
-          :targetable="false"
-          @drop-card="onDropOnSelf"
-        />
+      <!-- Player Hand -->
+      <div class="hand-wrapper player-hand-wrapper">
         <div class="hand-container">
           <HandArea
             :cards="store.player!.hand"
@@ -55,9 +64,21 @@
             :selected-uid="selectedUid"
             :stun="playerStunned"
             :hidden="false"
+            :max-visible="5"
             @play="onPlayCard"
+            @show-all="() => openCardModal(0)"
           />
         </div>
+      </div>
+
+      <!-- Player Panel (bottom) -->
+      <div class="panel-wrapper player-panel-wrapper">
+        <PlayerPanel
+          :player="store.player!"
+          :active="store.activePlayer === 0"
+          :targetable="false"
+          @drop-card="onDropOnSelf"
+        />
       </div>
     </div>
 
@@ -72,6 +93,16 @@
       @records="goRecords"
       @home="goHome"
     />
+
+    <CardModal
+      v-if="cardModalOpen"
+      :cards="cardModalCards"
+      :energy="cardModalEnergy"
+      :stun="cardModalStun"
+      :player-id="cardModalPlayerId"
+      @close="cardModalOpen = false"
+      @play="onCardFromModal"
+    />
   </div>
   <div v-else class="empty">
     <div>未开始战斗，<router-link to="/">返回首页</router-link>开始新一局。</div>
@@ -85,6 +116,7 @@ import PlayerPanel from '@/components/PlayerPanel.vue'
 import HandArea from '@/components/HandArea.vue'
 import BattleLog from '@/components/BattleLog.vue'
 import ResultModal from '@/components/ResultModal.vue'
+import CardModal from '@/components/CardModal.vue'
 import { useBattleStore, getCardDef } from '@/stores/battle'
 import { sfx } from '@/composables/sfx'
 import type { PlayerId } from '@/types/game'
@@ -107,6 +139,33 @@ const enemyStunned = computed(
 
 const selectedUid = ref<string | null>(null)
 const pendingEnemyTarget = ref(false)
+
+// Card modal state
+const cardModalOpen = ref(false)
+const cardModalPlayerId = ref<PlayerId>(0)
+const cardModalCards = computed(() => {
+  const player = cardModalPlayerId.value === 0 ? store.player : store.enemy
+  return player?.hand ?? []
+})
+const cardModalEnergy = computed(() => {
+  const player = cardModalPlayerId.value === 0 ? store.player : store.enemy
+  return player?.energy ?? 0
+})
+const cardModalStun = computed(() => {
+  const player = cardModalPlayerId.value === 0 ? store.player : store.enemy
+  return !!player?.statuses.find((s) => s.kind === 'stun')
+})
+
+function openCardModal(pid: PlayerId) {
+  cardModalPlayerId.value = pid
+  cardModalOpen.value = true
+}
+function onCardFromModal(uid: string) {
+  const pid = cardModalPlayerId.value
+  cardModalOpen.value = false
+  if (pid === 0) onPlayCard(uid)
+  else onPlayEnemy(uid)
+}
 
 // target tracking
 watch(selectedUid, (uid) => {
@@ -289,7 +348,7 @@ onBeforeUnmount(() => {
   overflow: hidden;
   display: grid;
   grid-template-columns: 1fr 320px;
-  grid-template-rows: auto 1fr;
+  grid-template-rows: 54px 1fr;
   grid-template-areas:
     'top top'
     'arena side';
@@ -315,6 +374,10 @@ onBeforeUnmount(() => {
   background: rgba(10, 11, 20, 0.65);
   border-bottom: 1px solid var(--card-edge);
   z-index: 2;
+  height: 54px;
+  min-height: 54px;
+  max-height: 54px;
+  overflow: hidden;
 }
 .turn-info {
   font-size: 14px;
@@ -324,68 +387,100 @@ onBeforeUnmount(() => {
 .arena {
   grid-area: arena;
   position: relative;
-  padding: 14px 18px;
+  padding: 10px 18px 18px;
   display: grid;
   grid-template-columns: 1fr;
-  grid-template-rows: minmax(0, 1fr) auto auto minmax(0, 1fr);
+  grid-template-rows: 92px 1fr 28px 1fr 92px;
   grid-template-areas:
-    'enemy-area'
+    'enemy-panel'
+    'enemy-hand'
     'vs'
-    'player-area';
-  gap: 8px;
+    'player-hand'
+    'player-panel';
+  gap: 2px;
   z-index: 2;
   min-height: 0;
+  height: 100%;
+  overflow: hidden;
 }
-.side {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  min-height: 0;
-}
-.enemy-side {
-  grid-area: enemy-area;
-  justify-content: flex-start;
-  padding-top: 4px;
-  max-height: 100%;
-}
-.player-side {
-  grid-area: player-area;
-  justify-content: flex-end;
-  padding-bottom: 4px;
-  max-height: 100%;
-}
-.hand-container {
+.panel-wrapper {
   width: 100%;
-  height: 240px;
-  min-height: 240px;
-  max-height: 240px;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+}
+.enemy-panel-wrapper {
+  grid-area: enemy-panel;
+  align-items: flex-start;
+}
+.player-panel-wrapper {
+  grid-area: player-panel;
+  align-items: flex-end;
+}
+.hand-wrapper {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  max-height: 100%;
+  overflow: hidden;
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  overflow: hidden;
 }
-.hand-container > .hand-area {
+.enemy-hand-wrapper {
+  grid-area: enemy-hand;
+  align-items: flex-end;
+}
+.player-hand-wrapper {
+  grid-area: player-hand;
+  align-items: flex-end;
+}
+.vs {
+  grid-area: vs;
+  text-align: center;
+  font-size: 22px;
+  color: var(--gold);
+  letter-spacing: 4px;
+  opacity: 0.7;
+  line-height: 28px;
+  padding: 0;
+  pointer-events: none;
+  z-index: 3;
+  margin: 0;
+}
+.hand-container {
   width: 100%;
   height: 100%;
-  min-height: 240px;
+  min-height: 0;
+  max-height: 100%;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
 }
 .enemy-hand-fan {
   display: flex;
   justify-content: center;
   align-items: flex-end;
+  gap: 0;
   height: 100%;
-  padding-bottom: 20px;
+  max-height: 100%;
+  padding-bottom: 10px;
+  overflow: hidden;
+  min-height: 0;
 }
 .hidden-card {
-  width: 40px;
-  height: 56px;
-  border-radius: 6px;
+  width: 36px;
+  height: 52px;
+  border-radius: 5px;
   border: 1px solid var(--card-edge);
   background: linear-gradient(160deg, #1c1f40 0%, #0e1028 100%);
-  margin: 0 -14px;
-  box-shadow: 0 6px 10px rgba(0, 0, 0, 0.35);
+  margin: 0 -12px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.35);
   position: relative;
+  flex-shrink: 0;
 }
 .hidden-card::after {
   content: '✶';
@@ -394,7 +489,24 @@ onBeforeUnmount(() => {
   display: grid;
   place-items: center;
   color: #3b4278;
-  font-size: 18px;
+  font-size: 16px;
+}
+.more-btn {
+  appearance: none;
+  border: 1px solid var(--accent);
+  background: rgba(111, 243, 198, 0.15);
+  color: var(--accent);
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  cursor: pointer;
+  margin-left: 6px;
+  align-self: flex-end;
+  margin-bottom: 10px;
+  flex-shrink: 0;
+}
+.more-btn:hover {
+  background: rgba(111, 243, 198, 0.3);
 }
 .sidebar {
   grid-area: side;
