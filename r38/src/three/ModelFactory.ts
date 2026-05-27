@@ -244,6 +244,10 @@ export class ModelFactory {
 
     group.position.set(gate.position.x, gate.position.y, gate.position.z)
 
+    if (Math.abs(gate.position.x) > Math.abs(gate.position.z)) {
+      group.rotation.y = Math.PI / 2
+    }
+
     return group
   }
 
