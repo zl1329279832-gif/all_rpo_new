@@ -69,10 +69,11 @@ const labelsVisible = ref(true)
 const alarmFilter = ref<AlarmLevel | 'all'>('all')
 const isSimulating = ref(false)
 const simulationInterval = ref<number | null>(null)
+const alarmList = ref([...alarms])
 
 const filteredAlarms = computed(() => {
-  if (alarmFilter.value === 'all') return alarms
-  return alarms.filter(a => a.level === alarmFilter.value)
+  if (alarmFilter.value === 'all') return alarmList.value
+  return alarmList.value.filter(a => a.level === alarmFilter.value)
 })
 
 const handleSceneReady = (manager: SceneManager) => {
@@ -129,11 +130,14 @@ const handleLocateAlarm = (alarm: Alarm) => {
 }
 
 const handleHandleAlarm = (alarm: Alarm) => {
-  const alarmIndex = alarms.findIndex(a => a.id === alarm.id)
+  const alarmIndex = alarmList.value.findIndex(a => a.id === alarm.id)
   if (alarmIndex !== -1) {
-    alarms[alarmIndex].status = 'handling'
-    alarms[alarmIndex].handler = '当前用户'
-    alarms[alarmIndex].handleTime = new Date().toLocaleString()
+    alarmList.value[alarmIndex] = {
+      ...alarmList.value[alarmIndex],
+      status: 'handling',
+      handler: '当前用户',
+      handleTime: new Date().toLocaleString()
+    }
   }
 }
 
@@ -173,15 +177,18 @@ const startSimulation = () => {
       description: `模拟告警事件 - ${building.name}`
     }
 
-    alarms.unshift(newAlarm)
+    alarmList.value.unshift(newAlarm)
     sceneManager.value.showAlarm(newAlarm)
 
     setTimeout(() => {
       if (sceneManager.value) {
         sceneManager.value.removeAlarm(newAlarm.id)
-        const idx = alarms.findIndex(a => a.id === newAlarm.id)
+        const idx = alarmList.value.findIndex(a => a.id === newAlarm.id)
         if (idx !== -1) {
-          alarms[idx].status = 'resolved'
+          alarmList.value[idx] = {
+            ...alarmList.value[idx],
+            status: 'resolved'
+          }
         }
       }
     }, 8000)

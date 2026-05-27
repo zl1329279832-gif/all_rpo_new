@@ -58,11 +58,11 @@ export class OrbitControls {
   private setupEventListeners(): void {
     this.domElement.addEventListener('contextmenu', this.onContextMenu)
     this.domElement.addEventListener('mousedown', this.onMouseDown)
-    this.domElement.addEventListener('wheel', this.onMouseWheel)
+    this.domElement.addEventListener('wheel', this.onMouseWheel, { passive: false })
     document.addEventListener('mousemove', this.onMouseMove)
     document.addEventListener('mouseup', this.onMouseUp)
     this.domElement.addEventListener('touchstart', this.onTouchStart)
-    this.domElement.addEventListener('touchmove', this.onTouchMove)
+    this.domElement.addEventListener('touchmove', this.onTouchMove, { passive: false })
     this.domElement.addEventListener('touchend', this.onTouchEnd)
   }
 
@@ -116,11 +116,9 @@ export class OrbitControls {
   private onMouseWheel = (event: WheelEvent): void => {
     event.preventDefault()
 
-    if (event.deltaY < 0) {
-      this.dollyIn(0.95)
-    } else {
-      this.dollyOut(1.05)
-    }
+    const delta = event.deltaY > 0 ? 1.1 : 0.9
+    this.scale *= delta
+    this.update()
   }
 
   private onTouchStart = (event: TouchEvent): void => {
