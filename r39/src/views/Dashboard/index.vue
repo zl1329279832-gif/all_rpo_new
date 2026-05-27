@@ -85,13 +85,14 @@ function updateIncomeChart() {
     grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
     xAxis: {
       type: 'category',
-      boundaryGap: false,
+      boundaryGap: true,
       data: incomeTrendData.value.map(d => d.date)
     },
     yAxis: { type: 'value' },
     series: [{
       name: '收入',
       type: 'bar',
+      barWidth: '50%',
       data: incomeTrendData.value.map(d => d.value),
       color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
         { offset: 0, color: '#67c23a' },
@@ -317,13 +318,14 @@ onMounted(() => {
 
 .stat-card {
   border-radius: 12px;
-  padding: 20px;
+  padding: 16px 20px;
   color: #fff;
   position: relative;
   overflow: hidden;
   min-height: 120px;
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  justify-content: center;
 
   .stat-content {
     position: relative;
@@ -331,19 +333,19 @@ onMounted(() => {
   }
 
   .stat-icon {
-    font-size: 32px;
-    margin-bottom: 8px;
+    font-size: 28px;
+    margin-bottom: 6px;
     opacity: 0.9;
   }
 
   .stat-label {
-    font-size: 14px;
+    font-size: 13px;
     opacity: 0.9;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
   }
 
   .stat-value {
-    font-size: 28px;
+    font-size: 24px;
     font-weight: 700;
   }
 }

@@ -1,4 +1,4 @@
-import { getStations, getOrders, getAlarms } from '../utils/storage'
+import { getStations, getOrders, getAlarms, getDevices } from '../utils/storage'
 import type { ApiResponse, PageResult, ReportParams } from '../types'
 
 export async function getReportList(params: ReportParams): Promise<ApiResponse<PageResult<any>>> {
@@ -71,26 +71,52 @@ export async function getReportStats(): Promise<ApiResponse> {
   })
 }
 
-export async function getReportOverview(): Promise<ApiResponse> {
+export async function getReportOverview(period?: string): Promise<ApiResponse> {
   return new Promise((resolve) => {
     setTimeout(() => {
       const orders = getOrders()
       const alarms = getAlarms()
       const stations = getStations()
+      const devices = getDevices()
 
       const totalElectricity = orders.reduce((sum, o) => sum + (o.electricity || 0), 0)
       const totalIncome = orders.reduce((sum, o) => sum + (o.amount || 0), 0)
+
+      const days = period === 'month' ? 30 : period === 'quarter' ? 90 : 7
+      const list: any[] = []
+      for (let i = days - 1; i >= 0; i--) {
+        const date = new Date()
+        date.setDate(date.getDate() - i)
+        const dateStr = `${date.getMonth() + 1}-${date.getDate()}`
+
+        const dayOrders = Math.floor(Math.random() * 80) + 20
+        list.push({
+          date: dateStr,
+          orders: dayOrders,
+          income: Number((dayOrders * (Math.random() * 30 + 20)).toFixed(2)),
+          electricity: Number((dayOrders * (Math.random() * 20 + 30)).toFixed(2))
+        })
+      }
+
+      const onlineDevices = devices.filter(d => d.status !== 'offline').length
+      const avgUtilization = devices.length > 0
+        ? Math.round((onlineDevices / devices.length) * 100)
+        : 0
 
       resolve({
         code: 200,
         message: 'success',
         data: {
-          totalStations: stations.length,
-          totalElectricity: Number(totalElectricity.toFixed(2)),
-          totalOrders: orders.length,
-          totalIncome: Number(totalIncome.toFixed(2)),
-          faultCount: alarms.filter(a => a.level === 'critical').length,
-          alarmCount: alarms.length
+          summary: {
+            totalStations: stations.length,
+            totalElectricity: Number(totalElectricity.toFixed(2)),
+            totalOrders: orders.length,
+            totalIncome: Number(totalIncome.toFixed(2)),
+            avgUtilization,
+            faultCount: alarms.filter(a => a.level === 'critical').length,
+            alarmCount: alarms.length
+          },
+          list
         }
       })
     }, 200)
