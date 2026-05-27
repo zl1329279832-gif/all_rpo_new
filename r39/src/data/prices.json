@@ -1,0 +1,57 @@
+[
+  {
+    "id": "price-001",
+    "name": "峰时电价",
+    "type": "time",
+    "startTime": "10:00",
+    "endTime": "14:00",
+    "price": 1.8,
+    "serviceFee": 0.6,
+    "status": "active",
+    "createTime": "2024-01-01 00:00:00"
+  },
+  {
+    "id": "price-002",
+    "name": "平时电价",
+    "type": "time",
+    "startTime": "07:00",
+    "endTime": "10:00",
+    "price": 1.2,
+    "serviceFee": 0.5,
+    "status": "active",
+    "createTime": "2024-01-01 00:00:00"
+  },
+  {
+    "id": "price-003",
+    "name": "谷时电价",
+    "type": "time",
+    "startTime": "23:00",
+    "endTime": "07:00",
+    "price": 0.8,
+    "serviceFee": 0.4,
+    "status": "active",
+    "createTime": "2024-01-01 00:00:00"
+  },
+  {
+    "id": "price-004",
+    "name": "平段电价",
+    "type": "time",
+    "startTime": "14:00",
+    "endTime": "19:00",
+    "price": 1.35,
+    "serviceFee": 0.55,
+    "status": "active",
+    "createTime": "2024-01-01 00:00:00"
+  },
+  {
+    "id": "price-005",
+    "name": "夜间优惠",
+    "type": "time",
+    "startTime": "00:00",
+    "endTime": "06:00",
+    "price": 0.65,
+    "serviceFee": 0.35,
+    "status": "inactive",
+    "createTime": "2024-02-15 10:30:00"
+  }
+]

@@ -23,7 +23,7 @@ export class LabelSystem {
   }
 
   createLabel(data: LabelData): THREE.Sprite {
-    const { id, text, position, color = '#ffffff, type = 'device' } = data
+    const { id, text, position, color = '#ffffff', type = 'device' } = data
 
     const padding = LABEL_CONFIG.padding
     const fontSize = LABEL_CONFIG.fontSize

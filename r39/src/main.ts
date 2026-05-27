@@ -7,7 +7,9 @@ import './style.css'
 import './styles/index.scss'
 import App from './App.vue'
 import router from './router'
-import './mock'
+import { initializeData } from './utils/storage'
+
+initializeData()
 
 const app = createApp(App)
 const pinia = createPinia()

@@ -1,26 +1,70 @@
-import request from '../utils/request'
-import type { ApiResponse, PageResult, Order, PageParams, OrderStatus } from '../types'
+import { getOrders } from '../utils/storage'
+import type { ApiResponse, PageResult, Order, OrderParams } from '../types'
 
-export interface OrderParams extends PageParams {
-  stationId?: string
-  status?: OrderStatus
-  keyword?: string
-  startDate?: string
-  endDate?: string
+export async function getOrderList(params: OrderParams): Promise<ApiResponse<PageResult<Order>>> {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      let orders = getOrders()
+
+      if (params.keyword) {
+        orders = orders.filter(o =>
+          o.orderNo.includes(params.keyword!) ||
+          o.userName.includes(params.keyword!) ||
+          o.deviceName.includes(params.keyword!)
+        )
+      }
+      if (params.status) {
+        orders = orders.filter(o => o.status === params.status)
+      }
+      if (params.startDate) {
+        orders = orders.filter(o => o.createTime >= params.startDate!)
+      }
+      if (params.endDate) {
+        orders = orders.filter(o => o.createTime <= params.endDate! + ' 23:59:59')
+      }
+
+      const start = (params.page - 1) * params.pageSize
+      const list = orders.slice(start, start + params.pageSize)
+
+      resolve({
+        code: 200,
+        message: 'success',
+        data: {
+          list,
+          total: orders.length,
+          page: params.page,
+          pageSize: params.pageSize
+        }
+      })
+    }, 300)
+  })
 }
 
-export function getOrderList(params: OrderParams) {
-  return request.get<any, ApiResponse<PageResult<Order>>>('/order/list', { params })
+export async function getOrderDetail(id: string): Promise<ApiResponse<Order | null>> {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      const orders = getOrders()
+      const order = orders.find(o => o.id === id)
+
+      resolve({
+        code: 200,
+        message: 'success',
+        data: order || null
+      })
+    }, 200)
+  })
 }
 
-export function getOrderDetail(id: string) {
-  return request.get<any, ApiResponse<Order>>('/order/detail', { params: { id } })
-}
-
-export function exportOrders(params: Partial<OrderParams>) {
-  return request.post<any, ApiResponse<{ downloadUrl: string }>>('/order/export', params)
-}
-
-export function getOrderTrend() {
-  return request.get<any, ApiResponse>('/order/trend')
+export async function exportOrder(): Promise<ApiResponse> {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve({
+        code: 200,
+        message: '导出成功',
+        data: {
+          downloadUrl: '/reports/orders.xlsx'
+        }
+      })
+    }, 500)
+  })
 }

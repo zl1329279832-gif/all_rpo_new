@@ -44,6 +44,7 @@ export class OrbitControls {
   private updateLastQuaternion = new THREE.Quaternion()
   private updateRight = new THREE.Vector3()
   private updateUp = new THREE.Vector3()
+  private updateSpherical = new THREE.Spherical()
 
   constructor(object: THREE.PerspectiveCamera, domElement: HTMLElement) {
     this.object = object
@@ -207,7 +208,12 @@ export class OrbitControls {
     this.updateQuatInverse.copy(this.updateQuat).invert()
 
     this.updateOffset.applyQuaternion(this.updateQuat)
-    this.updateSpherical.setFromVector3(this.updateOffset)
+
+    const radius = this.updateOffset.length()
+    const theta = Math.atan2(this.updateOffset.x, this.updateOffset.z)
+    const phi = Math.acos(Math.max(-1, Math.min(1, this.updateOffset.y / radius)))
+
+    this.updateSpherical.set(radius, phi, theta)
 
     this.updateSpherical.theta += this.sphericalDelta.theta
     this.updateSpherical.phi += this.sphericalDelta.phi
@@ -234,7 +240,12 @@ export class OrbitControls {
 
     this.scale = 1
 
-    this.updateOffset.setFromSpherical(this.updateSpherical)
+    const sinPhiRadius = Math.sin(this.updateSpherical.phi) * this.updateSpherical.radius
+    this.updateOffset.set(
+      sinPhiRadius * Math.sin(this.updateSpherical.theta),
+      Math.cos(this.updateSpherical.phi) * this.updateSpherical.radius,
+      sinPhiRadius * Math.cos(this.updateSpherical.theta)
+    )
     this.updateOffset.applyQuaternion(this.updateQuatInverse)
 
     position.copy(this.target).add(this.updateOffset)

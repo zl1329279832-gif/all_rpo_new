@@ -1,0 +1,46 @@
+{
+  "admin": {
+    "password": "admin123",
+    "user": {
+      "id": "1",
+      "username": "admin",
+      "role": "super_admin",
+      "avatar": "",
+      "email": "admin@charging.com",
+      "phone": "13800000001"
+    }
+  },
+  "operation": {
+    "password": "operation123",
+    "user": {
+      "id": "2",
+      "username": "operation",
+      "role": "operation_admin",
+      "avatar": "",
+      "email": "operation@charging.com",
+      "phone": "13800000002"
+    }
+  },
+  "maintenance": {
+    "password": "maintenance123",
+    "user": {
+      "id": "3",
+      "username": "maintenance",
+      "role": "maintenance",
+      "avatar": "",
+      "email": "maintenance@charging.com",
+      "phone": "13800000003"
+    }
+  },
+  "finance": {
+    "password": "finance123",
+    "user": {
+      "id": "4",
+      "username": "finance",
+      "role": "finance",
+      "avatar": "",
+      "email": "finance@charging.com",
+      "phone": "13800000004"
+    }
+  }
+}

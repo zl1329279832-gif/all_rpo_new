@@ -174,3 +174,9 @@ export interface OrderParams extends PageParams {
   startDate?: string
   endDate?: string
 }
+
+export interface ReportParams extends PageParams {
+  period?: 'day' | 'week' | 'month' | 'year'
+  startDate?: string
+  endDate?: string
+}

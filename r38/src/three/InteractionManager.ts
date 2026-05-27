@@ -20,6 +20,12 @@ export class InteractionManager {
   private lastMouseX = 0
   private lastMouseY = 0
 
+  private boundOnMouseDown: (event: MouseEvent) => void
+  private boundOnMouseMove: (event: MouseEvent) => void
+  private boundOnMouseUp: (event: MouseEvent) => void
+  private boundOnTouchStart: (event: TouchEvent) => void
+  private boundOnTouchEnd: (event: TouchEvent) => void
+
   constructor(
     scene: THREE.Scene,
     camera: THREE.PerspectiveCamera,
@@ -31,17 +37,23 @@ export class InteractionManager {
     this.raycaster = new THREE.Raycaster()
     this.mouse = new THREE.Vector2()
 
+    this.boundOnMouseDown = this.onMouseDown.bind(this)
+    this.boundOnMouseMove = this.onMouseMove.bind(this)
+    this.boundOnMouseUp = this.onMouseUp.bind(this)
+    this.boundOnTouchStart = this.onTouchStart.bind(this)
+    this.boundOnTouchEnd = this.onTouchEnd.bind(this)
+
     this.setupEventListeners()
   }
 
   private setupEventListeners(): void {
     const domElement = this.renderer.domElement
 
-    domElement.addEventListener('mousedown', this.onMouseDown.bind(this))
-    domElement.addEventListener('mousemove', this.onMouseMove.bind(this))
-    domElement.addEventListener('mouseup', this.onMouseUp.bind(this))
-    domElement.addEventListener('touchstart', this.onTouchStart.bind(this))
-    domElement.addEventListener('touchmove', this.onTouchEnd.bind(this))
+    domElement.addEventListener('mousedown', this.boundOnMouseDown)
+    domElement.addEventListener('mousemove', this.boundOnMouseMove)
+    domElement.addEventListener('mouseup', this.boundOnMouseUp)
+    domElement.addEventListener('touchstart', this.boundOnTouchStart)
+    domElement.addEventListener('touchend', this.boundOnTouchEnd)
   }
 
   private onMouseDown(event: MouseEvent): void {
@@ -100,16 +112,26 @@ export class InteractionManager {
 
   private updateMouse(event: { clientX: number; clientY: number }): void {
     const rect = this.renderer.domElement.getBoundingClientRect()
-    this.mouse.x = ((event.clientX - rect.left) / rect.width * 2 - 1
+    this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1
     this.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1
+  }
+
+  private getObjectsByType(type: string): THREE.Object3D[] {
+    const result: THREE.Object3D[] = []
+    this.scene.traverse((obj) => {
+      if (obj.userData && obj.userData.type === type) {
+        result.push(obj)
+      }
+    })
+    return result
   }
 
   pick(): PickResult {
     this.raycaster.setFromCamera(this.mouse, this.camera)
 
-    const buildings = this.scene.getObjectsByProperty('userData', { type: 'building' })
-    const devices = this.scene.getObjectsByProperty('userData', { type: 'device' })
-    const gates = this.scene.getObjectsByProperty('userData', { type: 'gate' })
+    const buildings = this.getObjectsByType('building')
+    const devices = this.getObjectsByType('device')
+    const gates = this.getObjectsByType('gate')
 
     const allObjects = [...buildings, ...devices, ...gates]
 
@@ -144,10 +166,10 @@ export class InteractionManager {
 
   dispose(): void {
     const domElement = this.renderer.domElement
-    domElement.removeEventListener('mousedown', this.onMouseDown.bind(this))
-    domElement.removeEventListener('mousemove', this.onMouseMove.bind(this))
-    domElement.removeEventListener('mouseup', this.onMouseUp.bind(this))
-    domElement.removeEventListener('touchstart', this.onTouchStart.bind(this))
-    domElement.removeEventListener('touchend', this.onTouchEnd.bind(this))
+    domElement.removeEventListener('mousedown', this.boundOnMouseDown)
+    domElement.removeEventListener('mousemove', this.boundOnMouseMove)
+    domElement.removeEventListener('mouseup', this.boundOnMouseUp)
+    domElement.removeEventListener('touchstart', this.boundOnTouchStart)
+    domElement.removeEventListener('touchend', this.boundOnTouchEnd)
   }
 }
