@@ -124,13 +124,13 @@ export class ModelFactory {
         floorGroup.add(windowBack)
       }
 
-      for (let wz = -size.depth / 2 + windowSpacing / 2; wz < size.depth / 2 - windowHeight / 2; wz += windowSpacing) {
-        const windowLeft = new THREE.Mesh(new THREE.PlaneGeometry(windowHeight, windowWidth), windowMaterial)
+      for (let wz = -size.depth / 2 + windowSpacing / 2; wz < size.depth / 2 - windowWidth / 2; wz += windowSpacing) {
+        const windowLeft = new THREE.Mesh(new THREE.PlaneGeometry(windowWidth, windowHeight), windowMaterial)
         windowLeft.position.set(-size.width / 2 - 0.01, i * floorHeight + floorHeight / 2, wz)
         windowLeft.rotation.y = Math.PI / 2
         floorGroup.add(windowLeft)
 
-        const windowRight = new THREE.Mesh(new THREE.PlaneGeometry(windowHeight, windowWidth), windowMaterial)
+        const windowRight = new THREE.Mesh(new THREE.PlaneGeometry(windowWidth, windowHeight), windowMaterial)
         windowRight.position.set(size.width / 2 + 0.01, i * floorHeight + floorHeight / 2, wz)
         windowRight.rotation.y = -Math.PI / 2
         floorGroup.add(windowRight)
