@@ -58,6 +58,7 @@ export class ModelFactory {
 
   private static createVessel(name: string, status: string, length: number): THREE.Group {
     const group = new THREE.Group()
+    group.name = 'vessel'
     group.userData = { type: 'vessel', name, status }
 
     const hullGeometry = new THREE.BoxGeometry(length, 8, 20)
@@ -78,6 +79,7 @@ export class ModelFactory {
     const statusLightGeometry = new THREE.SphereGeometry(1, 16, 16)
     const statusLightMaterial = this.getMaterial(statusColor, { emissive: statusColor, emissiveIntensity: 0.5 })
     const statusLight = new THREE.Mesh(statusLightGeometry, statusLightMaterial)
+    statusLight.name = 'statusLight'
     statusLight.position.set(length * 0.25, 20, 0)
     group.add(statusLight)
 

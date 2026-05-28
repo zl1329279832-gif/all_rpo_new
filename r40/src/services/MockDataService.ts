@@ -105,16 +105,38 @@ export class MockDataService {
     })
   }
 
+  private static readonly horizontalRoadsZ = [-100, -40, 20, 80, 140]
+  private static readonly verticalRoadsX = [-150, -85, -20, 45, 110, 175]
+
   private static generateTruckPath(start: Position3D): Position3D[] {
     const path: Position3D[] = []
-    const points = 5 + Math.floor(Math.random() * 5)
+    const segments = 4 + Math.floor(Math.random() * 4)
     
-    for (let i = 0; i < points; i++) {
-      path.push({
-        x: start.x + (Math.random() - 0.5) * 200,
-        y: 0,
-        z: start.z + (Math.random() - 0.5) * 150
-      })
+    let currentX = start.x
+    let currentZ = start.z
+    
+    path.push({ x: currentX, y: 0, z: currentZ })
+    
+    for (let i = 0; i < segments; i++) {
+      const isHorizontal = Math.random() > 0.5
+      
+      if (isHorizontal) {
+        const targetRoadZ = this.horizontalRoadsZ[Math.floor(Math.random() * this.horizontalRoadsZ.length)]
+        path.push({ x: currentX, y: 0, z: targetRoadZ })
+        
+        const targetX = -180 + Math.random() * 360
+        path.push({ x: targetX, y: 0, z: targetRoadZ })
+        currentX = targetX
+        currentZ = targetRoadZ
+      } else {
+        const targetRoadX = this.verticalRoadsX[Math.floor(Math.random() * this.verticalRoadsX.length)]
+        path.push({ x: targetRoadX, y: 0, z: currentZ })
+        
+        const targetZ = -100 + Math.random() * 200
+        path.push({ x: targetRoadX, y: 0, z: targetZ })
+        currentX = targetRoadX
+        currentZ = targetZ
+      }
     }
     
     return path
@@ -126,43 +148,50 @@ export class MockDataService {
 
     for (const block of yardBlocks) {
       const containerInBlock = Math.floor(count / yardBlocks.length)
+      const occupancy = Math.min(0.9, containerInBlock / block.totalSlots)
       
-      for (let i = 0; i < containerInBlock && containerIndex < count; i++) {
-        const bay = Math.floor(Math.random() * block.bays)
-        const row = Math.floor(Math.random() * block.rows)
-        const tier = Math.floor(Math.random() * block.tiers)
-        const isOvertime = Math.random() < 0.08
-        const isDangerous = block.isDangerousZone && Math.random() < 0.3
-
-        const size: '20ft' | '40ft' = Math.random() > 0.6 ? '40ft' : '20ft'
-        const width = size === '20ft' ? SceneConfig.container.width20ft : SceneConfig.container.width40ft
-
-        containers.push({
-          id: `container-${containerIndex}`,
-          type: 'container' as const,
-          name: this.generateContainerNumber(),
-          containerNumber: this.generateContainerNumber(),
-          size,
-          weight: 10 + Math.floor(Math.random() * 20),
-          inTime: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000),
-          owner: ['中远海运', '马士基', '达飞', '赫伯罗特'][Math.floor(Math.random() * 4)],
-          status: isOvertime ? 'overtime' : 'normal',
-          isDangerous,
-          dangerousLevel: isDangerous ? Math.floor(Math.random() * 3) + 1 : undefined,
-          stackPosition: {
-            block: block.blockCode,
-            bay,
-            row,
-            tier
-          },
-          position: {
-            x: block.position.x - SceneConfig.yard.blockWidth / 2 + 5 + bay * SceneConfig.yard.bayGap,
-            y: SceneConfig.container.height / 2 + tier * SceneConfig.container.height + 0.5,
-            z: block.position.z - SceneConfig.yard.blockDepth / 2 + 5 + row * 8
+      for (let bay = 0; bay < block.bays && containerIndex < count; bay++) {
+        for (let row = 0; row < block.rows && containerIndex < count; row++) {
+          let maxTierForStack = Math.floor(Math.random() * (block.tiers + 1))
+          
+          if (Math.random() > occupancy) {
+            maxTierForStack = 0
           }
-        })
+          
+          for (let tier = 0; tier < maxTierForStack && containerIndex < count; tier++) {
+            const isOvertime = Math.random() < 0.08
+            const isDangerous = block.isDangerousZone && Math.random() < 0.3
 
-        containerIndex++
+            const size: '20ft' | '40ft' = Math.random() > 0.6 ? '40ft' : '20ft'
+
+            containers.push({
+              id: `container-${containerIndex}`,
+              type: 'container' as const,
+              name: this.generateContainerNumber(),
+              containerNumber: this.generateContainerNumber(),
+              size,
+              weight: 10 + Math.floor(Math.random() * 20),
+              inTime: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000),
+              owner: ['中远海运', '马士基', '达飞', '赫伯罗特'][Math.floor(Math.random() * 4)],
+              status: isOvertime ? 'overtime' : 'normal',
+              isDangerous,
+              dangerousLevel: isDangerous ? Math.floor(Math.random() * 3) + 1 : undefined,
+              stackPosition: {
+                block: block.blockCode,
+                bay,
+                row,
+                tier
+              },
+              position: {
+                x: block.position.x - SceneConfig.yard.blockWidth / 2 + 5 + bay * SceneConfig.yard.bayGap,
+                y: SceneConfig.container.height / 2 + tier * SceneConfig.container.height + 0.5,
+                z: block.position.z - SceneConfig.yard.blockDepth / 2 + 5 + row * 8
+              }
+            })
+
+            containerIndex++
+          }
+        }
       }
     }
 

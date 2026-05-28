@@ -96,6 +96,9 @@ const generateSceneData = () => {
     objectGroups.value.set(berth.id, mesh)
     targetObjects.push(mesh)
     labelManager!.createObjectLabel(berth, new THREE.Vector3(berth.position.x, 5, berth.position.z))
+    
+    const vessel = mesh.getObjectByName('vessel')
+    animationManager!.addBerthAnimation(berth.id, mesh, vessel)
   })
 
   yardBlocks.forEach(block => {

@@ -7,14 +7,17 @@ type GameScreenType = 'menu' | 'game'
 
 const currentScreen = ref<GameScreenType>('menu')
 const selectedLevel = ref(1)
+const loadSave = ref(false)
 
-const handleStartGame = (level: number) => {
+const handleStartGame = (level: number, loadSaved = false) => {
   selectedLevel.value = level
+  loadSave.value = loadSaved
   currentScreen.value = 'game'
 }
 
 const handleBackToMenu = () => {
   currentScreen.value = 'menu'
+  loadSave.value = false
 }
 </script>
 
@@ -25,7 +28,8 @@ const handleBackToMenu = () => {
   />
   <GameScreen 
     v-else 
-    :level="selectedLevel" 
+    :level="selectedLevel"
+    :load-save="loadSave"
     @back-to-menu="handleBackToMenu" 
   />
 </template>

@@ -2,6 +2,14 @@ export type CargoType = 'normal' | 'priority' | 'cold' | 'dangerous'
 
 export type ContainerSize = 20 | 40
 
+export type ContainerStatus = 
+  | 'on_ship'
+  | 'unloading'
+  | 'on_truck'
+  | 'in_yard'
+  | 'loading_out'
+  | 'delivered'
+
 export interface Cargo {
   id: string
   type: CargoType
@@ -12,12 +20,14 @@ export interface Cargo {
 
 export interface Order {
   id: string
+  containerId: string
   cargo: Cargo
   deadline: number
   reward: number
   penalty: number
   status: 'pending' | 'in_progress' | 'completed' | 'failed'
   createdAt: number
+  completedAt?: number
 }
 
 export interface Ship {
@@ -27,7 +37,7 @@ export interface Ship {
   maxCapacity: number
   position: Position
   targetBerth: string | null
-  status: 'arriving' | 'docking' | 'loading' | 'unloading' | 'departing' | 'waiting'
+  status: 'arriving' | 'docking' | 'docked' | 'unloading' | 'departing' | 'waiting'
   eta: number
 }
 
@@ -35,8 +45,10 @@ export interface Container {
   id: string
   cargo: Cargo
   position: Position
-  location: 'ship' | 'yard' | 'truck' | 'crane'
+  status: ContainerStatus
+  location: 'ship' | 'crane' | 'truck' | 'yard' | 'gate'
   locationId: string
+  orderId?: string
 }
 
 export interface Truck {
@@ -44,19 +56,22 @@ export interface Truck {
   position: Position
   targetPosition: Position | null
   container: Container | null
-  status: 'idle' | 'moving' | 'loading' | 'unloading'
+  status: 'idle' | 'moving_to_berth' | 'loading' | 'moving_to_yard' | 'unloading' | 'moving_to_gate'
   speed: number
   path: Position[]
   pathIndex: number
+  targetYardSlotId?: string
 }
 
 export interface Crane {
   id: string
   position: Position
   container: Container | null
-  status: 'idle' | 'loading' | 'unloading'
+  status: 'idle' | 'picking' | 'dropping'
   efficiency: number
   level: number
+  targetContainerId?: string
+  progress: number
 }
 
 export interface Berth {
@@ -64,6 +79,7 @@ export interface Berth {
   position: Position
   ship: Ship | null
   crane: Crane | null
+  queue: Container[]
 }
 
 export interface YardSlot {
@@ -71,6 +87,8 @@ export interface YardSlot {
   position: Position
   container: Container | null
   zone: 'normal' | 'cold' | 'dangerous'
+  row: number
+  col: number
 }
 
 export interface Position {
@@ -108,6 +126,8 @@ export interface GameStats {
   totalExpenses: number
   congestionEvents: number
   averageDeliveryTime: number
+  containersUnloaded: number
+  containersDelivered: number
 }
 
 export interface SaveData {
@@ -116,5 +136,17 @@ export interface SaveData {
   highScores: Record<number, number>
   totalMoney: number
   upgrades: Record<string, number>
+  gameState?: {
+    gameTime: number
+    money: number
+    score: number
+    orders: Order[]
+    ships: Ship[]
+    trucks: Truck[]
+    containers: Container[]
+    cranes: Crane[]
+    yardSlots: YardSlot[]
+    stats: GameStats
+  }
   timestamp: number
 }

@@ -4,7 +4,7 @@ import { LEVELS } from '@/config/levels'
 import { useGameStore } from '@/stores/gameStore'
 
 const emit = defineEmits<{
-  (e: 'start-game', level: number): void
+  (e: 'start-game', level: number, loadSave?: boolean): void
 }>()
 
 const gameStore = useGameStore()
@@ -12,22 +12,15 @@ const selectedLevel = ref(1)
 const hasSave = ref(false)
 
 onMounted(() => {
+  hasSave.value = gameStore.hasSavedGame()
   const save = gameStore.loadGame()
-  hasSave.value = !!save
   if (save) {
     selectedLevel.value = save.currentLevel
   }
 })
 
-const startGame = (levelId: number) => {
-  emit('start-game', levelId)
-}
-
-const continueGame = () => {
-  const save = gameStore.loadGame()
-  if (save) {
-    emit('start-game', save.currentLevel)
-  }
+const startGame = (levelId: number, loadSave = false) => {
+  emit('start-game', levelId, loadSave)
 }
 
 const getDifficultyColor = (difficulty: string) => {
@@ -96,26 +89,28 @@ const getDifficultyText = (difficulty: string) => {
         <button 
           v-if="hasSave" 
           class="btn btn-secondary"
-          @click="continueGame"
+          @click="startGame(selectedLevel, true)"
         >
           📂 继续游戏
         </button>
         <button 
           class="btn btn-primary start-btn"
-          @click="startGame(selectedLevel)"
+          @click="startGame(selectedLevel, false)"
         >
           🚢 开始游戏
         </button>
       </div>
 
       <div class="game-tips">
-        <h3>💡 游戏提示</h3>
-        <ul>
-          <li>点击地图上的目标位置调度集卡</li>
-          <li>优先处理高价值和紧急订单</li>
-          <li>注意冷链和危险品的特殊存放要求</li>
-          <li>避免港口拥堵造成的效率损失</li>
-        </ul>
+        <h3>💡 游戏流程</h3>
+        <ol>
+          <li><strong>货轮到港</strong> - 船舶自动停靠泊位，生成订单</li>
+          <li><strong>吊机卸货</strong> - 吊机自动将集装箱从船上卸下</li>
+          <li><strong>集卡运输</strong> - 空闲集卡装载集装箱</li>
+          <li><strong>堆场存放</strong> - 集卡将货物运送到指定区域</li>
+          <li><strong>完成订单</strong> - 货物入堆场后自动完成订单</li>
+        </ol>
+        <p class="tip-note">注意：不同货物需要存放到对应的堆场区域！</p>
       </div>
     </div>
   </div>
@@ -140,7 +135,7 @@ const getDifficultyText = (difficulty: string) => {
 
 .title-section {
   text-align: center;
-  margin-bottom: 40px;
+  margin-bottom: 30px;
 }
 
 .game-title {
@@ -266,22 +261,44 @@ const getDifficultyText = (difficulty: string) => {
   font-size: 16px;
 }
 
-.game-tips ul {
+.game-tips ol {
   list-style: none;
   padding: 0;
+  margin-bottom: 10px;
 }
 
 .game-tips li {
   color: #94a3b8;
-  padding: 5px 0;
-  padding-left: 20px;
+  padding: 6px 0;
+  padding-left: 30px;
   position: relative;
+  counter-increment: step;
 }
 
 .game-tips li::before {
-  content: '▸';
+  content: counter(step);
   position: absolute;
   left: 0;
-  color: #3b82f6;
+  width: 22px;
+  height: 22px;
+  background: linear-gradient(135deg, #3b82f6, #06b6d4);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: bold;
+  color: white;
+}
+
+.game-tips li strong {
+  color: #e2e8f0;
+}
+
+.tip-note {
+  color: #f59e0b;
+  font-size: 13px;
+  margin-top: 10px;
+  padding-left: 30px;
 }
 </style>

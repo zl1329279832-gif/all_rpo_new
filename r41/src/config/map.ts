@@ -4,10 +4,10 @@ export const MAP_WIDTH = 1200
 export const MAP_HEIGHT = 700
 
 export const BERTHS: Berth[] = [
-  { id: 'berth-1', position: { x: 100, y: 150 }, ship: null, crane: null },
-  { id: 'berth-2', position: { x: 100, y: 300 }, ship: null, crane: null },
-  { id: 'berth-3', position: { x: 100, y: 450 }, ship: null, crane: null },
-  { id: 'berth-4', position: { x: 100, y: 600 }, ship: null, crane: null }
+  { id: 'berth-1', position: { x: 120, y: 120 }, ship: null, crane: null, queue: [] },
+  { id: 'berth-2', position: { x: 120, y: 270 }, ship: null, crane: null, queue: [] },
+  { id: 'berth-3', position: { x: 120, y: 420 }, ship: null, crane: null, queue: [] },
+  { id: 'berth-4', position: { x: 120, y: 570 }, ship: null, crane: null, queue: [] }
 ]
 
 export const generateYardSlots = (): YardSlot[] => {
@@ -20,19 +20,21 @@ export const generateYardSlots = (): YardSlot[] => {
       slots.push({
         id: `yard-${row}-${col}`,
         position: {
-          x: 400 + col * 90,
-          y: 100 + row * 110
+          x: 420 + col * 85,
+          y: 80 + row * 120
         },
         container: null,
-        zone
+        zone,
+        row,
+        col
       })
     }
   }
   return slots
 }
 
-export const TRUCK_SPAWN: Position = { x: 1100, y: 350 }
-export const GATE_POSITION: Position = { x: 1150, y: 350 }
+export const TRUCK_SPAWN: Position = { x: 1050, y: 350 }
+export const GATE_POSITION: Position = { x: 1100, y: 350 }
 
 export const getDistance = (p1: Position, p2: Position): number => {
   return Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2))
@@ -40,11 +42,16 @@ export const getDistance = (p1: Position, p2: Position): number => {
 
 export const findPath = (from: Position, to: Position): Position[] => {
   const path: Position[] = []
-  const midX = (from.x + to.x) / 2
+  const midX = 300
   
-  if (Math.abs(to.x - from.x) > 200) {
+  if (from.x > midX && to.x <= midX) {
     path.push({ x: midX, y: from.y })
     path.push({ x: midX, y: to.y })
+  } else if (from.x <= midX && to.x > midX) {
+    path.push({ x: midX, y: from.y })
+    path.push({ x: midX, y: to.y })
+  } else if (Math.abs(to.y - from.y) > 100) {
+    path.push({ x: from.x, y: to.y })
   }
   
   path.push(to)

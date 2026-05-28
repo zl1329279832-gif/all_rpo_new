@@ -1,12 +1,17 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useGameStore } from '@/stores/gameStore'
-import { getCargoTypeName, getCargoTypeColor } from '@/systems/orderSystem'
+import { getCargoTypeName, getCargoTypeColor, getStatusName } from '@/systems/orderSystem'
 
 const gameStore = useGameStore()
 
-const pendingOrders = computed(() => 
-  gameStore.orders.filter(o => o.status === 'pending' || o.status === 'in_progress')
+const activeOrders = computed(() => 
+  gameStore.orders.filter(o => o.status !== 'completed' && o.status !== 'failed')
+    .sort((a, b) => a.deadline - b.deadline)
+)
+
+const completedOrders = computed(() =>
+  gameStore.orders.filter(o => o.status === 'completed')
 )
 
 const formatTime = (seconds: number): string => {
@@ -26,15 +31,14 @@ const getUrgencyColor = (deadline: number): string => {
   return 'normal'
 }
 
-const acceptOrder = (orderId: string) => {
-  const order = gameStore.orders.find(o => o.id === orderId)
-  if (order && order.status === 'pending') {
-    order.status = 'in_progress'
+const getStatusColor = (status: string): string => {
+  switch (status) {
+    case 'pending': return '#94a3b8'
+    case 'in_progress': return '#f59e0b'
+    case 'completed': return '#10b981'
+    case 'failed': return '#ef4444'
+    default: return '#94a3b8'
   }
-}
-
-const completeOrder = (orderId: string) => {
-  gameStore.completeOrder(orderId)
 }
 
 const getCargoBadgeStyle = (type: string) => {
@@ -43,23 +47,46 @@ const getCargoBadgeStyle = (type: string) => {
     borderColor: getCargoTypeColor(type as any)
   }
 }
+
+const getContainerStatus = (order: any): string => {
+  const container = gameStore.containers.find(c => c.id === order.containerId)
+  if (container) {
+    return getStatusName(container.status)
+  }
+  return '等待处理'
+}
 </script>
 
 <template>
   <div class="order-panel">
     <div class="panel-header">
       <h3>📋 订单列表</h3>
-      <span class="order-count">{{ pendingOrders.length }} 个待处理</span>
+      <span class="order-count">{{ activeOrders.length }} 个待处理</span>
+    </div>
+    
+    <div class="stats-bar">
+      <div class="stat-item">
+        <span class="stat-icon">✅</span>
+        <span>{{ completedOrders.length }}</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-icon">📦</span>
+        <span>{{ gameStore.stats.containersUnloaded }}</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-icon">🚚</span>
+        <span>{{ gameStore.idleTrucks.length }}/{{ gameStore.trucks.length }}</span>
+      </div>
     </div>
     
     <div class="orders-list">
-      <div v-if="pendingOrders.length === 0" class="empty-state">
+      <div v-if="activeOrders.length === 0" class="empty-state">
         <span class="empty-icon">📭</span>
-        <span>暂无订单</span>
+        <span>等待货轮到达...</span>
       </div>
       
       <div 
-        v-for="order in pendingOrders" 
+        v-for="order in activeOrders" 
         :key="order.id"
         class="order-card"
         :class="[getUrgencyColor(order.deadline), { accepted: order.status === 'in_progress' }]"
@@ -80,7 +107,13 @@ const getCargoBadgeStyle = (type: string) => {
           </div>
           <div class="info-row">
             <span class="label">规格</span>
-            <span class="value">{{ order.cargo.size }}尺 / {{ order.cargo.weight }}吨</span>
+            <span class="value">{{ order.cargo.size }}尺</span>
+          </div>
+          <div class="info-row">
+            <span class="label">状态</span>
+            <span class="value" :style="{ color: getStatusColor(order.status) }">
+              {{ getContainerStatus(order) }}
+            </span>
           </div>
         </div>
         
@@ -95,21 +128,46 @@ const getCargoBadgeStyle = (type: string) => {
           </div>
         </div>
         
-        <div class="order-actions">
-          <button 
-            v-if="order.status === 'pending'"
-            class="btn btn-primary btn-sm"
-            @click="acceptOrder(order.id)"
-          >
-            接受订单
-          </button>
-          <button 
-            v-else
-            class="btn btn-success btn-sm"
-            @click="completeOrder(order.id)"
-          >
-            ✓ 完成
-          </button>
+        <div class="progress-indicator" v-if="order.status === 'in_progress'">
+          <div class="progress-steps">
+            <div class="step completed">
+              <span class="step-icon">🚢</span>
+              <span class="step-label">到港</span>
+            </div>
+            <div class="step-line completed"></div>
+            <div class="step completed">
+              <span class="step-icon">🏗️</span>
+              <span class="step-label">卸货</span>
+            </div>
+            <div class="step-line completed"></div>
+            <div class="step active">
+              <span class="step-icon">🚚</span>
+              <span class="step-label">运输</span>
+            </div>
+            <div class="step-line"></div>
+            <div class="step">
+              <span class="step-icon">📦</span>
+              <span class="step-label">入库</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="legend">
+      <h4>堆场区域</h4>
+      <div class="legend-items">
+        <div class="legend-item">
+          <span class="legend-color" style="background: #4b5563"></span>
+          <span>普通区</span>
+        </div>
+        <div class="legend-item">
+          <span class="legend-color" style="background: #0891b2"></span>
+          <span>冷链区</span>
+        </div>
+        <div class="legend-item">
+          <span class="legend-color" style="background: #dc2626"></span>
+          <span>危险品区</span>
         </div>
       </div>
     </div>
@@ -118,7 +176,7 @@ const getCargoBadgeStyle = (type: string) => {
 
 <style scoped>
 .order-panel {
-  width: 300px;
+  width: 320px;
   background: rgba(15, 23, 42, 0.95);
   border-left: 1px solid rgba(255, 255, 255, 0.1);
   display: flex;
@@ -146,6 +204,26 @@ const getCargoBadgeStyle = (type: string) => {
   background: rgba(255, 255, 255, 0.1);
   padding: 2px 10px;
   border-radius: 12px;
+}
+
+.stats-bar {
+  display: flex;
+  justify-content: space-around;
+  padding: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.stat-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #e2e8f0;
+  font-size: 13px;
+}
+
+.stat-icon {
+  font-size: 14px;
 }
 
 .orders-list {
@@ -241,7 +319,7 @@ const getCargoBadgeStyle = (type: string) => {
 .order-reward {
   display: flex;
   gap: 15px;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
   padding-top: 10px;
   border-top: 1px solid rgba(255, 255, 255, 0.05);
 }
@@ -265,18 +343,88 @@ const getCargoBadgeStyle = (type: string) => {
 .value.positive { color: #4ade80; }
 .value.negative { color: #f87171; }
 
-.order-actions {
+.progress-indicator {
+  padding: 10px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+}
+
+.progress-steps {
   display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
-.btn-sm {
-  width: 100%;
-  padding: 8px;
-  font-size: 13px;
+.step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  opacity: 0.4;
 }
 
-.btn-success {
-  background: linear-gradient(135deg, #059669, #10b981);
-  color: white;
+.step.active {
+  opacity: 1;
+  animation: pulse 1.5s infinite;
+}
+
+.step.completed {
+  opacity: 1;
+}
+
+.step-icon {
+  font-size: 16px;
+}
+
+.step-label {
+  font-size: 9px;
+  color: #94a3b8;
+}
+
+.step-line {
+  flex: 1;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.1);
+  margin: 0 5px;
+}
+
+.step-line.completed {
+  background: #10b981;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.legend {
+  padding: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.legend h4 {
+  font-size: 12px;
+  color: #94a3b8;
+  margin-bottom: 8px;
+}
+
+.legend-items {
+  display: flex;
+  justify-content: space-around;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.legend-color {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
 }
 </style>

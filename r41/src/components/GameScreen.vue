@@ -9,6 +9,7 @@ import GameOverModal from './GameOverModal.vue'
 
 const props = defineProps<{
   level: number
+  loadSave?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -28,7 +29,7 @@ const isVictory = computed(() => gameStore.isVictory)
 onMounted(() => {
   if (canvasRef.value) {
     renderer = new GameRenderer(canvasRef.value)
-    gameStore.initializeGame(props.level)
+    gameStore.initializeGame(props.level, props.loadSave)
     startGameLoop()
   }
 })
@@ -65,14 +66,10 @@ const startGameLoop = () => {
 }
 
 const handleCanvasClick = (event: MouseEvent) => {
-  if (!renderer || !canvasRef.value) return
+  if (!renderer || !canvasRef.value || gameStore.isPaused) return
   
   const pos = renderer.getCanvasPosition(event.clientX, event.clientY)
-  
-  const idleTruck = gameStore.trucks.find(t => t.status === 'idle')
-  if (idleTruck) {
-    gameStore.dispatchTruck(idleTruck.id, pos)
-  }
+  console.log('Clicked position:', pos)
 }
 
 const handlePause = () => {
