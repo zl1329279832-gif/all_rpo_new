@@ -218,7 +218,7 @@ export class AnimationManager {
       const direction = new THREE.Vector3().subVectors(segTo, segFrom)
       if (direction.length() > 0.1) {
         direction.normalize()
-        const targetAngle = Math.atan2(direction.x, direction.z)
+        const targetAngle = -Math.atan2(direction.z, direction.x)
         const currentAngle = anim.truck.rotation.y
         let angleDiff = targetAngle - currentAngle
         while (angleDiff > Math.PI) angleDiff -= Math.PI * 2
@@ -522,7 +522,7 @@ export class AnimationManager {
       const direction = new THREE.Vector3().subVectors(segTo, segFrom)
       if (direction.length() > 0.1) {
         direction.normalize()
-        const targetAngle = Math.atan2(direction.x, direction.z)
+        const targetAngle = -Math.atan2(direction.z, direction.x)
         anim.truck.rotation.y = targetAngle
       }
 

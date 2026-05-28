@@ -24,7 +24,7 @@ export class GameRenderer {
     this.drawBackground()
     this.drawWater()
     this.drawRoads()
-    this.drawBerths(berths)
+    this.drawBerths(berths, trucks)
     this.drawYard(yardSlots)
     this.drawShips(ships)
     this.drawCranes(cranes)
@@ -80,7 +80,7 @@ export class GameRenderer {
     this.ctx.setLineDash([])
   }
 
-  private drawBerths(berths: Berth[]) {
+  private drawBerths(berths: Berth[], trucks: Truck[]) {
     berths.forEach((berth, index) => {
       this.ctx.fillStyle = '#4a5568'
       this.ctx.fillRect(berth.position.x - 20, berth.position.y - 50, 70, 100)
@@ -101,17 +101,56 @@ export class GameRenderer {
       }
 
       if (berth.ship) {
-        this.ctx.fillStyle = 'rgba(34, 197, 94, 0.3)'
-        this.ctx.fillRect(berth.position.x + 60, berth.position.y - 25, 50, 50)
-        this.ctx.strokeStyle = '#22c55e'
-        this.ctx.lineWidth = 2
-        this.ctx.setLineDash([3, 3])
-        this.ctx.strokeRect(berth.position.x + 60, berth.position.y - 25, 50, 50)
-        this.ctx.setLineDash([])
-        this.ctx.fillStyle = '#22c55e'
-        this.ctx.font = '9px Arial'
-        this.ctx.fillText('点击', berth.position.x + 85, berth.position.y - 5)
-        this.ctx.fillText('派车', berth.position.x + 85, berth.position.y + 8)
+        const hasWaitingEmptyTruck = trucks.some(t => 
+          (t.status === 'moving_to_berth' || t.status === 'waiting_at_berth' || t.status === 'loading') &&
+          t.targetBerthId === berth.id &&
+          !t.container
+        )
+        
+        const hasLoadedTruck = trucks.some(t => 
+          t.status === 'loaded_waiting' &&
+          t.targetBerthId === berth.id &&
+          t.container
+        )
+
+        if (hasLoadedTruck) {
+          this.ctx.fillStyle = 'rgba(59, 130, 246, 0.3)'
+          this.ctx.fillRect(berth.position.x + 60, berth.position.y - 25, 50, 50)
+          this.ctx.strokeStyle = '#3b82f6'
+          this.ctx.lineWidth = 2
+          this.ctx.setLineDash([3, 3])
+          this.ctx.strokeRect(berth.position.x + 60, berth.position.y - 25, 50, 50)
+          this.ctx.setLineDash([])
+          this.ctx.fillStyle = '#3b82f6'
+          this.ctx.font = '9px Arial'
+          this.ctx.fillText('点击', berth.position.x + 85, berth.position.y - 8)
+          this.ctx.fillText('出发', berth.position.x + 85, berth.position.y + 3)
+          this.ctx.fillText('去堆场', berth.position.x + 85, berth.position.y + 14)
+        } else if (!hasWaitingEmptyTruck) {
+          this.ctx.fillStyle = 'rgba(34, 197, 94, 0.3)'
+          this.ctx.fillRect(berth.position.x + 60, berth.position.y - 25, 50, 50)
+          this.ctx.strokeStyle = '#22c55e'
+          this.ctx.lineWidth = 2
+          this.ctx.setLineDash([3, 3])
+          this.ctx.strokeRect(berth.position.x + 60, berth.position.y - 25, 50, 50)
+          this.ctx.setLineDash([])
+          this.ctx.fillStyle = '#22c55e'
+          this.ctx.font = '9px Arial'
+          this.ctx.fillText('点击', berth.position.x + 85, berth.position.y - 5)
+          this.ctx.fillText('派车', berth.position.x + 85, berth.position.y + 8)
+        } else {
+          this.ctx.fillStyle = 'rgba(107, 114, 128, 0.3)'
+          this.ctx.fillRect(berth.position.x + 60, berth.position.y - 25, 50, 50)
+          this.ctx.strokeStyle = '#6b7280'
+          this.ctx.lineWidth = 2
+          this.ctx.setLineDash([3, 3])
+          this.ctx.strokeRect(berth.position.x + 60, berth.position.y - 25, 50, 50)
+          this.ctx.setLineDash([])
+          this.ctx.fillStyle = '#9ca3af'
+          this.ctx.font = '9px Arial'
+          this.ctx.fillText('车辆', berth.position.x + 85, berth.position.y - 5)
+          this.ctx.fillText('已派', berth.position.x + 85, berth.position.y + 8)
+        }
       }
     })
   }
@@ -254,6 +293,7 @@ export class GameRenderer {
                         truck.status === 'moving_to_berth' ? '#f59e0b' :
                         truck.status === 'waiting_at_berth' ? '#f97316' :
                         truck.status === 'loading' ? '#eab308' :
+                        truck.status === 'loaded_waiting' ? '#8b5cf6' :
                         truck.status === 'moving_to_yard' ? '#22c55e' : 
                         truck.status === 'moving_to_gate' ? '#3b82f6' : '#dc2626'
       
@@ -276,6 +316,7 @@ export class GameRenderer {
         moving_to_berth: '去泊位',
         waiting_at_berth: '等装货',
         loading: '装货中',
+        loaded_waiting: '待出发',
         moving_to_yard: '去堆场',
         unloading: '卸货',
         moving_to_gate: '返回'
@@ -317,6 +358,8 @@ export class GameRenderer {
       { color: '#6b7280', label: '空闲' },
       { color: '#f59e0b', label: '去泊位' },
       { color: '#f97316', label: '等装货' },
+      { color: '#eab308', label: '装货中' },
+      { color: '#8b5cf6', label: '待出发' },
       { color: '#22c55e', label: '去堆场' },
       { color: '#3b82f6', label: '返回' }
     ]

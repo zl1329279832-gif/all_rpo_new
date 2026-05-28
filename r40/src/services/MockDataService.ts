@@ -46,8 +46,6 @@ export class RoadNetwork {
     this.horizontalRoadsZ = []
     this.verticalRoadsX = []
 
-    const firstRowZ = L.yardStartZ - L.roadWidth / 2
-    this.horizontalRoadsZ.push(firstRowZ)
     this.horizontalRoadsZ.push(L.berthFrontRoadZ)
 
     const rowSet = new Set<number>()

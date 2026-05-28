@@ -311,7 +311,7 @@ export const useGameStore = defineStore('game', () => {
             
             setTimeout(() => {
               if (targetTruck.status === 'loading' && targetTruck.container) {
-                dispatchTruckToYard(targetTruck.id, targetTruck.container.cargo.type)
+                targetTruck.status = 'loaded_waiting'
               }
             }, 1000)
             
@@ -576,6 +576,25 @@ export const useGameStore = defineStore('game', () => {
     return false
   }
 
+  const dispatchLoadedTruckToYard = (truckId: string) => {
+    const truck = trucks.value.find(t => t.id === truckId)
+    if (!truck || !truck.container || truck.status !== 'loaded_waiting') return false
+
+    return dispatchTruckToYard(truckId, truck.container.cargo.type)
+  }
+
+  const dispatchLoadedTruckByBerth = (berthId: string) => {
+    const loadedTruck = trucks.value.find(t => 
+      t.status === 'loaded_waiting' && 
+      t.targetBerthId === berthId &&
+      t.container
+    )
+    if (loadedTruck) {
+      return dispatchLoadedTruckToYard(loadedTruck.id)
+    }
+    return false
+  }
+
   const endGame = () => {
     isRunning.value = false
   }
@@ -614,6 +633,8 @@ export const useGameStore = defineStore('game', () => {
     endGame,
     dispatchTruckToBerth,
     dispatchTruckToBerthByClick,
-    dispatchTruckToYard
+    dispatchTruckToYard,
+    dispatchLoadedTruckToYard,
+    dispatchLoadedTruckByBerth
   }
 })

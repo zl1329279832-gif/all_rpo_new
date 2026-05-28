@@ -78,11 +78,24 @@ const handleCanvasClick = (event: MouseEvent) => {
     
     if (pos.x >= clickZoneX && pos.x <= clickZoneX + zoneWidth &&
         pos.y >= clickZoneY && pos.y <= clickZoneY + zoneHeight) {
-      const success = gameStore.dispatchTruckToBerthByClick(berth.id)
-      if (success) {
-        console.log(`派遣集卡到 ${berth.id}`)
+      const loadedTruck = gameStore.trucks.find(t => 
+        t.status === 'loaded_waiting' && 
+        t.targetBerthId === berth.id &&
+        t.container
+      )
+      
+      if (loadedTruck) {
+        const success = gameStore.dispatchLoadedTruckByBerth(berth.id)
+        if (success) {
+          console.log(`派遣集卡从 ${berth.id} 去堆场`)
+        }
       } else {
-        console.log('没有空闲集卡或该泊位已有集卡')
+        const success = gameStore.dispatchTruckToBerthByClick(berth.id)
+        if (success) {
+          console.log(`派遣集卡到 ${berth.id}`)
+        } else {
+          console.log('没有空闲集卡或该泊位已有集卡')
+        }
       }
       break
     }

@@ -105,13 +105,14 @@ const getDifficultyText = (difficulty: string) => {
         <h3>💡 游戏流程（手动操作）</h3>
         <ol>
           <li><strong>货轮到港</strong> - 船舶自动停靠泊位，生成订单</li>
-          <li><strong>点击派车</strong> - 点击泊位旁的「点击派车」绿色区域派遣集卡</li>
+          <li><strong>点击派车</strong> - 点击泊位旁的<span style="color:#22c55e">绿色「点击派车」</span>区域派遣集卡</li>
           <li><strong>集卡行驶</strong> - 集卡自动行驶到泊位等待装货</li>
           <li><strong>吊机卸货</strong> - 吊机自动将集装箱装到集卡上</li>
+          <li><strong>点击出发</strong> - 装货完成后，点击<span style="color:#3b82f6">蓝色「点击出发去堆场」</span>区域</li>
           <li><strong>自动运输</strong> - 集卡自动将货物运送到对应堆场区域</li>
           <li><strong>完成订单</strong> - 货物入堆场后自动完成订单获得奖励</li>
         </ol>
-        <p class="tip-note">⚠️ 必须手动点击派车！集卡不会自动出发。不同货物需要存放到对应的堆场区域！</p>
+        <p class="tip-note">⚠️ 需要两次点击操作：先派车去泊位，再派车去堆场！不同货物需要存放到对应的堆场区域！</p>
       </div>
     </div>
   </div>
