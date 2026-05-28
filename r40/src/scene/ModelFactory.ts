@@ -153,14 +153,18 @@ export class ModelFactory {
     const trolleyGroup = new THREE.Group()
     trolleyGroup.name = 'trolley'
     const trolleyGeometry = new THREE.BoxGeometry(6, 3, 5)
-    const trolley = new THREE.Mesh(trolleyGeometry, this.getMaterial(0x455a64))
-    trolley.castShadow = true
-    trolleyGroup.add(trolley)
+    const trolleyBody = new THREE.Mesh(trolleyGeometry, this.getMaterial(0x455a64))
+    trolleyBody.castShadow = true
+    trolleyGroup.add(trolleyBody)
+
+    const liftGroup = new THREE.Group()
+    liftGroup.name = 'liftGroup'
 
     const spreaderGeometry = new THREE.BoxGeometry(4, 0.5, 3)
     const spreader = new THREE.Mesh(spreaderGeometry, this.getMaterial(0xffc107))
+    spreader.name = 'spreader'
     spreader.position.y = -5
-    trolleyGroup.add(spreader)
+    liftGroup.add(spreader)
 
     const ropeMaterial = new THREE.LineBasicMaterial({ color: 0x9e9e9e })
     for (let i = 0; i < 4; i++) {
@@ -168,8 +172,12 @@ export class ModelFactory {
       ropePoints.push(new THREE.Vector3(-1.5 + i % 2 * 3, -1.5, -1 + Math.floor(i / 2) * 2))
       ropePoints.push(new THREE.Vector3(-1.5 + i % 2 * 3, -5, -1 + Math.floor(i / 2) * 2))
       const ropeGeometry = new THREE.BufferGeometry().setFromPoints(ropePoints)
-      trolleyGroup.add(new THREE.Line(ropeGeometry, ropeMaterial))
+      const rope = new THREE.Line(ropeGeometry, ropeMaterial)
+      rope.name = `rope-${i}`
+      liftGroup.add(rope)
     }
+
+    trolleyGroup.add(liftGroup)
 
     trolleyGroup.position.y = data.height + 2.5
     group.add(trolleyGroup)

@@ -271,11 +271,6 @@ export const useGameStore = defineStore('game', () => {
               crane.targetContainerId = container.id
               crane.progress = 0
             }
-          } else {
-            const idleTruck = idleTrucks.value[0]
-            if (idleTruck) {
-              dispatchTruckToBerth(idleTruck.id, berth.id)
-            }
           }
         }
       } else if (crane.status === 'picking') {

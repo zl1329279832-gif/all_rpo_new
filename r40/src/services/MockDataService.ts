@@ -175,44 +175,36 @@ export class RoadNetwork {
 
     const path: Position3D[] = [{ x: startNode.x, y: 0, z: startNode.z }]
     let currentNode = startNode
+    let lastDir = ''
 
     for (let seg = 0; seg < segmentCount; seg++) {
       const connections = currentNode.connections
       if (connections.length === 0) break
 
-      let nextNodeId: string
-      const forwardCandidates = connections.filter(id => {
+      const candidates = connections.filter(id => {
         const n = this.nodes.get(id)!
-        return !path.some(p => Math.abs(p.x - n.x) < 1 && Math.abs(p.z - n.z) < 1)
+        const dir = this.getDirection(currentNode, n)
+        return dir !== lastDir
       })
 
-      if (forwardCandidates.length > 0) {
-        nextNodeId = forwardCandidates[Math.floor(Math.random() * forwardCandidates.length)]
-      } else {
-        nextNodeId = connections[Math.floor(Math.random() * connections.length)]
-      }
-
+      const pool = candidates.length > 0 ? candidates : connections
+      const nextNodeId = pool[Math.floor(Math.random() * pool.length)]
       const nextNode = this.nodes.get(nextNodeId)!
-      const dx = nextNode.x - currentNode.x
-      const dz = nextNode.z - currentNode.z
-
-      const laneOffset = L.laneWidth / 2
-
-      if (Math.abs(dx) > 1) {
-        const laneZ = dz > 0 ? currentNode.z + laneOffset : currentNode.z - laneOffset
-        path.push({ x: currentNode.x, y: 0, z: laneZ })
-        path.push({ x: nextNode.x, y: 0, z: laneZ })
-      } else if (Math.abs(dz) > 1) {
-        const laneX = dx > 0 ? currentNode.x + laneOffset : currentNode.x - laneOffset
-        path.push({ x: laneX, y: 0, z: currentNode.z })
-        path.push({ x: laneX, y: 0, z: nextNode.z })
-      }
 
       path.push({ x: nextNode.x, y: 0, z: nextNode.z })
+
+      lastDir = this.getDirection(currentNode, nextNode)
       currentNode = nextNode
     }
 
     return path
+  }
+
+  private getDirection(from: RoadNode, to: RoadNode): string {
+    const dx = to.x - from.x
+    const dz = to.z - from.z
+    if (Math.abs(dx) > Math.abs(dz)) return dx > 0 ? 'east' : 'west'
+    return dz > 0 ? 'south' : 'north'
   }
 }
 

@@ -124,7 +124,7 @@ const generateSceneData = () => {
     objectGroups.value.set(truck.id, mesh)
     targetObjects.push(mesh)
     if (truck.path) {
-      animationManager!.addTruckAnimation(truck.id, mesh, truck.path, 0.003)
+      animationManager!.addTruckAnimation(truck.id, mesh, truck.path, SceneConfig.truck.maxSpeed)
     }
   })
 

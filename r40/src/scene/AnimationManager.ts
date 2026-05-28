@@ -19,10 +19,11 @@ export interface TruckAnimation {
 export interface CraneAnimation {
   crane: THREE.Group
   targetX: number
-  targetY: number
-  phase: 'idle' | 'moving' | 'lifting' | 'lowering' | 'loading' | 'unloading'
-  liftHeight: number
-  baseY: number
+  targetLiftY: number
+  currentLiftY: number
+  phase: 'idle' | 'moving' | 'lowering' | 'grabbing' | 'lifting' | 'moving_with_load' | 'releasing'
+  liftTravel: number
+  baseLiftY: number
   hasContainer: boolean
 }
 
@@ -65,7 +66,7 @@ export class AnimationManager {
       truckId,
       path: vectorPath,
       progress: 0,
-      currentSpeed: 0,
+      currentSpeed: speed * 0.5,
       maxSpeed: speed,
       currentSegment: 0,
       segmentProgress: 0,
@@ -88,15 +89,17 @@ export class AnimationManager {
 
   public addCraneAnimation(craneId: string, craneGroup: THREE.Group): void {
     const trolley = craneGroup.getObjectByName('trolley')
-    const baseY = trolley ? trolley.position.y : 35
+    const liftGroup = trolley?.getObjectByName('liftGroup')
+    const baseLiftY = liftGroup ? liftGroup.position.y : 0
 
     this.craneAnimations.set(craneId, {
       crane: craneGroup,
       targetX: 0,
-      targetY: baseY,
+      targetLiftY: baseLiftY,
+      currentLiftY: baseLiftY,
       phase: 'idle',
-      liftHeight: 20,
-      baseY,
+      liftTravel: 20,
+      baseLiftY,
       hasContainer: false
     })
   }
@@ -237,58 +240,105 @@ export class AnimationManager {
 
   private updateCranes(deltaTime: number): void {
     this.craneAnimations.forEach((anim) => {
-      const trolley = anim.crane.getObjectByName('trolley')
+      const trolley = anim.crane.getObjectByName('trolley') as THREE.Group | undefined
       if (!trolley) return
 
-      const moveSpeed = 0.025 * this.speed * deltaTime * 60
-      const liftSpeed = 0.03 * this.speed * deltaTime * 60
+      const liftGroup = trolley.getObjectByName('liftGroup') as THREE.Group | undefined
+      if (!liftGroup) return
+
+      const moveSpeed = 0.05 * this.speed * deltaTime * 60
+      const liftSpeed = 0.04 * this.speed * deltaTime * 60
 
       switch (anim.phase) {
-        case 'idle':
+        case 'idle': {
           anim.targetX = -15 + Math.random() * 30
           anim.phase = 'moving'
           break
+        }
 
-        case 'moving':
+        case 'moving': {
           const diffX = anim.targetX - trolley.position.x
           if (Math.abs(diffX) < 0.1) {
             trolley.position.x = anim.targetX
-            anim.phase = anim.hasContainer ? 'lowering' : 'lifting'
+            anim.phase = 'lowering'
+            anim.targetLiftY = anim.baseLiftY - anim.liftTravel
           } else {
-            trolley.position.x += Math.sign(diffX) * moveSpeed
+            trolley.position.x += Math.sign(diffX) * Math.min(moveSpeed, Math.abs(diffX))
           }
           break
+        }
 
-        case 'lifting':
-          anim.targetY = anim.baseY + anim.liftHeight
-          const liftDiff = anim.targetY - trolley.position.y
-          if (Math.abs(liftDiff) < 0.1) {
-            trolley.position.y = anim.targetY
-            if (!anim.hasContainer) {
-              this.attachContainerToSpreader(trolley)
-              anim.hasContainer = true
-            }
+        case 'lowering': {
+          const diff = anim.targetLiftY - anim.currentLiftY
+          if (Math.abs(diff) < 0.1) {
+            anim.currentLiftY = anim.targetLiftY
+            liftGroup.position.y = anim.currentLiftY
+            this.updateRopes(trolley, liftGroup)
+            anim.phase = 'grabbing'
+          } else {
+            const step = Math.sign(diff) * Math.min(liftSpeed, Math.abs(diff))
+            anim.currentLiftY += step
+            liftGroup.position.y = anim.currentLiftY
+            this.updateRopes(trolley, liftGroup)
+          }
+          break
+        }
+
+        case 'grabbing': {
+          this.attachContainerToSpreader(liftGroup)
+          anim.hasContainer = true
+          anim.targetLiftY = anim.baseLiftY
+          anim.phase = 'lifting'
+          break
+        }
+
+        case 'lifting': {
+          const diff = anim.targetLiftY - anim.currentLiftY
+          if (Math.abs(diff) < 0.1) {
+            anim.currentLiftY = anim.targetLiftY
+            liftGroup.position.y = anim.currentLiftY
+            this.updateRopes(trolley, liftGroup)
             anim.targetX = anim.targetX > 0 ? -15 + Math.random() * 10 : 10 + Math.random() * 10
-            anim.phase = 'moving'
+            anim.phase = 'moving_with_load'
           } else {
-            trolley.position.y += Math.sign(liftDiff) * liftSpeed
+            const step = Math.sign(diff) * Math.min(liftSpeed, Math.abs(diff))
+            anim.currentLiftY += step
+            liftGroup.position.y = anim.currentLiftY
+            this.updateRopes(trolley, liftGroup)
           }
           break
+        }
 
-        case 'lowering':
-          anim.targetY = anim.baseY
-          const lowerDiff = anim.targetY - trolley.position.y
-          if (Math.abs(lowerDiff) < 0.1) {
-            trolley.position.y = anim.targetY
-            if (anim.hasContainer) {
-              this.detachContainerFromSpreader(trolley)
-              anim.hasContainer = false
-            }
-            anim.phase = 'idle'
+        case 'moving_with_load': {
+          const diffX = anim.targetX - trolley.position.x
+          if (Math.abs(diffX) < 0.1) {
+            trolley.position.x = anim.targetX
+            anim.phase = 'releasing'
+            anim.targetLiftY = anim.baseLiftY - anim.liftTravel
           } else {
-            trolley.position.y += Math.sign(lowerDiff) * liftSpeed
+            trolley.position.x += Math.sign(diffX) * Math.min(moveSpeed, Math.abs(diffX))
           }
           break
+        }
+
+        case 'releasing': {
+          const diff = anim.targetLiftY - anim.currentLiftY
+          if (Math.abs(diff) < 0.1) {
+            anim.currentLiftY = anim.targetLiftY
+            liftGroup.position.y = anim.currentLiftY
+            this.updateRopes(trolley, liftGroup)
+            this.detachContainerFromSpreader(liftGroup)
+            anim.hasContainer = false
+            anim.targetLiftY = anim.baseLiftY
+            anim.phase = 'lifting'
+          } else {
+            const step = Math.sign(diff) * Math.min(liftSpeed, Math.abs(diff))
+            anim.currentLiftY += step
+            liftGroup.position.y = anim.currentLiftY
+            this.updateRopes(trolley, liftGroup)
+          }
+          break
+        }
       }
 
       const statusLight = anim.crane.getObjectByName('statusLight')
@@ -299,8 +349,29 @@ export class AnimationManager {
     })
   }
 
-  private attachContainerToSpreader(trolley: THREE.Group): void {
-    const existingContainer = trolley.getObjectByName('containerOnSpreader')
+  private updateRopes(trolley: THREE.Group, liftGroup: THREE.Group): void {
+    const spreader = liftGroup.getObjectByName('spreader')
+    if (!spreader) return
+
+    const spreaderY = liftGroup.position.y + spreader.position.y
+    const trolleyBottom = -1.5
+
+    liftGroup.children.forEach(child => {
+      if (child instanceof THREE.Line && child.name.startsWith('rope-')) {
+        const posAttr = child.geometry.getAttribute('position')
+        if (posAttr && posAttr.count >= 2) {
+          const x = posAttr.getX(0)
+          const z = posAttr.getZ(0)
+          posAttr.setXYZ(0, x, trolleyBottom, z)
+          posAttr.setXYZ(1, x, spreaderY, z)
+          posAttr.needsUpdate = true
+        }
+      }
+    })
+  }
+
+  private attachContainerToSpreader(liftGroup: THREE.Group): void {
+    const existingContainer = liftGroup.getObjectByName('containerOnSpreader')
     if (existingContainer) return
 
     const containerGeometry = new THREE.BoxGeometry(6, 2.6, 2.5)
@@ -313,13 +384,13 @@ export class AnimationManager {
     container.name = 'containerOnSpreader'
     container.position.set(0, -8, 0)
     container.castShadow = true
-    trolley.add(container)
+    liftGroup.add(container)
   }
 
-  private detachContainerFromSpreader(trolley: THREE.Group): void {
-    const container = trolley.getObjectByName('containerOnSpreader')
+  private detachContainerFromSpreader(liftGroup: THREE.Group): void {
+    const container = liftGroup.getObjectByName('containerOnSpreader')
     if (container) {
-      trolley.remove(container)
+      liftGroup.remove(container)
       if (container instanceof THREE.Mesh) {
         container.geometry.dispose()
         if (container.material instanceof THREE.Material) {

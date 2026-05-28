@@ -38,11 +38,11 @@ export const SceneConfig = {
   },
 
   truck: {
-    minFollowingDistance: 12,
-    safeDistance: 16,
-    maxSpeed: 0.004,
-    acceleration: 0.0001,
-    deceleration: 0.0003
+    minFollowingDistance: 14,
+    safeDistance: 22,
+    maxSpeed: 0.8,
+    acceleration: 0.02,
+    deceleration: 0.05
   },
 
   colors: {
