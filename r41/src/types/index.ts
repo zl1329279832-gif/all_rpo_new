@@ -56,11 +56,12 @@ export interface Truck {
   position: Position
   targetPosition: Position | null
   container: Container | null
-  status: 'idle' | 'moving_to_berth' | 'loading' | 'moving_to_yard' | 'unloading' | 'moving_to_gate'
+  status: 'idle' | 'moving_to_berth' | 'waiting_at_berth' | 'loading' | 'moving_to_yard' | 'unloading' | 'moving_to_gate'
   speed: number
   path: Position[]
   pathIndex: number
   targetYardSlotId?: string
+  targetBerthId?: string
 }
 
 export interface Crane {

@@ -1,27 +1,48 @@
 export const SceneConfig = {
-  containerCount: 1500,
-  truckCount: 25,
+  containerCount: 1200,
+  truckCount: 12,
   craneCount: 4,
   berthCount: 3,
-  yardBlockCount: 12,
+  yardBlockCount: 8,
   enableAnimation: true,
   enableLabels: true,
   labelsDistance: 150,
   animationSpeed: 1.0,
 
+  layout: {
+    roadWidth: 14,
+    laneWidth: 6,
+    yardGapX: 14,
+    yardGapZ: 14,
+    yardStartX: -120,
+    yardStartZ: -30,
+    yardBlockWidth: 50,
+    yardBlockDepth: 30,
+    berthZ: -150,
+    berthFrontRoadZ: -95
+  },
+
   yard: {
-    blockWidth: 60,
-    blockDepth: 40,
-    blockGap: 15,
+    blockWidth: 50,
+    blockDepth: 30,
+    blockGap: 14,
     rowGap: 3,
-    bayGap: 6
+    bayGap: 5
   },
 
   container: {
-    width20ft: 6,
-    width40ft: 12,
-    depth: 2.5,
+    width20ft: 5,
+    width40ft: 10,
+    depth: 2.4,
     height: 2.6
+  },
+
+  truck: {
+    minFollowingDistance: 12,
+    safeDistance: 16,
+    maxSpeed: 0.004,
+    acceleration: 0.0001,
+    deceleration: 0.0003
   },
 
   colors: {
@@ -34,6 +55,7 @@ export const SceneConfig = {
     yard: 0x37474F,
     yardDangerous: 0x7B1FA2,
     road: 0x424242,
+    roadLine: 0xFFEB3B,
     roadCongested: 0xE53935,
     quayCrane: 0x607D8B,
     truck: 0x0288D1,

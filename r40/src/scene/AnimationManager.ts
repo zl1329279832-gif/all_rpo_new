@@ -5,9 +5,15 @@ import { SceneConfig } from './config'
 
 export interface TruckAnimation {
   truck: THREE.Group
+  truckId: string
   path: THREE.Vector3[]
   progress: number
-  speed: number
+  currentSpeed: number
+  maxSpeed: number
+  currentSegment: number
+  segmentProgress: number
+  isWaiting: boolean
+  waitTimer: number
 }
 
 export interface CraneAnimation {
@@ -41,6 +47,7 @@ export class AnimationManager {
   private alertAnimations: Map<string, AlertAnimation> = new Map()
   private enabled: boolean = true
   private speed: number = SceneConfig.animationSpeed
+  private truckPositions: Map<string, THREE.Vector3> = new Map()
 
   constructor(scene: THREE.Scene) {
     this.scene = scene
@@ -50,15 +57,23 @@ export class AnimationManager {
     truckId: string,
     truckGroup: THREE.Group,
     path: Position3D[],
-    speed: number = 0.002
+    speed: number = SceneConfig.truck.maxSpeed
   ): void {
     const vectorPath = path.map(p => new THREE.Vector3(p.x, p.y, p.z))
-    this.truckAnimations.set(truckId, {
+    const anim: TruckAnimation = {
       truck: truckGroup,
+      truckId,
       path: vectorPath,
       progress: 0,
-      speed
-    })
+      currentSpeed: 0,
+      maxSpeed: speed,
+      currentSegment: 0,
+      segmentProgress: 0,
+      isWaiting: false,
+      waitTimer: 0
+    }
+    this.truckAnimations.set(truckId, anim)
+    this.truckPositions.set(truckId, vectorPath[0].clone())
   }
 
   public updateTruckPath(truckId: string, path: Position3D[]): void {
@@ -66,13 +81,15 @@ export class AnimationManager {
     if (animation) {
       animation.path = path.map(p => new THREE.Vector3(p.x, p.y, p.z))
       animation.progress = 0
+      animation.currentSegment = 0
+      animation.segmentProgress = 0
     }
   }
 
   public addCraneAnimation(craneId: string, craneGroup: THREE.Group): void {
     const trolley = craneGroup.getObjectByName('trolley')
     const baseY = trolley ? trolley.position.y : 35
-    
+
     this.craneAnimations.set(craneId, {
       crane: craneGroup,
       targetX: 0,
@@ -113,39 +130,115 @@ export class AnimationManager {
   }
 
   private updateTrucks(deltaTime: number): void {
-    this.truckAnimations.forEach((anim, id) => {
-      if (anim.path.length < 2) return
+    const truckArray = Array.from(this.truckAnimations.values())
 
-      const adjustedSpeed = anim.speed * this.speed * deltaTime * 60
-      anim.progress += adjustedSpeed
+    for (const anim of truckArray) {
+      if (anim.path.length < 2) continue
 
-      if (anim.progress >= anim.path.length - 1) {
-        anim.progress = 0
+      if (anim.isWaiting) {
+        anim.waitTimer -= deltaTime
+        if (anim.waitTimer <= 0) {
+          anim.isWaiting = false
+          anim.currentSpeed = anim.maxSpeed * 0.3
+        }
+        continue
       }
 
-      const currentIndex = Math.floor(anim.progress)
-      const nextIndex = Math.min(currentIndex + 1, anim.path.length - 1)
-      const t = anim.progress - currentIndex
+      const currentPos = this.truckPositions.get(anim.truckId) || anim.truck.position.clone()
 
-      const currentPos = anim.path[currentIndex]
-      const nextPos = anim.path[nextIndex]
+      let closestDist = Infinity
+      let closestTruckId = ''
 
-      const newPos = new THREE.Vector3().lerpVectors(currentPos, nextPos, t)
+      for (const other of truckArray) {
+        if (other.truckId === anim.truckId) continue
+        const otherPos = this.truckPositions.get(other.truckId) || other.truck.position.clone()
+        const dist = currentPos.distanceTo(otherPos)
+
+        if (dist < SceneConfig.truck.safeDistance) {
+          const toOther = new THREE.Vector3().subVectors(otherPos, currentPos)
+          const truckForward = this.getTruckForward(anim)
+          const dot = toOther.dot(truckForward)
+
+          if (dot > 0 && dist < closestDist) {
+            closestDist = dist
+            closestTruckId = other.truckId
+          }
+        }
+      }
+
+      if (closestTruckId && closestDist < SceneConfig.truck.minFollowingDistance) {
+        anim.currentSpeed = 0
+        anim.isWaiting = true
+        anim.waitTimer = 0.5 + Math.random() * 1.5
+      } else if (closestTruckId && closestDist < SceneConfig.truck.safeDistance) {
+        const ratio = (closestDist - SceneConfig.truck.minFollowingDistance) /
+          (SceneConfig.truck.safeDistance - SceneConfig.truck.minFollowingDistance)
+        anim.currentSpeed = anim.maxSpeed * Math.max(0.1, ratio)
+      } else {
+        if (anim.currentSpeed < anim.maxSpeed) {
+          anim.currentSpeed = Math.min(anim.maxSpeed, anim.currentSpeed + SceneConfig.truck.acceleration * deltaTime * 60)
+        }
+      }
+
+      const moveAmount = anim.currentSpeed * this.speed * deltaTime * 60
+
+      anim.segmentProgress += moveAmount
+
+      const from = anim.path[anim.currentSegment]
+      const to = anim.path[Math.min(anim.currentSegment + 1, anim.path.length - 1)]
+      const segmentLength = from.distanceTo(to)
+
+      if (segmentLength < 0.1 || anim.segmentProgress >= segmentLength) {
+        anim.currentSegment++
+        anim.segmentProgress = 0
+
+        if (anim.currentSegment >= anim.path.length - 1) {
+          anim.currentSegment = 0
+          anim.segmentProgress = 0
+          anim.currentSpeed = 0
+        }
+      }
+
+      const segFrom = anim.path[anim.currentSegment]
+      const segTo = anim.path[Math.min(anim.currentSegment + 1, anim.path.length - 1)]
+      const segLen = segFrom.distanceTo(segTo)
+
+      let t = 0
+      if (segLen > 0.1) {
+        t = Math.min(1, anim.segmentProgress / segLen)
+      }
+
+      const newPos = new THREE.Vector3().lerpVectors(segFrom, segTo, t)
       anim.truck.position.copy(newPos)
+      this.truckPositions.set(anim.truckId, newPos.clone())
 
-      const direction = new THREE.Vector3().subVectors(nextPos, currentPos).normalize()
+      const direction = new THREE.Vector3().subVectors(segTo, segFrom)
       if (direction.length() > 0.1) {
-        anim.truck.rotation.y = Math.atan2(direction.x, direction.z)
+        direction.normalize()
+        const targetAngle = Math.atan2(direction.x, direction.z)
+        const currentAngle = anim.truck.rotation.y
+        let angleDiff = targetAngle - currentAngle
+        while (angleDiff > Math.PI) angleDiff -= Math.PI * 2
+        while (angleDiff < -Math.PI) angleDiff += Math.PI * 2
+        anim.truck.rotation.y += angleDiff * Math.min(1, deltaTime * 5)
       }
-    })
+    }
+  }
+
+  private getTruckForward(anim: TruckAnimation): THREE.Vector3 {
+    const segFrom = anim.path[anim.currentSegment]
+    const segTo = anim.path[Math.min(anim.currentSegment + 1, anim.path.length - 1)]
+    const dir = new THREE.Vector3().subVectors(segTo, segFrom)
+    if (dir.length() > 0.1) {
+      return dir.normalize()
+    }
+    return new THREE.Vector3(0, 0, 1)
   }
 
   private updateCranes(deltaTime: number): void {
     this.craneAnimations.forEach((anim) => {
       const trolley = anim.crane.getObjectByName('trolley')
-      const spreader = trolley?.getObjectByName('spreader')
-      const containerOnSpreader = trolley?.getObjectByName('containerOnSpreader')
-      if (!trolley || !spreader) return
+      if (!trolley) return
 
       const moveSpeed = 0.025 * this.speed * deltaTime * 60
       const liftSpeed = 0.03 * this.speed * deltaTime * 60
@@ -305,10 +398,7 @@ export class AnimationManager {
     object.traverse((child) => {
       if (child instanceof THREE.Mesh && child.material) {
         if (Array.isArray(child.material)) {
-          child.material.forEach(m => {
-            m.transparent = true
-            m.opacity = opacity
-          })
+          child.material.forEach(m => { m.transparent = true; m.opacity = opacity })
         } else {
           child.material.transparent = true
           child.material.opacity = opacity
@@ -321,10 +411,7 @@ export class AnimationManager {
     object.traverse((child) => {
       if (child instanceof THREE.Mesh && child.material) {
         if (Array.isArray(child.material)) {
-          child.material.forEach(m => {
-            m.transparent = false
-            m.opacity = 1
-          })
+          child.material.forEach(m => { m.transparent = false; m.opacity = 1 })
         } else {
           child.material.transparent = false
           child.material.opacity = 1
@@ -337,31 +424,46 @@ export class AnimationManager {
     const animation = this.truckAnimations.get(truckId)
     if (!animation) return
 
-    animation.progress = 0
-    
-    new TWEEN.Tween(animation)
-      .to({ progress: animation.path.length - 1 }, 8000 / this.speed)
-      .easing(TWEEN.Easing.Linear.None)
-      .onUpdate(() => {
-        const currentIndex = Math.floor(animation.progress)
-        const nextIndex = Math.min(currentIndex + 1, animation.path.length - 1)
-        const t = animation.progress - currentIndex
+    animation.currentSegment = 0
+    animation.segmentProgress = 0
+    animation.currentSpeed = animation.maxSpeed
 
-        const currentPos = animation.path[currentIndex]
-        const nextPos = animation.path[nextIndex]
+    const totalLength = animation.path.reduce((sum, p, i) => {
+      if (i === 0) return 0
+      return sum + p.distanceTo(animation.path[i - 1])
+    }, 0)
 
-        const newPos = new THREE.Vector3().lerpVectors(currentPos, nextPos, t)
-        animation.truck.position.copy(newPos)
+    const duration = (totalLength / animation.maxSpeed) * 16 / this.speed
 
-        const direction = new THREE.Vector3().subVectors(nextPos, currentPos).normalize()
-        if (direction.length() > 0.1) {
-          animation.truck.rotation.y = Math.atan2(direction.x, direction.z)
-        }
-      })
-      .onComplete(() => {
+    let elapsed = 0
+
+    const animateStep = () => {
+      if (!this.enabled || !this.truckAnimations.has(truckId)) {
         if (onComplete) onComplete()
-      })
-      .start()
+        return
+      }
+
+      const anim = this.truckAnimations.get(truckId)!
+      anim.currentSpeed = anim.maxSpeed
+
+      const segFrom = anim.path[anim.currentSegment]
+      const segTo = anim.path[Math.min(anim.currentSegment + 1, anim.path.length - 1)]
+      const direction = new THREE.Vector3().subVectors(segTo, segFrom)
+      if (direction.length() > 0.1) {
+        direction.normalize()
+        const targetAngle = Math.atan2(direction.x, direction.z)
+        anim.truck.rotation.y = targetAngle
+      }
+
+      if (anim.currentSegment >= anim.path.length - 1) {
+        if (onComplete) onComplete()
+        return
+      }
+
+      requestAnimationFrame(animateStep)
+    }
+
+    animateStep()
   }
 
   public setSpeed(speed: number): void {
@@ -382,6 +484,7 @@ export class AnimationManager {
 
   public removeTruckAnimation(truckId: string): void {
     this.truckAnimations.delete(truckId)
+    this.truckPositions.delete(truckId)
   }
 
   public removeCraneAnimation(craneId: string): void {
@@ -402,6 +505,7 @@ export class AnimationManager {
 
   public clearAll(): void {
     this.truckAnimations.clear()
+    this.truckPositions.clear()
     this.craneAnimations.clear()
     this.berthAnimations.clear()
     this.alertAnimations.forEach(anim => this.resetObjectOpacity(anim.object))

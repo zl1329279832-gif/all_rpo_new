@@ -267,6 +267,56 @@ export class ModelFactory {
     roadMesh.receiveShadow = true
     group.add(roadMesh)
 
+    const centerLineMaterial = new THREE.LineDashedMaterial({
+      color: SceneConfig.colors.roadLine,
+      dashSize: 3,
+      gapSize: 2,
+      linewidth: 1
+    })
+    const centerLinePoints = [
+      new THREE.Vector3(road.start.x, 0.03, road.start.z),
+      new THREE.Vector3(road.end.x, 0.03, road.end.z)
+    ]
+    const centerLineGeometry = new THREE.BufferGeometry().setFromPoints(centerLinePoints)
+    const centerLine = new THREE.Line(centerLineGeometry, centerLineMaterial)
+    centerLine.computeLineDistances()
+    group.add(centerLine)
+
+    const laneOffset = SceneConfig.layout.laneWidth / 2
+    const isHorizontal = Math.abs(dx) > Math.abs(dz)
+    
+    const edgeLineMaterial = new THREE.LineBasicMaterial({ color: 0xFFFFFF, transparent: true, opacity: 0.3 })
+
+    if (isHorizontal) {
+      const edge1Points = [
+        new THREE.Vector3(road.start.x, 0.03, road.start.z + laneOffset),
+        new THREE.Vector3(road.end.x, 0.03, road.end.z + laneOffset)
+      ]
+      const edge1Geometry = new THREE.BufferGeometry().setFromPoints(edge1Points)
+      group.add(new THREE.Line(edge1Geometry, edgeLineMaterial))
+
+      const edge2Points = [
+        new THREE.Vector3(road.start.x, 0.03, road.start.z - laneOffset),
+        new THREE.Vector3(road.end.x, 0.03, road.end.z - laneOffset)
+      ]
+      const edge2Geometry = new THREE.BufferGeometry().setFromPoints(edge2Points)
+      group.add(new THREE.Line(edge2Geometry, edgeLineMaterial))
+    } else {
+      const edge1Points = [
+        new THREE.Vector3(road.start.x + laneOffset, 0.03, road.start.z),
+        new THREE.Vector3(road.end.x + laneOffset, 0.03, road.end.z)
+      ]
+      const edge1Geometry = new THREE.BufferGeometry().setFromPoints(edge1Points)
+      group.add(new THREE.Line(edge1Geometry, edgeLineMaterial))
+
+      const edge2Points = [
+        new THREE.Vector3(road.start.x - laneOffset, 0.03, road.start.z),
+        new THREE.Vector3(road.end.x - laneOffset, 0.03, road.end.z)
+      ]
+      const edge2Geometry = new THREE.BufferGeometry().setFromPoints(edge2Points)
+      group.add(new THREE.Line(edge2Geometry, edgeLineMaterial))
+    }
+
     if (road.congestionLevel > 0.3) {
       const indicatorGeometry = new THREE.SphereGeometry(2, 8, 8)
       const indicatorColor = road.congestionLevel > 0.7 ? 0xf44336 : road.congestionLevel > 0.5 ? 0xff9800 : 0xffc107

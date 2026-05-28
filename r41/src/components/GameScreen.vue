@@ -69,7 +69,24 @@ const handleCanvasClick = (event: MouseEvent) => {
   if (!renderer || !canvasRef.value || gameStore.isPaused) return
   
   const pos = renderer.getCanvasPosition(event.clientX, event.clientY)
-  console.log('Clicked position:', pos)
+  
+  for (const berth of gameStore.berths) {
+    const clickZoneX = berth.position.x + 60
+    const clickZoneY = berth.position.y - 25
+    const zoneWidth = 50
+    const zoneHeight = 50
+    
+    if (pos.x >= clickZoneX && pos.x <= clickZoneX + zoneWidth &&
+        pos.y >= clickZoneY && pos.y <= clickZoneY + zoneHeight) {
+      const success = gameStore.dispatchTruckToBerthByClick(berth.id)
+      if (success) {
+        console.log(`派遣集卡到 ${berth.id}`)
+      } else {
+        console.log('没有空闲集卡或该泊位已有集卡')
+      }
+      break
+    }
+  }
 }
 
 const handlePause = () => {

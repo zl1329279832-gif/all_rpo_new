@@ -55,6 +55,8 @@ export const useGameStore = defineStore('game', () => {
 
   const idleTrucks = computed(() => trucks.value.filter(t => t.status === 'idle'))
   const idleCranes = computed(() => cranes.value.filter(c => c.status === 'idle'))
+  
+  const availableTrucks = computed(() => trucks.value.filter(t => t.status === 'idle' || t.status === 'waiting_at_berth'))
 
   const initializeGame = (levelId: number, loadSaved = false) => {
     const level = getLevelById(levelId)
@@ -251,11 +253,29 @@ export const useGameStore = defineStore('game', () => {
 
       if (crane.status === 'idle') {
         if (berth.ship && berth.queue.length > 0 && !crane.container) {
-          const container = berth.queue.shift()
-          if (container) {
-            crane.status = 'picking'
-            crane.targetContainerId = container.id
-            crane.progress = 0
+          const waitingTruck = trucks.value.find(t => 
+            (t.status === 'waiting_at_berth' || t.status === 'loading') &&
+            t.targetBerthId === berth.id &&
+            !t.container
+          )
+          
+          const truckNearby = trucks.value.find(t => 
+            t.status === 'idle' && 
+            Math.abs(t.position.x - berth.position.x) < 150
+          )
+          
+          if (waitingTruck || truckNearby) {
+            const container = berth.queue.shift()
+            if (container) {
+              crane.status = 'picking'
+              crane.targetContainerId = container.id
+              crane.progress = 0
+            }
+          } else {
+            const idleTruck = idleTrucks.value[0]
+            if (idleTruck) {
+              dispatchTruckToBerth(idleTruck.id, berth.id)
+            }
           }
         }
       } else if (crane.status === 'picking') {
@@ -275,24 +295,31 @@ export const useGameStore = defineStore('game', () => {
       } else if (crane.status === 'dropping') {
         crane.progress += deltaTime * crane.efficiency
         if (crane.progress >= 1 && crane.container) {
-          const idleTruck = trucks.value.find(t => 
-            t.status === 'idle' && 
-            Math.abs(t.position.x - berth.position.x) < 150
+          const targetTruck = trucks.value.find(t => 
+            ((t.status === 'waiting_at_berth' && t.targetBerthId === berth.id) ||
+             (t.status === 'idle' && Math.abs(t.position.x - berth.position.x) < 150)) &&
+            !t.container
           )
           
-          if (idleTruck) {
-            crane.container.position = { ...idleTruck.position }
+          if (targetTruck) {
+            targetTruck.status = 'loading'
+            crane.container.position = { ...targetTruck.position }
             crane.container.status = 'on_truck'
             crane.container.location = 'truck'
-            crane.container.locationId = idleTruck.id
-            idleTruck.container = crane.container
+            crane.container.locationId = targetTruck.id
+            targetTruck.container = crane.container
             
             const order = orders.value.find(o => o.containerId === crane.container!.id)
             if (order) {
               order.status = 'in_progress'
             }
             
-            dispatchTruckToYard(idleTruck.id, crane.container.cargo.type)
+            setTimeout(() => {
+              if (targetTruck.status === 'loading' && targetTruck.container) {
+                dispatchTruckToYard(targetTruck.id, targetTruck.container.cargo.type)
+              }
+            }, 1000)
+            
             crane.container = null
             crane.targetContainerId = undefined
             crane.status = 'idle'
@@ -302,6 +329,20 @@ export const useGameStore = defineStore('game', () => {
         }
       }
     })
+  }
+
+  const dispatchTruckToBerth = (truckId: string, berthId: string) => {
+    const truck = trucks.value.find(t => t.id === truckId)
+    const berth = berths.value.find(b => b.id === berthId)
+    if (!truck || !berth || truck.status !== 'idle') return false
+
+    const loadPosition = { x: berth.position.x + 80, y: berth.position.y }
+    truck.targetBerthId = berthId
+    truck.targetPosition = loadPosition
+    truck.path = [{ x: truck.position.x, y: truck.position.y }, ...findPath(truck.position, loadPosition)]
+    truck.pathIndex = 0
+    truck.status = 'moving_to_berth'
+    return true
   }
 
   const dispatchTruckToYard = (truckId: string, cargoType: string) => {
@@ -334,7 +375,30 @@ export const useGameStore = defineStore('game', () => {
 
   const updateTrucks = (deltaTime: number) => {
     trucks.value.forEach(truck => {
-      if (truck.status === 'moving_to_yard' && truck.path.length > 0) {
+      if (truck.status === 'moving_to_berth' && truck.path.length > 0) {
+        const target = truck.path[truck.pathIndex]
+        if (target) {
+          const dx = target.x - truck.position.x
+          const dy = target.y - truck.position.y
+          const dist = Math.sqrt(dx * dx + dy * dy)
+          
+          if (dist < 5) {
+            truck.pathIndex++
+            if (truck.pathIndex >= truck.path.length) {
+              truck.status = 'waiting_at_berth'
+              truck.path = []
+              truck.pathIndex = 0
+            }
+          } else {
+            const speed = truck.speed * deltaTime * 60
+            truck.position.x += (dx / dist) * speed
+            truck.position.y += (dy / dist) * speed
+            if (truck.container) {
+              truck.container.position = { ...truck.position }
+            }
+          }
+        }
+      } else if (truck.status === 'moving_to_yard' && truck.path.length > 0) {
         const target = truck.path[truck.pathIndex]
         if (target) {
           const dx = target.x - truck.position.x
@@ -370,6 +434,7 @@ export const useGameStore = defineStore('game', () => {
               truck.path = []
               truck.pathIndex = 0
               truck.targetPosition = null
+              truck.targetBerthId = undefined
             }
           } else {
             const speed = truck.speed * deltaTime * 60
@@ -498,6 +563,24 @@ export const useGameStore = defineStore('game', () => {
     isPaused.value = false
   }
 
+  const dispatchTruckToBerthByClick = (berthId: string) => {
+    const berth = berths.value.find(b => b.id === berthId)
+    if (!berth || !berth.ship) return false
+
+    const existingTruck = trucks.value.find(t => 
+      (t.status === 'moving_to_berth' || t.status === 'waiting_at_berth' || t.status === 'loading') &&
+      t.targetBerthId === berthId &&
+      !t.container
+    )
+    if (existingTruck) return false
+
+    const idleTruck = idleTrucks.value[0]
+    if (idleTruck) {
+      return dispatchTruckToBerth(idleTruck.id, berthId)
+    }
+    return false
+  }
+
   const endGame = () => {
     isRunning.value = false
   }
@@ -524,6 +607,7 @@ export const useGameStore = defineStore('game', () => {
     isVictory,
     idleTrucks,
     idleCranes,
+    availableTrucks,
     initializeGame,
     updateGame,
     completeOrder,
@@ -532,6 +616,9 @@ export const useGameStore = defineStore('game', () => {
     hasSavedGame,
     pauseGame,
     resumeGame,
-    endGame
+    endGame,
+    dispatchTruckToBerth,
+    dispatchTruckToBerthByClick,
+    dispatchTruckToYard
   }
 })

@@ -99,6 +99,20 @@ export class GameRenderer {
         this.ctx.font = '10px Arial'
         this.ctx.fillText(`待卸: ${berth.ship.containers.length}`, berth.position.x + 15, berth.position.y + 20)
       }
+
+      if (berth.ship) {
+        this.ctx.fillStyle = 'rgba(34, 197, 94, 0.3)'
+        this.ctx.fillRect(berth.position.x + 60, berth.position.y - 25, 50, 50)
+        this.ctx.strokeStyle = '#22c55e'
+        this.ctx.lineWidth = 2
+        this.ctx.setLineDash([3, 3])
+        this.ctx.strokeRect(berth.position.x + 60, berth.position.y - 25, 50, 50)
+        this.ctx.setLineDash([])
+        this.ctx.fillStyle = '#22c55e'
+        this.ctx.font = '9px Arial'
+        this.ctx.fillText('点击', berth.position.x + 85, berth.position.y - 5)
+        this.ctx.fillText('派车', berth.position.x + 85, berth.position.y + 8)
+      }
     })
   }
 
@@ -237,8 +251,11 @@ export class GameRenderer {
       }
 
       const truckColor = truck.status === 'idle' ? '#6b7280' : 
+                        truck.status === 'moving_to_berth' ? '#f59e0b' :
+                        truck.status === 'waiting_at_berth' ? '#f97316' :
+                        truck.status === 'loading' ? '#eab308' :
                         truck.status === 'moving_to_yard' ? '#22c55e' : 
-                        truck.status === 'moving_to_gate' ? '#3b82f6' : '#f59e0b'
+                        truck.status === 'moving_to_gate' ? '#3b82f6' : '#dc2626'
       
       this.ctx.fillStyle = truckColor
       this.ctx.fillRect(truck.position.x - 9, truck.position.y + 4, 18, 13)
@@ -257,7 +274,8 @@ export class GameRenderer {
       const statusLabels: Record<string, string> = {
         idle: '空闲',
         moving_to_berth: '去泊位',
-        loading: '装货',
+        waiting_at_berth: '等装货',
+        loading: '装货中',
         moving_to_yard: '去堆场',
         unloading: '卸货',
         moving_to_gate: '返回'
@@ -297,9 +315,10 @@ export class GameRenderer {
     
     const items = [
       { color: '#6b7280', label: '空闲' },
+      { color: '#f59e0b', label: '去泊位' },
+      { color: '#f97316', label: '等装货' },
       { color: '#22c55e', label: '去堆场' },
-      { color: '#3b82f6', label: '返回' },
-      { color: '#f59e0b', label: '装卸' }
+      { color: '#3b82f6', label: '返回' }
     ]
     
     let x = 220
