@@ -1,0 +1,1747 @@
+[
+  {
+    "id": "MBR001",
+    "memberNo": "VIP20260001",
+    "name": "王建国",
+    "gender": "男",
+    "age": 45,
+    "phone": "138****1234",
+    "email": "wangjianguo@example.com",
+    "level": "钻石卡",
+    "points": 125800,
+    "totalStays": 86,
+    "totalNights": 258,
+    "totalSpent": 258600,
+    "lastStayDate": "2026-05-28",
+    "registrationDate": "2020-03-15",
+    "birthday": "1981-06-20",
+    "preferences": {
+      "roomType": "豪华套房",
+      "floor": "高楼层",
+      "smoking": "无烟",
+      "bedType": "大床",
+      "breakfast": "含早",
+      "extra": [
+        "行政酒廊",
+        "免费升级"
+      ]
+    },
+    "tags": [
+      "高端客户",
+      "商务出差",
+      "长住客户"
+    ],
+    "status": "active",
+    "address": "北京市朝阳区建国路88号",
+    "company": "北京某科技有限公司",
+    "notes": "重要客户，总经理，每次入住需要安排15楼以上房间"
+  },
+  {
+    "id": "MBR002",
+    "memberNo": "VIP20260002",
+    "name": "李美丽",
+    "gender": "女",
+    "age": 32,
+    "phone": "139****5678",
+    "email": "limeili@example.com",
+    "level": "钻石卡",
+    "points": 89600,
+    "totalStays": 52,
+    "totalNights": 128,
+    "totalSpent": 168500,
+    "lastStayDate": "2026-05-25",
+    "registrationDate": "2021-06-20",
+    "birthday": "1994-08-15",
+    "preferences": {
+      "roomType": "大床房",
+      "floor": "中间楼层",
+      "smoking": "无烟",
+      "bedType": "大床",
+      "breakfast": "含早",
+      "extra": [
+        "欢迎水果",
+        "夜床服务"
+      ]
+    },
+    "tags": [
+      "高端客户",
+      "休闲度假",
+      "会员日活跃"
+    ],
+    "status": "active",
+    "address": "上海市浦东新区陆家嘴环路1000号",
+    "company": "上海某金融公司",
+    "notes": "喜欢安静，对服务要求高"
+  },
+  {
+    "id": "MBR003",
+    "memberNo": "VIP20260003",
+    "name": "张伟强",
+    "gender": "男",
+    "age": 38,
+    "phone": "137****9012",
+    "email": "zhangweiqiang@example.com",
+    "level": "金卡",
+    "points": 45200,
+    "totalStays": 38,
+    "totalNights": 86,
+    "totalSpent": 108500,
+    "lastStayDate": "2026-05-20",
+    "registrationDate": "2022-01-10",
+    "birthday": "1988-03-25",
+    "preferences": {
+      "roomType": "标准间",
+      "floor": "低楼层",
+      "smoking": "无烟",
+      "bedType": "双床",
+      "breakfast": "不含早",
+      "extra": [
+        "健身中心",
+        "洗衣服务"
+      ]
+    },
+    "tags": [
+      "商务差旅",
+      "价格敏感",
+      "协议客户"
+    ],
+    "status": "active",
+    "address": "广州市天河区珠江新城",
+    "company": "广州某贸易公司",
+    "notes": "需要增值税专用发票"
+  },
+  {
+    "id": "MBR004",
+    "memberNo": "VIP20260004",
+    "name": "刘芳芳",
+    "gender": "女",
+    "age": 28,
+    "phone": "136****3456",
+    "email": "liufangfang@example.com",
+    "level": "金卡",
+    "points": 32800,
+    "totalStays": 28,
+    "totalNights": 68,
+    "totalSpent": 86200,
+    "lastStayDate": "2026-05-18",
+    "registrationDate": "2022-08-15",
+    "birthday": "1998-11-30",
+    "preferences": {
+      "roomType": "双床房",
+      "floor": "高楼层",
+      "smoking": "无烟",
+      "bedType": "双床",
+      "breakfast": "含早",
+      "extra": [
+        "行政酒廊"
+      ]
+    },
+    "tags": [
+      "年轻白领",
+      "周末休闲",
+      "美食爱好者"
+    ],
+    "status": "active",
+    "address": "深圳市南山区科技园",
+    "company": "深圳某互联网公司",
+    "notes": "喜欢拍照发朋友圈"
+  },
+  {
+    "id": "MBR005",
+    "memberNo": "VIP20260005",
+    "name": "陈明华",
+    "gender": "男",
+    "age": 52,
+    "phone": "135****7890",
+    "email": "chenminghua@example.com",
+    "level": "钻石卡",
+    "points": 156800,
+    "totalStays": 120,
+    "totalNights": 365,
+    "totalSpent": 368000,
+    "lastStayDate": "2026-05-30",
+    "registrationDate": "2019-09-01",
+    "birthday": "1974-02-14",
+    "preferences": {
+      "roomType": "总统套房",
+      "floor": "顶层",
+      "smoking": "无烟",
+      "bedType": "大床",
+      "breakfast": "含早",
+      "extra": [
+        "行政酒廊",
+        "24小时管家",
+        "免费升级"
+      ]
+    },
+    "tags": [
+      "VIP客户",
+      "董事长",
+      "长住客户"
+    ],
+    "status": "active",
+    "address": "杭州市西湖区文三路",
+    "company": "杭州某集团公司",
+    "notes": "顶级VIP，酒店股东，入住时需要总经理亲自接待"
+  },
+  {
+    "id": "MBR006",
+    "memberNo": "VIP20260006",
+    "name": "赵丽娜",
+    "gender": "女",
+    "age": 35,
+    "phone": "159****1234",
+    "email": "zhaolina@example.com",
+    "level": "金卡",
+    "points": 28600,
+    "totalStays": 22,
+    "totalNights": 56,
+    "totalSpent": 72800,
+    "lastStayDate": "2026-05-15",
+    "registrationDate": "2023-02-20",
+    "birthday": "1991-07-08",
+    "preferences": {
+      "roomType": "豪华套房",
+      "floor": "高楼层",
+      "smoking": "无烟",
+      "bedType": "大床",
+      "breakfast": "含早",
+      "extra": [
+        "SPA优惠券"
+      ]
+    },
+    "tags": [
+      "商务出差",
+      "高端客户"
+    ],
+    "status": "active",
+    "address": "成都市武侯区天府大道",
+    "company": "成都某咨询公司",
+    "notes": "每次需要安排安静的房间"
+  },
+  {
+    "id": "MBR007",
+    "memberNo": "VIP20260007",
+    "name": "孙志强",
+    "gender": "男",
+    "age": 42,
+    "phone": "158****5678",
+    "email": "sunzhiqiang@example.com",
+    "level": "银卡",
+    "points": 12500,
+    "totalStays": 18,
+    "totalNights": 42,
+    "totalSpent": 52500,
+    "lastStayDate": "2026-05-10",
+    "registrationDate": "2023-06-15",
+    "birthday": "1984-09-12",
+    "preferences": {
+      "roomType": "标准间",
+      "floor": "中间楼层",
+      "smoking": "可吸烟",
+      "bedType": "双床",
+      "breakfast": "不含早",
+      "extra": []
+    },
+    "tags": [
+      "普通客户",
+      "偶尔入住"
+    ],
+    "status": "active",
+    "address": "武汉市江汉区建设大道",
+    "company": "武汉某建筑公司",
+    "notes": "吸烟客户"
+  },
+  {
+    "id": "MBR008",
+    "memberNo": "VIP20260008",
+    "name": "周婷婷",
+    "gender": "女",
+    "age": 26,
+    "phone": "157****9012",
+    "email": "zhoutingting@example.com",
+    "level": "银卡",
+    "points": 8600,
+    "totalStays": 12,
+    "totalNights": 28,
+    "totalSpent": 36800,
+    "lastStayDate": "2026-05-08",
+    "registrationDate": "2024-01-10",
+    "birthday": "2000-04-22",
+    "preferences": {
+      "roomType": "大床房",
+      "floor": "低楼层",
+      "smoking": "无烟",
+      "bedType": "大床",
+      "breakfast": "含早",
+      "extra": [
+        "欢迎水果"
+      ]
+    },
+    "tags": [
+      "年轻客户",
+      "旅游爱好者",
+      "网红打卡"
+    ],
+    "status": "active",
+    "address": "南京市鼓楼区中山路",
+    "company": "南京某设计公司",
+    "notes": "喜欢酒店打卡"
+  },
+  {
+    "id": "MBR009",
+    "memberNo": "VIP20260009",
+    "name": "吴明亮",
+    "gender": "男",
+    "age": 48,
+    "phone": "156****3456",
+    "email": "wumingliang@example.com",
+    "level": "金卡",
+    "points": 36500,
+    "totalStays": 32,
+    "totalNights": 78,
+    "totalSpent": 98500,
+    "lastStayDate": "2026-05-22",
+    "registrationDate": "2022-04-18",
+    "birthday": "1978-12-05",
+    "preferences": {
+      "roomType": "家庭房",
+      "floor": "低楼层",
+      "smoking": "无烟",
+      "bedType": "家庭床",
+      "breakfast": "含早",
+      "extra": [
+        "儿童用品"
+      ]
+    },
+    "tags": [
+      "家庭出游",
+      "亲子客户"
+    ],
+    "status": "active",
+    "address": "西安市雁塔区高新路",
+    "company": "西安某教育机构",
+    "notes": "经常带家人入住"
+  },
+  {
+    "id": "MBR010",
+    "memberNo": "VIP20260010",
+    "name": "郑晓燕",
+    "gender": "女",
+    "age": 30,
+    "phone": "155****7890",
+    "email": "zhengxiaoyan@example.com",
+    "level": "银卡",
+    "points": 6800,
+    "totalStays": 15,
+    "totalNights": 35,
+    "totalSpent": 45600,
+    "lastStayDate": "2026-05-05",
+    "registrationDate": "2024-03-25",
+    "birthday": "1996-06-18",
+    "preferences": {
+      "roomType": "双床房",
+      "floor": "中间楼层",
+      "smoking": "无烟",
+      "bedType": "双床",
+      "breakfast": "含早",
+      "extra": []
+    },
+    "tags": [
+      "普通客户",
+      "闺蜜出行"
+    ],
+    "status": "active",
+    "address": "重庆市渝中区解放碑",
+    "company": "重庆某传媒公司",
+    "notes": "喜欢逛街购物"
+  },
+  {
+    "id": "MBR011",
+    "memberNo": "VIP20260011",
+    "name": "冯大伟",
+    "gender": "男",
+    "age": 36,
+    "phone": "138****2233",
+    "email": "fengdawei@example.com",
+    "level": "金卡",
+    "points": 24500,
+    "totalStays": 25,
+    "totalNights": 62,
+    "totalSpent": 78600,
+    "lastStayDate": "2026-05-12",
+    "registrationDate": "2023-01-08",
+    "birthday": "1990-01-25",
+    "preferences": {
+      "roomType": "大床房",
+      "floor": "高楼层",
+      "smoking": "无烟",
+      "bedType": "大床",
+      "breakfast": "含早",
+      "extra": [
+        "行政酒廊"
+      ]
+    },
+    "tags": [
+      "商务出差",
+      "协议客户"
+    ],
+    "status": "active",
+    "address": "天津市和平区南京路",
+    "company": "天津某物流公司",
+    "notes": "需要快速办理入住"
+  },
+  {
+    "id": "MBR012",
+    "memberNo": "VIP20260012",
+    "name": "何秀兰",
+    "gender": "女",
+    "age": 55,
+    "phone": "139****4455",
+    "email": "hexiulan@example.com",
+    "level": "钻石卡",
+    "points": 98500,
+    "totalStays": 68,
+    "totalNights": 168,
+    "totalSpent": 208600,
+    "lastStayDate": "2026-05-28",
+    "registrationDate": "2020-08-15",
+    "birthday": "1971-05-12",
+    "preferences": {
+      "roomType": "豪华套房",
+      "floor": "高楼层",
+      "smoking": "无烟",
+      "bedType": "大床",
+      "breakfast": "含早",
+      "extra": [
+        "行政酒廊",
+        "免费升级"
+      ]
+    },
+    "tags": [
+      "高端客户",
+      "商务宴请"
+    ],
+    "status": "active",
+    "address": "苏州市工业园区金鸡湖大道",
+    "company": "苏州某电子公司",
+    "notes": "公司高管，对细节要求高"
+  },
+  {
+    "id": "MBR013",
+    "memberNo": "VIP20260013",
+    "name": "蒋建国",
+    "gender": "男",
+    "age": 40,
+    "phone": "137****6677",
+    "email": "jiangjianguo@example.com",
+    "level": "银卡",
+    "points": 5200,
+    "totalStays": 10,
+    "totalNights": 22,
+    "totalSpent": 28500,
+    "lastStayDate": "2026-04-28",
+    "registrationDate": "2024-06-10",
+    "birthday": "1986-08-30",
+    "preferences": {
+      "roomType": "标准间",
+      "floor": "低楼层",
+      "smoking": "可吸烟",
+      "bedType": "双床",
+      "breakfast": "不含早",
+      "extra": []
+    },
+    "tags": [
+      "普通客户",
+      "出差入住"
+    ],
+    "status": "active",
+    "address": "东莞市南城区鸿福路",
+    "company": "东莞某制造业公司",
+    "notes": null
+  },
+  {
+    "id": "MBR014",
+    "memberNo": "VIP20260014",
+    "name": "许丽华",
+    "gender": "女",
+    "age": 33,
+    "phone": "136****8899",
+    "email": "xulihua@example.com",
+    "level": "金卡",
+    "points": 28800,
+    "totalStays": 28,
+    "totalNights": 68,
+    "totalSpent": 86500,
+    "lastStayDate": "2026-05-20",
+    "registrationDate": "2022-11-20",
+    "birthday": "1993-02-14",
+    "preferences": {
+      "roomType": "大床房",
+      "floor": "中间楼层",
+      "smoking": "无烟",
+      "bedType": "大床",
+      "breakfast": "含早",
+      "extra": [
+        "SPA"
+      ]
+    },
+    "tags": [
+      "商务差旅",
+      "女性客户"
+    ],
+    "status": "active",
+    "address": "青岛市市南区香港中路",
+    "company": "青岛某外贸公司",
+    "notes": "需要安全措施要做好"
+  },
+  {
+    "id": "MBR015",
+    "memberNo": "VIP20260015",
+    "name": "郭志强",
+    "gender": "男",
+    "age": 46,
+    "phone": "135****1122",
+    "email": "guozhiqiang@example.com",
+    "level": "钻石卡",
+    "points": 112600,
+    "totalStays": 88,
+    "totalNights": 218,
+    "totalSpent": 268000,
+    "lastStayDate": "2026-05-30",
+    "registrationDate": "2020-05-20",
+    "birthday": "1980-10-08",
+    "preferences": {
+      "roomType": "总统套房",
+      "floor": "顶层",
+      "smoking": "无烟",
+      "bedType": "大床",
+      "breakfast": "含早",
+      "extra": [
+        "行政酒廊",
+        "24小时管家"
+      ]
+    },
+    "tags": [
+      "VIP客户",
+      "企业家"
+    ],
+    "status": "active",
+    "address": "厦门市思明区环岛路",
+    "company": "厦门某投资公司",
+    "notes": "私人企业主，对隐私要求高"
+  },
+  {
+    "id": "MBR016",
+    "memberNo": "VIP20260016",
+    "name": "林美玲",
+    "gender": "女",
+    "age": 29,
+    "phone": "159****2233",
+    "email": "linmeiling@example.com",
+    "level": "银卡",
+    "points": 9200,
+    "totalStays": 16,
+    "totalNights": 38,
+    "totalSpent": 48500,
+    "lastStayDate": "2026-05-18",
+    "registrationDate": "2024-02-14",
+    "birthday": "1997-03-22",
+    "preferences": {
+      "roomType": "双床房",
+      "floor": "高楼层",
+      "smoking": "无烟",
+      "bedType": "双床",
+      "breakfast": "含早",
+      "extra": []
+    },
+    "tags": [
+      "年轻白领",
+      "闺蜜游"
+    ],
+    "status": "active",
+    "address": "福州市鼓楼区五四路",
+    "company": "福州某医疗机构",
+    "notes": "护士，经常出差学习"
+  },
+  {
+    "id": "MBR017",
+    "memberNo": "VIP20260017",
+    "name": "曾伟",
+    "gender": "男",
+    "age": 39,
+    "phone": "158****4455",
+    "email": "zengwei@example.com",
+    "level": "金卡",
+    "points": 32600,
+    "totalStays": 28,
+    "totalNights": 65,
+    "totalSpent": 82600,
+    "lastStayDate": "2026-05-15",
+    "registrationDate": "2023-03-18",
+    "birthday": "1987-12-15",
+    "preferences": {
+      "roomType": "大床房",
+      "floor": "中间楼层",
+      "smoking": "可吸烟",
+      "bedType": "大床",
+      "breakfast": "不含早",
+      "extra": [
+        "健身中心"
+      ]
+    },
+    "tags": [
+      "商务出差",
+      "吸烟客户"
+    ],
+    "status": "active",
+    "address": "济南市历下区泺源大街",
+    "company": "济南某能源公司",
+    "notes": null
+  },
+  {
+    "id": "MBR018",
+    "memberNo": "VIP20260018",
+    "name": "余芳",
+    "gender": "女",
+    "age": 31,
+    "phone": "157****6677",
+    "email": "yufang@example.com",
+    "level": "银卡",
+    "points": 7500,
+    "totalStays": 14,
+    "totalNights": 32,
+    "totalSpent": 41200,
+    "lastStayDate": "2026-05-08",
+    "registrationDate": "2024-04-20",
+    "birthday": "1995-09-08",
+    "preferences": {
+      "roomType": "标准间",
+      "floor": "低楼层",
+      "smoking": "无烟",
+      "bedType": "双床",
+      "breakfast": "含早",
+      "extra": []
+    },
+    "tags": [
+      "教师",
+      "暑期出游"
+    ],
+    "status": "active",
+    "address": "昆明市五华区人民中路",
+    "company": "昆明某大学",
+    "notes": "老师，放寒暑假会带家人出游"
+  },
+  {
+    "id": "MBR019",
+    "memberNo": "VIP20260019",
+    "name": "程浩",
+    "gender": "男",
+    "age": 34,
+    "phone": "156****8899",
+    "email": "chenghao@example.com",
+    "level": "金卡",
+    "points": 26800,
+    "totalStays": 22,
+    "totalNights": 58,
+    "totalSpent": 75800,
+    "lastStayDate": "2026-05-25",
+    "registrationDate": "2022-09-05",
+    "birthday": "1992-04-18",
+    "preferences": {
+      "roomType": "豪华套房",
+      "floor": "高楼层",
+      "smoking": "无烟",
+      "bedType": "大床",
+      "breakfast": "含早",
+      "extra": [
+        "行政酒廊",
+        "免费升级"
+      ]
+    },
+    "tags": [
+      "律师",
+      "高端商务"
+    ],
+    "status": "active",
+    "address": "南昌市东湖区八一大道",
+    "company": "南昌某律师事务所",
+    "notes": "经常有商务宴请"
+  },
+  {
+    "id": "MBR020",
+    "memberNo": "VIP20260020",
+    "name": "叶敏",
+    "gender": "女",
+    "age": 27,
+    "phone": "155****1122",
+    "email": "yemin@example.com",
+    "level": "银卡",
+    "points": 5800,
+    "totalStays": 11,
+    "totalNights": 25,
+    "totalSpent": 32800,
+    "lastStayDate": "2026-05-05",
+    "registrationDate": "2024-07-15",
+    "birthday": "1999-01-30",
+    "preferences": {
+      "roomType": "大床房",
+      "floor": "中间楼层",
+      "smoking": "无烟",
+      "bedType": "大床",
+      "breakfast": "含早",
+      "extra": [
+        "欢迎水果"
+      ]
+    },
+    "tags": [
+      "年轻白领",
+      "美食博主"
+    ],
+    "status": "active",
+    "address": "合肥市蜀山区长江西路",
+    "company": "合肥某新媒体公司",
+    "notes": "喜欢拍照分享"
+  },
+  {
+    "id": "MBR021",
+    "memberNo": "VIP20260021",
+    "name": "杜强",
+    "gender": "男",
+    "age": 50,
+    "phone": "138****3344",
+    "email": "duqiang@example.com",
+    "level": "金卡",
+    "points": 48500,
+    "totalStays": 42,
+    "totalNights": 102,
+    "totalSpent": 125800,
+    "lastStayDate": "2026-05-28",
+    "registrationDate": "2021-11-20",
+    "birthday": "1976-06-10",
+    "preferences": {
+      "roomType": "家庭房",
+      "floor": "低楼层",
+      "smoking": "无烟",
+      "bedType": "家庭床",
+      "breakfast": "含早",
+      "extra": [
+        "儿童用品",
+        "加床"
+      ]
+    },
+    "tags": [
+      "家庭出游",
+      "长住客户"
+    ],
+    "status": "active",
+    "address": "长沙市芙蓉区五一大道",
+    "company": "长沙某房地产公司",
+    "notes": "经常带孩子和老人一起入住"
+  },
+  {
+    "id": "MBR022",
+    "memberNo": "VIP20260022",
+    "name": "苏丽",
+    "gender": "女",
+    "age": 43,
+    "phone": "139****5566",
+    "email": "suli@example.com",
+    "level": "钻石卡",
+    "points": 86500,
+    "totalStays": 58,
+    "totalNights": 142,
+    "totalSpent": 186000,
+    "lastStayDate": "2026-05-22",
+    "registrationDate": "2020-07-01",
+    "birthday": "1983-08-20",
+    "preferences": {
+      "roomType": "豪华套房",
+      "floor": "高楼层",
+      "smoking": "无烟",
+      "bedType": "大床",
+      "breakfast": "含早",
+      "extra": [
+        "行政酒廊",
+        "SPA",
+        "免费升级"
+      ]
+    },
+    "tags": [
+      "高端客户",
+      "商务出差"
+    ],
+    "status": "active",
+    "address": "郑州市金水区花园路",
+    "company": "郑州某咨询公司",
+    "notes": "公司财务总监"
+  },
+  {
+    "id": "MBR023",
+    "memberNo": "VIP20260023",
+    "name": "田亮",
+    "gender": "男",
+    "age": 37,
+    "phone": "137****7788",
+    "email": "tianliang@example.com",
+    "level": "银卡",
+    "points": 11200,
+    "totalStays": 19,
+    "totalNights": 45,
+    "totalSpent": 58600,
+    "lastStayDate": "2026-05-12",
+    "registrationDate": "2023-08-10",
+    "birthday": "1989-10-15",
+    "preferences": {
+      "roomType": "标准间",
+      "floor": "中间楼层",
+      "smoking": "可吸烟",
+      "bedType": "双床",
+      "breakfast": "不含早",
+      "extra": []
+    },
+    "tags": [
+      "普通客户",
+      "出差入住"
+    ],
+    "status": "active",
+    "address": "石家庄桥西区中山路",
+    "company": "石家庄某制药公司",
+    "notes": null
+  },
+  {
+    "id": "MBR024",
+    "memberNo": "VIP20260024",
+    "name": "丁燕",
+    "gender": "女",
+    "age": 25,
+    "phone": "136****9900",
+    "email": "dingyan@example.com",
+    "level": "银卡",
+    "points": 4500,
+    "totalStays": 8,
+    "totalNights": 18,
+    "totalSpent": 23500,
+    "lastStayDate": "2026-05-01",
+    "registrationDate": "2024-09-20",
+    "birthday": "2001-02-14",
+    "preferences": {
+      "roomType": "大床房",
+      "floor": "高楼层",
+      "smoking": "无烟",
+      "bedType": "大床",
+      "breakfast": "含早",
+      "extra": []
+    },
+    "tags": [
+      "年轻客户",
+      "旅游打卡"
+    ],
+    "status": "active",
+    "address": "长春市朝阳区人民大街",
+    "company": "长春某艺术院校",
+    "notes": "学设计的，喜欢有设计感的地方"
+  },
+  {
+    "id": "MBR025",
+    "memberNo": "VIP20260025",
+    "name": "董明",
+    "gender": "男",
+    "age": 44,
+    "phone": "135****2233",
+    "email": "dongming@example.com",
+    "level": "金卡",
+    "points": 38600,
+    "totalStays": 35,
+    "totalNights": 85,
+    "totalSpent": 108000,
+    "lastStayDate": "2026-05-18",
+    "registrationDate": "2022-05-15",
+    "birthday": "1982-11-22",
+    "preferences": {
+      "roomType": "大床房",
+      "floor": "高楼层",
+      "smoking": "无烟",
+      "bedType": "大床",
+      "breakfast": "含早",
+      "extra": [
+        "行政酒廊"
+      ]
+    },
+    "tags": [
+      "商务出差",
+      "协议客户"
+    ],
+    "status": "active",
+    "address": "南宁市青秀区民族大道",
+    "company": "南宁某建筑设计院",
+    "notes": "建筑设计师，对房间设计有要求"
+  },
+  {
+    "id": "MBR026",
+    "memberNo": "VIP20260026",
+    "name": "钟芳",
+    "gender": "女",
+    "age": 39,
+    "phone": "159****3344",
+    "email": "zhongfang@example.com",
+    "level": "金卡",
+    "points": 22500,
+    "totalStays": 20,
+    "totalNights": 48,
+    "totalSpent": 62500,
+    "lastStayDate": "2026-05-10",
+    "registrationDate": "2023-04-12",
+    "birthday": "1987-05-08",
+    "preferences": {
+      "roomType": "双床房",
+      "floor": "中间楼层",
+      "smoking": "无烟",
+      "bedType": "双床",
+      "breakfast": "含早",
+      "extra": []
+    },
+    "tags": [
+      "教师",
+      "培训出差"
+    ],
+    "status": "active",
+    "address": "太原市小店区长治路",
+    "company": "太原某医学院",
+    "notes": "医生，经常参加学术会议"
+  },
+  {
+    "id": "MBR027",
+    "memberNo": "VIP20260027",
+    "name": "夏强",
+    "gender": "男",
+    "age": 32,
+    "phone": "158****5566",
+    "email": "xiaqiang@example.com",
+    "level": "银卡",
+    "points": 8200,
+    "totalStays": 14,
+    "totalNights": 32,
+    "totalSpent": 41800,
+    "lastStayDate": "2026-05-05",
+    "registrationDate": "2024-01-08",
+    "birthday": "1994-07-18",
+    "preferences": {
+      "roomType": "标准间",
+      "floor": "低楼层",
+      "smoking": "无烟",
+      "bedType": "双床",
+      "breakfast": "不含早",
+      "extra": []
+    },
+    "tags": [
+      "程序员",
+      "加班出差"
+    ],
+    "status": "active",
+    "address": "哈尔滨市南岗区红旗大街",
+    "company": "哈尔滨某软件公司",
+    "notes": "晚上经常加班，需要安静"
+  },
+  {
+    "id": "MBR028",
+    "memberNo": "VIP20260028",
+    "name": "蔡琳",
+    "gender": "女",
+    "age": 41,
+    "phone": "157****7788",
+    "email": "cailin@example.com",
+    "level": "钻石卡",
+    "points": 102800,
+    "totalStays": 72,
+    "totalNights": 178,
+    "totalSpent": 225600,
+    "lastStayDate": "2026-05-28",
+    "registrationDate": "2020-04-10",
+    "birthday": "1985-03-25",
+    "preferences": {
+      "roomType": "豪华套房",
+      "floor": "高楼层",
+      "smoking": "无烟",
+      "bedType": "大床",
+      "breakfast": "含早",
+      "extra": [
+        "行政酒廊",
+        "免费升级",
+        "SPA"
+      ]
+    },
+    "tags": [
+      "高端客户",
+      "企业高管"
+    ],
+    "status": "active",
+    "address": "贵阳市云岩区中华北路",
+    "company": "贵阳某银行",
+    "notes": "银行高管，对服务要求很高"
+  },
+  {
+    "id": "MBR029",
+    "memberNo": "VIP20260029",
+    "name": "魏明",
+    "gender": "男",
+    "age": 47,
+    "phone": "156****9900",
+    "email": "weiming@example.com",
+    "level": "金卡",
+    "points": 34800,
+    "totalStays": 30,
+    "totalNights": 72,
+    "totalSpent": 92800,
+    "lastStayDate": "2026-05-20",
+    "registrationDate": "2021-09-05",
+    "birthday": "1979-09-12",
+    "preferences": {
+      "roomType": "大床房",
+      "floor": "高楼层",
+      "smoking": "可吸烟",
+      "bedType": "大床",
+      "breakfast": "含早",
+      "extra": [
+        "健身中心"
+      ]
+    },
+    "tags": [
+      "商务出差",
+      "吸烟客户"
+    ],
+    "status": "active",
+    "address": "苏州市高新区狮山路",
+    "company": "苏州某精密机械公司",
+    "notes": null
+  },
+  {
+    "id": "MBR030",
+    "memberNo": "VIP20260030",
+    "name": "邹婷",
+    "gender": "女",
+    "age": 28,
+    "phone": "155****2233",
+    "email": "zouting@example.com",
+    "level": "银卡",
+    "points": 6500,
+    "totalStays": 12,
+    "totalNights": 28,
+    "totalSpent": 35800,
+    "lastStayDate": "2026-05-08",
+    "registrationDate": "2024-05-18",
+    "birthday": "1998-12-08",
+    "preferences": {
+      "roomType": "大床房",
+      "floor": "中间楼层",
+      "smoking": "无烟",
+      "bedType": "大床",
+      "breakfast": "含早",
+      "extra": [
+        "欢迎水果"
+      ]
+    },
+    "tags": [
+      "年轻白领",
+      "周末游"
+    ],
+    "status": "active",
+    "address": "无锡滨湖区梁溪路",
+    "company": "无锡某广告公司",
+    "notes": "喜欢周末来市区逛街"
+  },
+  {
+    "id": "MBR031",
+    "memberNo": "VIP20260031",
+    "name": "汪军",
+    "gender": "男",
+    "age": 53,
+    "phone": "138****4455",
+    "email": "wangjun@example.com",
+    "level": "钻石卡",
+    "points": 142800,
+    "totalStays": 98,
+    "totalNights": 245,
+    "totalSpent": 298000,
+    "lastStayDate": "2026-05-30",
+    "registrationDate": "2019-12-01",
+    "birthday": "1973-04-18",
+    "preferences": {
+      "roomType": "总统套房",
+      "floor": "顶层",
+      "smoking": "无烟",
+      "bedType": "大床",
+      "breakfast": "含早",
+      "extra": [
+        "行政酒廊",
+        "24小时管家",
+        "免费升级"
+      ]
+    },
+    "tags": [
+      "VIP客户",
+      "集团客户"
+    ],
+    "status": "active",
+    "address": "佛山市南海区南海大道",
+    "company": "佛山某陶瓷集团",
+    "notes": "重要客户，老板"
+  },
+  {
+    "id": "MBR032",
+    "memberNo": "VIP20260032",
+    "name": "沈芳",
+    "gender": "女",
+    "age": 36,
+    "phone": "139****6677",
+    "email": "shenfang@example.com",
+    "level": "金卡",
+    "points": 29600,
+    "totalStays": 26,
+    "totalNights": 62,
+    "totalSpent": 78500,
+    "lastStayDate": "2026-05-15",
+    "registrationDate": "2023-05-20",
+    "birthday": "1990-08-22",
+    "preferences": {
+      "roomType": "双床房",
+      "floor": "高楼层",
+      "smoking": "无烟",
+      "bedType": "双床",
+      "breakfast": "含早",
+      "extra": []
+    },
+    "tags": [
+      "商务出差",
+      "人力资源"
+    ],
+    "status": "active",
+    "address": "常州市新北区通江大道",
+    "company": "常州某电子公司",
+    "notes": "HR经理，经常安排客户入住"
+  },
+  {
+    "id": "MBR033",
+    "memberNo": "VIP20260033",
+    "name": "姜浩",
+    "gender": "男",
+    "age": 35,
+    "phone": "137****9900",
+    "email": "jianghao@example.com",
+    "level": "银卡",
+    "points": 7200,
+    "totalStays": 13,
+    "totalNights": 30,
+    "totalSpent": 38600,
+    "lastStayDate": "2026-05-01",
+    "registrationDate": "2024-06-25",
+    "birthday": "1991-05-15",
+    "preferences": {
+      "roomType": "标准间",
+      "floor": "中间楼层",
+      "smoking": "无烟",
+      "bedType": "双床",
+      "breakfast": "不含早",
+      "extra": []
+    },
+    "tags": [
+      "销售",
+      "经常出差"
+    ],
+    "status": "active",
+    "address": "南通市崇川区人民中路",
+    "company": "南通某家纺公司",
+    "notes": "销售经理，经常跑市场"
+  },
+  {
+    "id": "MBR034",
+    "memberNo": "VIP20260034",
+    "name": "范丽",
+    "gender": "女",
+    "age": 30,
+    "phone": "136****2233",
+    "email": "fanli@example.com",
+    "level": "金卡",
+    "points": 31200,
+    "totalStays": 25,
+    "totalNights": 60,
+    "totalSpent": 76800,
+    "lastStayDate": "2026-05-22",
+    "registrationDate": "2022-08-15",
+    "birthday": "1996-01-20",
+    "preferences": {
+      "roomType": "大床房",
+      "floor": "高楼层",
+      "smoking": "无烟",
+      "bedType": "大床",
+      "breakfast": "含早",
+      "extra": [
+        "行政酒廊"
+      ]
+    },
+    "tags": [
+      "市场经理",
+      "商务出差"
+    ],
+    "status": "active",
+    "address": "徐州市泉山区淮海西路",
+    "company": "徐州某工程机械公司",
+    "notes": null
+  },
+  {
+    "id": "MBR035",
+    "memberNo": "VIP20260035",
+    "name": "方强",
+    "gender": "男",
+    "age": 39,
+    "phone": "135****5566",
+    "email": "fangqiang@example.com",
+    "level": "银卡",
+    "points": 12800,
+    "totalStays": 18,
+    "totalNights": 42,
+    "totalSpent": 56500,
+    "lastStayDate": "2026-05-10",
+    "registrationDate": "2023-02-08",
+    "birthday": "1987-07-30",
+    "preferences": {
+      "roomType": "标准间",
+      "floor": "低楼层",
+      "smoking": "可吸烟",
+      "bedType": "双床",
+      "breakfast": "不含早",
+      "extra": []
+    },
+    "tags": [
+      "普通客户",
+      "偶尔入住"
+    ],
+    "status": "active",
+    "address": "温州市鹿城区人民路",
+    "company": "温州某鞋服公司",
+    "notes": "温州商人"
+  },
+  {
+    "id": "MBR036",
+    "memberNo": "VIP20260036",
+    "name": "陆燕",
+    "gender": "女",
+    "age": 42,
+    "phone": "159****7788",
+    "email": "luyan@example.com",
+    "level": "金卡",
+    "points": 42500,
+    "totalStays": 36,
+    "totalNights": 88,
+    "totalSpent": 112600,
+    "lastStayDate": "2026-05-25",
+    "registrationDate": "2022-03-10",
+    "birthday": "1984-10-15",
+    "preferences": {
+      "roomType": "豪华套房",
+      "floor": "高楼层",
+      "smoking": "无烟",
+      "bedType": "大床",
+      "breakfast": "含早",
+      "extra": [
+        "行政酒廊",
+        "SPA"
+      ]
+    },
+    "tags": [
+      "商务出差",
+      "高管"
+    ],
+    "status": "active",
+    "address": "常州市武进区延政中路",
+    "company": "常州某新能源公司",
+    "notes": "副总，经常有商务接待"
+  },
+  {
+    "id": "MBR037",
+    "memberNo": "VIP20260037",
+    "name": "贾明",
+    "gender": "男",
+    "age": 48,
+    "phone": "159****8899",
+    "email": "jiaming@example.com",
+    "level": "银卡",
+    "points": 5500,
+    "totalStays": 10,
+    "totalNights": 22,
+    "totalSpent": 29800,
+    "lastStayDate": "2026-05-14",
+    "registrationDate": "2024-08-01",
+    "birthday": "1978-06-22",
+    "preferences": {
+      "roomType": "标准间",
+      "floor": "中间楼层",
+      "smoking": "无烟",
+      "bedType": "双床",
+      "breakfast": "不含早",
+      "extra": []
+    },
+    "tags": [
+      "公务员",
+      "出差"
+    ],
+    "status": "active",
+    "address": "烟台市芝罘区南大街",
+    "company": "烟台某政府部门",
+    "notes": "公务员，出差标准不高"
+  },
+  {
+    "id": "MBR038",
+    "memberNo": "VIP20260038",
+    "name": "魏芳",
+    "gender": "女",
+    "age": 34,
+    "phone": "159****1122",
+    "email": "weifang@example.com",
+    "level": "金卡",
+    "points": 25800,
+    "totalStays": 22,
+    "totalNights": 52,
+    "totalSpent": 68500,
+    "lastStayDate": "2026-05-18",
+    "registrationDate": "2023-07-10",
+    "birthday": "1992-11-08",
+    "preferences": {
+      "roomType": "双床房",
+      "floor": "高楼层",
+      "smoking": "无烟",
+      "bedType": "双床",
+      "breakfast": "含早",
+      "extra": []
+    },
+    "tags": [
+      "医生",
+      "学术会议"
+    ],
+    "status": "active",
+    "address": "潍坊市奎文区东风东街",
+    "company": "潍坊某医院",
+    "notes": "医生，经常参加学术交流"
+  },
+  {
+    "id": "MBR039",
+    "memberNo": "VIP20260039",
+    "name": "邹鹏",
+    "gender": "男",
+    "age": 31,
+    "phone": "158****3344",
+    "email": "zoupeng@example.com",
+    "level": "金卡",
+    "points": 26800,
+    "totalStays": 24,
+    "totalNights": 58,
+    "totalSpent": 72600,
+    "lastStayDate": "2026-05-25",
+    "registrationDate": "2022-12-15",
+    "birthday": "1995-04-18",
+    "preferences": {
+      "roomType": "豪华套房",
+      "floor": "高楼层",
+      "smoking": "无烟",
+      "bedType": "大床",
+      "breakfast": "含早",
+      "extra": [
+        "行政酒廊"
+      ]
+    },
+    "tags": [
+      "销售总监",
+      "商务出差"
+    ],
+    "status": "active",
+    "address": "淄博市张店区柳泉路",
+    "company": "淄博某化工公司",
+    "notes": "销售总监，经常有客户接待"
+  },
+  {
+    "id": "MBR040",
+    "memberNo": "VIP20260040",
+    "name": "喻婷",
+    "gender": "女",
+    "age": 29,
+    "phone": "157****5566",
+    "email": "yuting@example.com",
+    "level": "钻石卡",
+    "points": 78500,
+    "totalStays": 52,
+    "totalNights": 128,
+    "totalSpent": 168500,
+    "lastStayDate": "2026-05-10",
+    "registrationDate": "2021-04-20",
+    "birthday": "1997-02-14",
+    "preferences": {
+      "roomType": "总统套房",
+      "floor": "顶层",
+      "smoking": "无烟",
+      "bedType": "大床",
+      "breakfast": "含早",
+      "extra": [
+        "行政酒廊",
+        "24小时管家",
+        "免费升级"
+      ]
+    },
+    "tags": [
+      "高端客户",
+      "企业主"
+    ],
+    "status": "active",
+    "address": "临沂市兰山区沂蒙路",
+    "company": "临沂某连锁超市",
+    "notes": "年轻有为的企业家，对细节要求高"
+  },
+  {
+    "id": "MBR041",
+    "memberNo": "VIP20260041",
+    "name": "孙浩",
+    "gender": "男",
+    "age": 37,
+    "phone": "155****9900",
+    "email": "sunhao@example.com",
+    "level": "银卡",
+    "points": 4800,
+    "totalStays": 9,
+    "totalNights": 20,
+    "totalSpent": 26500,
+    "lastStayDate": "2026-05-28",
+    "registrationDate": "2024-03-05",
+    "birthday": "1989-08-25",
+    "preferences": {
+      "roomType": "标准间",
+      "floor": "低楼层",
+      "smoking": "无烟",
+      "bedType": "双床",
+      "breakfast": "不含早",
+      "extra": []
+    },
+    "tags": [
+      "普通客户",
+      "出差"
+    ],
+    "status": "active",
+    "address": "日照市东港区海曲东路",
+    "company": "日照某旅游公司",
+    "notes": null
+  },
+  {
+    "id": "MBR042",
+    "memberNo": "VIP20260042",
+    "name": "董磊",
+    "gender": "男",
+    "age": 45,
+    "phone": "137****2233",
+    "email": "donglei@example.com",
+    "level": "金卡",
+    "points": 36800,
+    "totalStays": 32,
+    "totalNights": 78,
+    "totalSpent": 98500,
+    "lastStayDate": "2026-05-28",
+    "registrationDate": "2022-02-28",
+    "birthday": "1981-09-15",
+    "preferences": {
+      "roomType": "大床房",
+      "floor": "高楼层",
+      "smoking": "无烟",
+      "bedType": "大床",
+      "breakfast": "含早",
+      "extra": [
+        "行政酒廊"
+      ]
+    },
+    "tags": [
+      "商务出差",
+      "采购经理"
+    ],
+    "status": "active",
+    "address": "莱芜市莱城区鲁中大街",
+    "company": "莱芜某钢铁公司",
+    "notes": "采购经理，对价格敏感"
+  },
+  {
+    "id": "MBR043",
+    "memberNo": "VIP20260043",
+    "name": "宁静",
+    "gender": "女",
+    "age": 33,
+    "phone": "139****6677",
+    "email": "ningjing@example.com",
+    "level": "金卡",
+    "points": 32500,
+    "totalStays": 28,
+    "totalNights": 68,
+    "totalSpent": 86800,
+    "lastStayDate": "2026-05-30",
+    "registrationDate": "2023-09-10",
+    "birthday": "1993-03-22",
+    "preferences": {
+      "roomType": "家庭房",
+      "floor": "低楼层",
+      "smoking": "无烟",
+      "bedType": "家庭床",
+      "breakfast": "含早",
+      "extra": [
+        "儿童用品"
+      ]
+    },
+    "tags": [
+      "家庭出游",
+      "妈妈客户"
+    ],
+    "status": "active",
+    "address": "德州市德城区东风中路",
+    "company": "德州某百货公司",
+    "notes": "经常带孩子入住"
+  },
+  {
+    "id": "MBR044",
+    "memberNo": "VIP20260044",
+    "name": "杨幂",
+    "gender": "女",
+    "age": 28,
+    "phone": "135****1122",
+    "email": "yangmi@example.com",
+    "level": "金卡",
+    "points": 28600,
+    "totalStays": 25,
+    "totalNights": 62,
+    "totalSpent": 78600,
+    "lastStayDate": "2026-05-31",
+    "registrationDate": "2022-11-05",
+    "birthday": "1998-07-18",
+    "preferences": {
+      "roomType": "豪华套房",
+      "floor": "高楼层",
+      "smoking": "无烟",
+      "bedType": "大床",
+      "breakfast": "含早",
+      "extra": [
+        "行政酒廊",
+        "免费升级"
+      ]
+    },
+    "tags": [
+      "商务出差",
+      "市场总监",
+      "VIP潜力客户"
+    ],
+    "status": "active",
+    "address": "聊城市东昌府区东昌西路",
+    "company": "聊城某传媒公司",
+    "notes": "市场总监，经常举办活动"
+  },
+  {
+    "id": "MBR045",
+    "memberNo": "VIP20260045",
+    "name": "范冰冰",
+    "gender": "女",
+    "age": 35,
+    "phone": "158****2233",
+    "email": "fanbingbing@example.com",
+    "level": "钻石卡",
+    "points": 115600,
+    "totalStays": 78,
+    "totalNights": 192,
+    "totalSpent": 258000,
+    "lastStayDate": "2026-05-15",
+    "registrationDate": "2020-10-15",
+    "birthday": "1991-05-20",
+    "preferences": {
+      "roomType": "总统套房",
+      "floor": "顶层",
+      "smoking": "无烟",
+      "bedType": "大床",
+      "breakfast": "含早",
+      "extra": [
+        "行政酒廊",
+        "24小时管家",
+        "SPA"
+      ]
+    },
+    "tags": [
+      "高端客户",
+      "影视明星"
+    ],
+    "status": "active",
+    "address": "滨州市滨城区黄河五路",
+    "company": "滨州某文化传媒公司",
+    "notes": "名人入住，需要严格保密"
+  },
+  {
+    "id": "MBR046",
+    "memberNo": "VIP20260046",
+    "name": "李晨",
+    "gender": "男",
+    "age": 38,
+    "phone": "157****4455",
+    "email": "lichen@example.com",
+    "level": "金卡",
+    "points": 24800,
+    "totalStays": 22,
+    "totalNights": 52,
+    "totalSpent": 66800,
+    "lastStayDate": "2026-06-01",
+    "registrationDate": "2023-06-01",
+    "birthday": "1988-02-28",
+    "preferences": {
+      "roomType": "标准间",
+      "floor": "中间楼层",
+      "smoking": "无烟",
+      "bedType": "双床",
+      "breakfast": "不含早",
+      "extra": []
+    },
+    "tags": [
+      "普通客户",
+      "出差"
+    ],
+    "status": "active",
+    "address": "菏泽市牡丹区中华路",
+    "company": "菏泽某农业公司",
+    "notes": null
+  },
+  {
+    "id": "MBR047",
+    "memberNo": "VIP20260047",
+    "name": "赵丽颖",
+    "gender": "女",
+    "age": 32,
+    "phone": "139****3344",
+    "email": "zhaoliying@example.com",
+    "level": "金卡",
+    "points": 38500,
+    "totalStays": 32,
+    "totalNights": 78,
+    "totalSpent": 98600,
+    "lastStayDate": "2026-05-20",
+    "registrationDate": "2022-04-10",
+    "birthday": "1994-06-08",
+    "preferences": {
+      "roomType": "家庭房",
+      "floor": "低楼层",
+      "smoking": "无烟",
+      "bedType": "家庭床",
+      "breakfast": "含早",
+      "extra": [
+        "儿童用品",
+        "加床"
+      ]
+    },
+    "tags": [
+      "家庭出游",
+      "亲子游"
+    ],
+    "status": "active",
+    "address": "东营市东营区济南路",
+    "company": "东营某石油公司",
+    "notes": "石油公司高管夫人"
+  },
+  {
+    "id": "MBR048",
+    "memberNo": "VIP20260048",
+    "name": "林更新",
+    "gender": "男",
+    "age": 34,
+    "phone": "137****7788",
+    "email": "lingengxin@example.com",
+    "level": "银卡",
+    "points": 11800,
+    "totalStays": 16,
+    "totalNights": 38,
+    "totalSpent": 52500,
+    "lastStayDate": "2026-05-26",
+    "registrationDate": "2023-11-15",
+    "birthday": "1992-02-13",
+    "preferences": {
+      "roomType": "大床房",
+      "floor": "高楼层",
+      "smoking": "无烟",
+      "bedType": "大床",
+      "breakfast": "不含早",
+      "extra": []
+    },
+    "tags": [
+      "年轻客户",
+      "旅游"
+    ],
+    "status": "active",
+    "address": "泰安市泰山区东岳大街",
+    "company": "泰安某旅游公司",
+    "notes": "导游，经常带团"
+  },
+  {
+    "id": "MBR049",
+    "memberNo": "VIP20260049",
+    "name": "高圆圆",
+    "gender": "女",
+    "age": 37,
+    "phone": "159****1122",
+    "email": "gaoyuanyuan@example.com",
+    "level": "金卡",
+    "points": 26500,
+    "totalStays": 24,
+    "totalNights": 58,
+    "totalSpent": 72800,
+    "lastStayDate": "2026-06-02",
+    "registrationDate": "2022-07-20",
+    "birthday": "1989-08-15",
+    "preferences": {
+      "roomType": "标准间",
+      "floor": "中间楼层",
+      "smoking": "无烟",
+      "bedType": "双床",
+      "breakfast": "不含早",
+      "extra": []
+    },
+    "tags": [
+      "普通客户",
+      "出差"
+    ],
+    "status": "active",
+    "address": "威海市环翠区世昌大道",
+    "company": "威海某海鲜加工公司",
+    "notes": null
+  },
+  {
+    "id": "MBR050",
+    "memberNo": "VIP20260050",
+    "name": "姚晨",
+    "gender": "女",
+    "age": 40,
+    "phone": "158****3344",
+    "email": "yaochen@example.com",
+    "level": "钻石卡",
+    "points": 92600,
+    "totalStays": 65,
+    "totalNights": 158,
+    "totalSpent": 198000,
+    "lastStayDate": "2026-05-20",
+    "registrationDate": "2020-06-15",
+    "birthday": "1986-04-20",
+    "preferences": {
+      "roomType": "家庭房",
+      "floor": "低楼层",
+      "smoking": "无烟",
+      "bedType": "家庭床",
+      "breakfast": "含早",
+      "extra": [
+        "儿童用品",
+        "加床",
+        "行政酒廊"
+      ]
+    },
+    "tags": [
+      "高端客户",
+      "家庭出游"
+    ],
+    "status": "active",
+    "address": "莱芜市莱城区文化北路",
+    "company": "莱芜某教育集团",
+    "notes": "教育集团创始人，每次带家人入住"
+  }
+]
