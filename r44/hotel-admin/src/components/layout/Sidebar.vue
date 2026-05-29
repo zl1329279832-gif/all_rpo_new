@@ -71,21 +71,22 @@ import {
   Management,
   List,
   User,
-  Setting,
+  Calendar,
   Money,
   Bell,
   Document,
   Sunny,
   Moon,
   Fold,
-  Expand
+  Expand,
+  DataLine
 } from '@element-plus/icons-vue'
 import { useTheme } from '../../composables/useTheme'
 
 interface MenuItem {
   path: string
   title: string
-  icon: string
+  icon: any
   children?: MenuItem[]
 }
 
@@ -107,26 +108,30 @@ const menuItems: MenuItem[] = [
     icon: DataAnalysis
   },
   {
-    path: '/orders',
-    title: '订单管理',
-    icon: List,
+    path: '/room-types',
+    title: '客房管理',
+    icon: Management,
     children: [
-      { path: '/orders/list', title: '订单列表', icon: Document },
-      { path: '/orders/create', title: '新建订单', icon: List }
+      { path: '/room-types', title: '客房类型', icon: Document },
+      { path: '/daily-status', title: '每日房态', icon: Calendar }
     ]
   },
   {
-    path: '/rooms',
-    title: '房型管理',
-    icon: Management
+    path: '/orders',
+    title: '订单管理',
+    icon: List
   },
   {
     path: '/price-strategy',
-    title: '价格策略',
-    icon: Money
+    title: '收益管理',
+    icon: Money,
+    children: [
+      { path: '/price-strategy', title: '价格策略', icon: Document },
+      { path: '/channel-performance', title: '渠道表现', icon: DataLine }
+    ]
   },
   {
-    path: '/members',
+    path: '/member-profiling',
     title: '会员管理',
     icon: User
   },
@@ -138,16 +143,7 @@ const menuItems: MenuItem[] = [
   {
     path: '/reports',
     title: '报表中心',
-    icon: Document,
-    children: [
-      { path: '/reports/daily', title: '日报表', icon: Document },
-      { path: '/reports/monthly', title: '月报表', icon: Document }
-    ]
-  },
-  {
-    path: '/channels',
-    title: '渠道管理',
-    icon: Setting
+    icon: Document
   }
 ]
 

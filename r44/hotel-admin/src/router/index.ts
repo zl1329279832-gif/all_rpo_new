@@ -20,6 +20,16 @@ declare module 'vue-router' {
 
 const routes: RouteRecordRaw[] = [
   {
+    path: '/login',
+    name: 'Login',
+    component: () => import('../views/Login.vue'),
+    meta: {
+      title: '登录',
+      hidden: true,
+      layout: 'empty'
+    }
+  },
+  {
     path: '/',
     redirect: '/dashboard'
   },
@@ -210,8 +220,18 @@ router.beforeEach((to: RouteLocationNormalized, _from: RouteLocationNormalized, 
     document.title = `${to.meta.title} - 酒店管理系统`
   }
 
+  const token = localStorage.getItem('token')
+
+  if (to.path === '/login') {
+    if (token) {
+      next('/dashboard')
+      return
+    }
+    next()
+    return
+  }
+
   if (to.meta.requiresAuth) {
-    const token = localStorage.getItem('token')
     if (!token) {
       ElMessage.warning('请先登录')
       next('/login')

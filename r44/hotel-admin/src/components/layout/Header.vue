@@ -99,9 +99,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { useRoute } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ref, computed, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   Fold,
   Expand,
@@ -127,11 +127,30 @@ const emit = defineEmits<{
 }>()
 
 const route = useRoute()
+const router = useRouter()
 const { themeMode, toggleTheme } = useTheme()
 
-const userName = ref('管理员')
+interface UserInfo {
+  username: string
+  name: string
+  role: string
+}
+
+const userInfo = ref<UserInfo | null>(null)
+const userName = computed(() => userInfo.value?.name || '管理员')
 const userAvatar = ref('')
 const showNotificationPanel = ref(false)
+
+onMounted(() => {
+  const savedUser = localStorage.getItem('user')
+  if (savedUser) {
+    try {
+      userInfo.value = JSON.parse(savedUser)
+    } catch {
+      userInfo.value = null
+    }
+  }
+})
 
 interface Notification {
   id: string
@@ -196,7 +215,17 @@ const handleUserCommand = (command: string) => {
       ElMessage.info('打开系统设置')
       break
     case 'logout':
-      ElMessage.success('退出登录成功')
+      ElMessageBox.confirm('确定要退出登录吗？', '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }).then(() => {
+        localStorage.removeItem('token')
+        localStorage.removeItem('user')
+        userInfo.value = null
+        ElMessage.success('退出登录成功')
+        router.push('/login')
+      }).catch(() => {})
       break
   }
 }
