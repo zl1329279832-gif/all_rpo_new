@@ -45,8 +45,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libasound2 \
     libssl3 \
     libcups2 \
-    ttf-wqy-microhei \
-    ttf-wqy-zenhei \
     fonts-wqy-microhei \
     fonts-wqy-zenhei \
     x11-apps \
@@ -60,18 +58,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.txt .
 
 RUN pip install --no-cache-dir --upgrade pip \
-    && pip install --no-cache-dir -r requirements.txt
+    && pip install --no-cache-dir --timeout 300 --retries 5 PySide6>=6.6.0 \
+    && pip install --no-cache-dir --timeout 120 --retries 5 Pillow>=10.0.0 \
+    && pip install --no-cache-dir --timeout 120 --retries 5 openpyxl>=3.1.0
 
 COPY . .
 
 RUN mkdir -p /app/thumbnails /app/exports /app/backups /app/logs \
-    && chmod -R 777 /app
+    && chmod +x /app/docker-entrypoint.sh
 
-EXPOSE 8080
-
-COPY docker-entrypoint.sh /usr/local/bin/
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh
-
-ENTRYPOINT ["docker-entrypoint.sh"]
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
 
 CMD ["python", "main.py"]

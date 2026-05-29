@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  hotel-admin:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: hotel-admin:latest
+    container_name: hotel-admin
+    restart: unless-stopped
+    ports:
+      - "5176:5176"
+    environment:
+      - TZ=Asia/Shanghai
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:5176/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - hotel-admin-network
+
+networks:
+  hotel-admin-network:
+    driver: bridge
