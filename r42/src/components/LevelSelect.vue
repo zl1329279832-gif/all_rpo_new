@@ -15,7 +15,7 @@
           :key="level.id"
           class="group relative bg-slate-800/50 border border-slate-700 rounded-xl overflow-hidden hover:border-blue-500 transition-all"
         >
-          <div class="absolute inset-0 bg-gradient-to-br from-blue-600/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+          <div class="absolute inset-0 bg-gradient-to-br from-blue-600/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
           <div class="p-6">
             <div class="flex items-start justify-between mb-4">
               <div class="flex items-center gap-3">

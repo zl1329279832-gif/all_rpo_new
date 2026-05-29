@@ -68,9 +68,10 @@ export class InstancedRenderer {
         deviceList.length
       )
       instancedMesh.name = `instanced_${key}`
-      instancedMesh.castShadow = true
+      instancedMesh.castShadow = type !== DeviceType.PV_PANEL
       instancedMesh.receiveShadow = true
       instancedMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage)
+      instancedMesh.frustumCulled = true
 
       const infos: InstanceInfo[] = []
       deviceList.forEach((device, index) => {
@@ -271,9 +272,10 @@ export class InstancedRenderer {
     const material = ModelFactory.getMaterial(type, status)
     const instancedMesh = new THREE.InstancedMesh(geometry, material, 1000)
     instancedMesh.name = `instanced_${key}`
-    instancedMesh.castShadow = true
+    instancedMesh.castShadow = type !== DeviceType.PV_PANEL
     instancedMesh.receiveShadow = true
     instancedMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage)
+    instancedMesh.frustumCulled = true
 
     this.instancedMeshes.set(key, instancedMesh)
     this.instanceInfos.set(key, [])

@@ -116,6 +116,9 @@ export class PVStationScene {
     })
 
     this.labelSystem.start()
+    this.engine.onBeforeRender(() => {
+      this.labelSystem.update()
+    })
     this.startDataRefresh()
   }
 

@@ -55,25 +55,30 @@ export const useGameStore = defineStore('game', () => {
     const sectors = generateStarMap(config.sectorCount);
     const mothershipSector = sectors[0];
     const newState = createInitialGameState(config);
-    newState.sectors = sectors;
-    newState.mothershipId = 'ship_0';
 
-    let shipIndex = 1;
-    const ships: Ship[] = [
-      createShip(ShipType.Mothership, 'ship_0', 'MV Genesis', mothershipSector.id)
-    ];
+    const ships: Ship[] = [];
+    let shipIndex = 0;
+
+    const ms = createShip(ShipType.Mothership, `ship_${shipIndex}`, 'MV Genesis', mothershipSector.id);
+    ships.push(ms);
+    newState.mothershipId = ms.id;
+    shipIndex++;
+
     for (const configShip of config.initialShips) {
+      const nameMap: Record<string, string[]> = {
+        [ShipType.MiningShip]: ['Mining Alpha', 'Mining Beta', 'Mining Gamma'],
+        [ShipType.TransportShip]: ['Hauler One', 'Hauler Two', 'Hauler Three'],
+        [ShipType.DefenseShip]: ['Defender I', 'Defender II', 'Defender III']
+      };
+      const names = nameMap[configShip.type] || [];
       for (let i = 0; i < configShip.count; i++) {
-        const names = {
-          [ShipType.MiningShip]: ['Mining Alpha', 'Mining Beta', 'Mining Gamma'],
-          [ShipType.TransportShip]: ['Hauler One', 'Hauler Two', 'Hauler Three'],
-          [ShipType.DefenseShip]: ['Defender I', 'Defender II', 'Defender III']
-        }[configShip.type];
-        const name = names ? names[i % names.length] + ` ${shipIndex}` : `Ship ${shipIndex}`;
+        const name = names.length > 0 ? names[i % names.length] : `Ship ${shipIndex}`;
         ships.push(createShip(configShip.type, `ship_${shipIndex}`, name, mothershipSector.id));
         shipIndex++;
       }
     }
+
+    newState.sectors = sectors;
     newState.ships = ships;
     state.value = newState;
     StorageService.deleteSave(levelId);
@@ -87,14 +92,17 @@ export const useGameStore = defineStore('game', () => {
     const currentState = state.value;
 
     for (const ship of currentState.ships) {
-      if (ship.state === SS.Moving) {
+      if (ship.state === SS.Moving || ship.state === SS.Transporting) {
         const arrived = moveShip(ship, dt, currentState.sectors);
-        if (arrived && ship.type === ShipType.TransportShip && ship.sectorId === currentState.sectors[0].id) {
-          for (const stack of ship.cargo) {
-            const result = addToWarehouse(currentState.warehouse, stack.type, stack.amount, currentState.warehouseCapacity, currentState.techs);
-            currentState.warehouse = result.warehouse;
+        if (arrived) {
+          const motherShip = currentState.ships.find(s => s.id === currentState.mothershipId);
+          if (ship.cargo.length > 0 && motherShip && ship.sectorId === motherShip.sectorId) {
+            for (const stack of ship.cargo) {
+              const result = addToWarehouse(currentState.warehouse, stack.type, stack.amount, currentState.warehouseCapacity, currentState.techs);
+              currentState.warehouse = result.warehouse;
+            }
+            ship.cargo = [];
           }
-          ship.cargo = [];
           ship.state = SS.Idle;
         }
       }

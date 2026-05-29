@@ -16,65 +16,75 @@ export class ThreeEngine {
     this.container = container
     this.scene = new THREE.Scene()
     this.scene.background = new THREE.Color(0x87ceeb)
-    this.scene.fog = new THREE.Fog(0x87ceeb, 200, 800)
+    this.scene.fog = new THREE.Fog(0x87ceeb, 300, 700)
 
     const width = container.clientWidth || window.innerWidth
     const height = container.clientHeight || window.innerHeight
 
     this.camera = new THREE.PerspectiveCamera(
-      60,
+      45,
       width / height,
-      0.1,
+      1,
       2000
     )
-    this.camera.position.set(150, 120, 150)
+    this.camera.position.set(180, 140, 180)
 
-    this.renderer = new THREE.WebGLRenderer({ antialias: true, logarithmicDepthBuffer: true })
+    this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' })
     this.renderer.setSize(width, height)
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5))
     this.renderer.shadowMap.enabled = true
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap
+    this.renderer.shadowMap.type = THREE.PCFShadowMap
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping
-    this.renderer.toneMappingExposure = 1.0
+    this.renderer.toneMappingExposure = 1.2
+    this.renderer.outputColorSpace = THREE.SRGBColorSpace
     this.renderer.domElement.style.position = 'absolute'
     this.renderer.domElement.style.top = '0'
     this.renderer.domElement.style.left = '0'
     this.renderer.domElement.style.width = '100%'
     this.renderer.domElement.style.height = '100%'
+    this.renderer.domElement.style.touchAction = 'none'
 
     container.appendChild(this.renderer.domElement)
 
     this.controls = new OrbitControls(this.camera, this.renderer.domElement)
     this.controls.enableDamping = true
-    this.controls.dampingFactor = 0.05
-    this.controls.maxPolarAngle = Math.PI / 2.1
-    this.controls.minDistance = 10
-    this.controls.maxDistance = 500
+    this.controls.dampingFactor = 0.08
+    this.controls.maxPolarAngle = Math.PI / 2.2
+    this.controls.minDistance = 15
+    this.controls.maxDistance = 400
+    this.controls.zoomSpeed = 0.8
+    this.controls.panSpeed = 0.8
+    this.controls.rotateSpeed = 0.6
 
     this.setupLighting()
     this.setupEventListeners()
   }
 
   private setupLighting(): void {
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6)
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.7)
     this.scene.add(ambientLight)
 
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 1.2)
-    directionalLight.position.set(100, 150, 80)
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 1.5)
+    directionalLight.position.set(120, 180, 100)
     directionalLight.castShadow = true
-    directionalLight.shadow.mapSize.width = 4096
-    directionalLight.shadow.mapSize.height = 4096
-    directionalLight.shadow.camera.near = 0.5
+    directionalLight.shadow.mapSize.width = 2048
+    directionalLight.shadow.mapSize.height = 2048
+    directionalLight.shadow.camera.near = 1
     directionalLight.shadow.camera.far = 500
     directionalLight.shadow.camera.left = -250
     directionalLight.shadow.camera.right = 250
     directionalLight.shadow.camera.top = 250
     directionalLight.shadow.camera.bottom = -250
-    directionalLight.shadow.bias = -0.0001
+    directionalLight.shadow.bias = -0.0005
+    directionalLight.shadow.normalBias = 0.02
     this.scene.add(directionalLight)
 
-    const hemisphereLight = new THREE.HemisphereLight(0x87ceeb, 0x548235, 0.4)
+    const hemisphereLight = new THREE.HemisphereLight(0x87ceeb, 0x548235, 0.5)
     this.scene.add(hemisphereLight)
+
+    const fillLight = new THREE.DirectionalLight(0xfff5e6, 0.3)
+    fillLight.position.set(-100, 80, -100)
+    this.scene.add(fillLight)
   }
 
   private setupEventListeners(): void {
