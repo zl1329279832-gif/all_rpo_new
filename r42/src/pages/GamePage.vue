@@ -27,7 +27,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted } from 'vue';
+import { onMounted, onUnmounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ChevronRight } from 'lucide-vue-next';
 import { useGameStore } from '../stores/gameStore';
@@ -43,11 +43,23 @@ const route = useRoute();
 const router = useRouter();
 const gameStore = useGameStore();
 
-onMounted(() => {
+function loadLevel(): void {
   const levelId = route.params.levelId as string;
   const loadSave = route.query.continue === '1';
   gameStore.initLevel(levelId, loadSave);
+}
+
+onMounted(() => {
+  loadLevel();
 });
+
+watch(
+  () => route.params.levelId,
+  () => {
+    gameStore.cleanup();
+    loadLevel();
+  }
+);
 
 onUnmounted(() => {
   gameStore.cleanup();

@@ -49,7 +49,12 @@ export class PVStationScene {
       domElement: this.engine.getDomElement(),
       camera: this.engine.getCamera(),
       getRaycastObjects: () => this.instancedRenderer.getRaycastObjects(),
-      getInstanceInfo: (intersect) => this.instancedRenderer.getInstanceInfoAt(intersect)
+      getInstanceInfo: (intersect) => {
+        if (intersect.object instanceof THREE.InstancedMesh && intersect.instanceId !== undefined) {
+          return this.instancedRenderer.getInstanceInfo(intersect.object, intersect.instanceId)
+        }
+        return null
+      }
     })
 
     this.setupEventListeners()
@@ -107,9 +112,7 @@ export class PVStationScene {
     this.patrolRoutes = stationData.patrolRoutes
 
     this.instancedRenderer.createInstancedMeshes(this.devices)
-    this.instancedRenderer.getMeshes().forEach(mesh => {
-      this.engine.addToScene(mesh)
-    })
+    this.instancedRenderer.addToScene(this.engine.getScene())
 
     this.devices.forEach(device => {
       this.labelSystem.createDeviceLabel(device)

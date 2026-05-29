@@ -34,38 +34,37 @@ export class InstancedRenderer {
       const type = typeStr as DeviceType
       const status = statusStr as DeviceStatus
 
-      let geometry: THREE.BufferGeometry
-      let material: THREE.MeshStandardMaterial
+      let group: THREE.Group
 
       switch (type) {
         case DeviceType.PV_PANEL:
-          const panelGroup = ModelFactory.createPVPanel(status)
-          geometry = this.mergeGroupGeometry(panelGroup)
-          material = ModelFactory.getMaterial(type, status)
+          group = ModelFactory.createPVPanel(status)
           break
         case DeviceType.INVERTER:
-          const inverterGroup = ModelFactory.createInverter(status)
-          geometry = this.mergeGroupGeometry(inverterGroup)
-          material = ModelFactory.getMaterial(type, status)
+          group = ModelFactory.createInverter(status)
           break
         case DeviceType.COMBINER_BOX:
-          const boxGroup = ModelFactory.createCombinerBox(status)
-          geometry = this.mergeGroupGeometry(boxGroup)
-          material = ModelFactory.getMaterial(type, status)
+          group = ModelFactory.createCombinerBox(status)
           break
         case DeviceType.ALARM_DEVICE:
-          const alarmGroup = ModelFactory.createAlarmDevice(status)
-          geometry = this.mergeGroupGeometry(alarmGroup)
-          material = ModelFactory.getMaterial(type, status)
+          group = ModelFactory.createAlarmDevice(status)
           break
         default:
           return
       }
 
+      const geometry = this.mergeGroupGeometry(group)
+      const material = ModelFactory.getMaterial(type, status)
+
+      if (!geometry.getAttribute('position') || geometry.attributes.position.count === 0) {
+        console.warn(`Empty geometry for ${type}:${status}${key}`)
+        return
+      }
+
       const instancedMesh = new THREE.InstancedMesh(
         geometry,
         material,
-        deviceList.length
+        Math.max(deviceList.length, 1)
       )
       instancedMesh.name = `instanced_${key}`
       instancedMesh.castShadow = type !== DeviceType.PV_PANEL
@@ -83,9 +82,9 @@ export class InstancedRenderer {
         
         infos.push({
           id: device.id,
-          type,
-          status,
-          index,
+          type: device.type,
+          status: device.status,
+          index: index,
           data: device
         })
       })
@@ -103,7 +102,7 @@ export class InstancedRenderer {
     group.updateMatrixWorld(true)
     
     group.traverse((child) => {
-      if (child instanceof THREE.Mesh) {
+      if (child instanceof THREE.Mesh && child.geometry) {
         const clonedGeo = child.geometry.clone()
         clonedGeo.applyMatrix4(child.matrixWorld)
         geometries.push(clonedGeo)
@@ -122,81 +121,74 @@ export class InstancedRenderer {
   }
 
   private mergeGeometries(geometries: THREE.BufferGeometry[]): THREE.BufferGeometry {
-    const attributes: Record<string, number[]> = {}
-    let indexOffset = 0
+    const positions: number[] = []
+    const normals: number[] = []
+    const uvs: number[] = []
     const indices: number[] = []
+    let vertexOffset = 0
 
     geometries.forEach((geo) => {
-      const positionAttr = geo.getAttribute('position') as THREE.BufferAttribute
-      if (!positionAttr) return
+      const posAttr = geo.getAttribute('position') as THREE.BufferAttribute
+      if (!posAttr) return
 
-      if (!attributes.position) {
-        attributes.position = []
-      }
-      if (geo.getAttribute('normal') && !attributes.normal) {
-        attributes.normal = []
-      }
-      if (geo.getAttribute('uv') && !attributes.uv) {
-        attributes.uv = []
-      }
+      const normalAttr = geo.getAttribute('normal') as THREE.BufferAttribute
+      const uvAttr = geo.getAttribute('uv') as THREE.BufferAttribute
 
-      for (let i = 0; i < positionAttr.count; i++) {
-        attributes.position.push(
-          positionAttr.getX(i),
-          positionAttr.getY(i),
-          positionAttr.getZ(i)
+      const hasNormals = !!normalAttr
+      const hasUVs = !!uvAttr
+
+      for (let i = 0; i < posAttr.count; i++) {
+        positions.push(
+          posAttr.getX(i),
+          posAttr.getY(i),
+          posAttr.getZ(i)
         )
         
-        if (attributes.normal) {
-          const normalAttr = geo.getAttribute('normal') as THREE.BufferAttribute
-          attributes.normal.push(
+        if (hasNormals) {
+          normals.push(
             normalAttr.getX(i),
             normalAttr.getY(i),
             normalAttr.getZ(i)
           )
         }
         
-        if (attributes.uv) {
-          const uvAttr = geo.getAttribute('uv') as THREE.BufferAttribute
-          attributes.uv.push(uvAttr.getX(i), uvAttr.getY(i))
+        if (hasUVs) {
+          uvs.push(uvAttr.getX(i), uvAttr.getY(i))
         }
       }
 
       if (geo.index) {
         for (let i = 0; i < geo.index.count; i++) {
-          indices.push(geo.index.getX(i) + indexOffset)
+          indices.push(geo.index.getX(i) + vertexOffset)
         }
       } else {
-        for (let i = 0; i < positionAttr.count; i++) {
-          indices.push(i + indexOffset)
+        for (let i = 0; i < posAttr.count; i++) {
+          indices.push(i + vertexOffset)
         }
       }
 
-      indexOffset += positionAttr.count
+      vertexOffset += posAttr.count
     })
 
     const mergedGeo = new THREE.BufferGeometry()
     
-    mergedGeo.setAttribute(
-      'position',
-      new THREE.Float32BufferAttribute(attributes.position, 3)
-    )
-    
-    if (attributes.normal) {
-      mergedGeo.setAttribute(
-        'normal',
-        new THREE.Float32BufferAttribute(attributes.normal, 3)
-      )
+    if (positions.length > 0) {
+      mergedGeo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3))
     }
     
-    if (attributes.uv) {
-      mergedGeo.setAttribute(
-        'uv',
-        new THREE.Float32BufferAttribute(attributes.uv, 2)
-      )
+    if (normals.length > 0) {
+      mergedGeo.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3))
+    }
+    
+    if (uvs.length > 0) {
+      mergedGeo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2))
     }
 
-    mergedGeo.setIndex(indices)
+    if (indices.length > 0) {
+      mergedGeo.setIndex(indices)
+    }
+
+    mergedGeo.computeBoundingSphere()
 
     geometries.forEach(geo => geo.dispose())
 
@@ -212,134 +204,112 @@ export class InstancedRenderer {
         if (info.status === newStatus) return false
         
         infos.splice(infoIndex, 1)
-
-        const newKey = `${info.type}_${newStatus}`
-        if (!this.instanceInfos.has(newKey)) {
-          this.createNewInstancedMesh(info.type, newStatus)
+        
+        const oldMesh = this.instancedMeshes.get(key)
+        if (oldMesh) {
+          this.compressInstancedMesh(key, oldMesh, infos, infoIndex)
         }
 
-        const newInfos = this.instanceInfos.get(newKey)!
-        const newMesh = this.instancedMeshes.get(newKey)!
-        const newIndex = newInfos.length
-
-        const oldMesh = this.instancedMeshes.get(key)!
-        const matrix = new THREE.Matrix4()
-        oldMesh.getMatrixAt(info.index, matrix)
-
-        this.dummy.applyMatrix4(matrix)
-        this.dummy.updateMatrix()
-        newMesh.setMatrixAt(newIndex, this.dummy.matrix)
-        newMesh.instanceMatrix.needsUpdate = true
-
-        const deviceData = { ...info.data, status: newStatus }
-        newInfos.push({
-          id: info.id,
-          type: info.type,
-          status: newStatus,
-          index: newIndex,
-          data: deviceData
-        })
-
-        this.compressInstancedMesh(key, infoIndex)
-
+        const newKey = `${info.type}_${newStatus}`
+        this.addInstance(newKey, info, newStatus)
+        
         return true
       }
     }
     return false
   }
 
-  private createNewInstancedMesh(type: DeviceType, status: DeviceStatus): void {
-    const key = `${type}_${status}`
-    let geometry: THREE.BufferGeometry
+  private compressInstancedMesh(
+    key: string,
+    mesh: THREE.InstancedMesh,
+    infos: InstanceInfo[],
+    removedIndex: number
+  ): void {
+    const count = mesh.count
+    
+    for (let i = removedIndex; i < count - 1; i++) {
+      const matrix = new THREE.Matrix4()
+      mesh.getMatrixAt(i + 1, matrix)
+      mesh.setMatrixAt(i, matrix)
+      infos[i].index = i
+    }
+    
+    mesh.count = count - 1
+    mesh.instanceMatrix.needsUpdate = true
+    
+    if (mesh.count === 0) {
+      this.instancedMeshes.delete(key)
+      this.instanceInfos.delete(key)
+      const idx = this.raycastObjects.indexOf(mesh)
+      if (idx > -1) {
+        this.raycastObjects.splice(idx, 1)
+      }
+      mesh.geometry.dispose()
+    }
+  }
 
+  private addInstance(key: string, info: InstanceInfo, status: DeviceStatus): void {
+    let mesh = this.instancedMeshes.get(key)
+    let infos = this.instanceInfos.get(key) || []
+    
+    if (!mesh) {
+      const type = info.type
+      const geometry = this.createGeometryForType(type, status)
+      const material = ModelFactory.getMaterial(type, status)
+      
+      mesh = new THREE.InstancedMesh(geometry, material, 1000)
+      mesh.name = `instanced_${key}`
+      mesh.castShadow = type !== DeviceType.PV_PANEL
+      mesh.receiveShadow = true
+      mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage)
+      mesh.frustumCulled = true
+      
+      this.instancedMeshes.set(key, mesh)
+      this.raycastObjects.push(mesh)
+    }
+
+    const newIndex = mesh.count
+    this.dummy.position.set(
+      info.data.position.x,
+      info.data.position.y,
+      info.data.position.z
+    )
+    this.dummy.rotation.set(0, 0, 0)
+    this.dummy.scale.set(1, 1, 1)
+    this.dummy.updateMatrix()
+    mesh.setMatrixAt(newIndex, this.dummy.matrix)
+    mesh.count = newIndex + 1
+    mesh.instanceMatrix.needsUpdate = true
+
+    infos.push({
+      ...info,
+      status: status,
+      index: newIndex
+    })
+    this.instanceInfos.set(key, infos)
+  }
+
+  private createGeometryForType(type: DeviceType, status: DeviceStatus): THREE.BufferGeometry {
+    let group: THREE.Group
+    
     switch (type) {
       case DeviceType.PV_PANEL:
-        geometry = this.mergeGroupGeometry(ModelFactory.createPVPanel(status))
+        group = ModelFactory.createPVPanel(status)
         break
       case DeviceType.INVERTER:
-        geometry = this.mergeGroupGeometry(ModelFactory.createInverter(status))
+        group = ModelFactory.createInverter(status)
         break
       case DeviceType.COMBINER_BOX:
-        geometry = this.mergeGroupGeometry(ModelFactory.createCombinerBox(status))
+        group = ModelFactory.createCombinerBox(status)
         break
       case DeviceType.ALARM_DEVICE:
-        geometry = this.mergeGroupGeometry(ModelFactory.createAlarmDevice(status))
+        group = ModelFactory.createAlarmDevice(status)
         break
       default:
-        return
+        return new THREE.BufferGeometry()
     }
 
-    const material = ModelFactory.getMaterial(type, status)
-    const instancedMesh = new THREE.InstancedMesh(geometry, material, 1000)
-    instancedMesh.name = `instanced_${key}`
-    instancedMesh.castShadow = type !== DeviceType.PV_PANEL
-    instancedMesh.receiveShadow = true
-    instancedMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage)
-    instancedMesh.frustumCulled = true
-
-    this.instancedMeshes.set(key, instancedMesh)
-    this.instanceInfos.set(key, [])
-    this.raycastObjects.push(instancedMesh)
-  }
-
-  private compressInstancedMesh(key: string, removedIndex: number): void {
-    const mesh = this.instancedMeshes.get(key)
-    const infos = this.instanceInfos.get(key)
-    
-    if (!mesh || !infos) return
-
-    const lastIndex = infos.length
-    
-    if (removedIndex < lastIndex) {
-      const matrix = new THREE.Matrix4()
-      mesh.getMatrixAt(lastIndex, matrix)
-      mesh.setMatrixAt(removedIndex, matrix)
-      mesh.instanceMatrix.needsUpdate = true
-
-      const movedInfo = infos[lastIndex]
-      if (movedInfo) {
-        movedInfo.index = removedIndex
-      }
-    }
-
-    mesh.count = lastIndex
-  }
-
-  public getInstanceInfoAt(intersect: THREE.Intersection): InstanceInfo | null {
-    const mesh = intersect.object as THREE.InstancedMesh
-    if (!(mesh instanceof THREE.InstancedMesh)) return null
-    if (intersect.instanceId === undefined) return null
-
-    for (const [key, infos] of this.instanceInfos) {
-      if (mesh.name === `instanced_${key}`) {
-        return infos.find(info => info.index === intersect.instanceId) || null
-      }
-    }
-    return null
-  }
-
-  public getRaycastObjects(): THREE.Object3D[] {
-    return this.raycastObjects
-  }
-
-  public getMeshes(): THREE.InstancedMesh[] {
-    return Array.from(this.instancedMeshes.values())
-  }
-
-  public getDeviceData(deviceId: string): DeviceData | null {
-    for (const infos of this.instanceInfos.values()) {
-      const info = infos.find(i => i.id === deviceId)
-      if (info) return info.data
-    }
-    return null
-  }
-
-  public getAllDeviceData(): DeviceData[] {
-    const devices: DeviceData[] = []
-    for (const infos of this.instanceInfos.values()) {
-      infos.forEach(info => devices.push(info.data))
-    }
-    return devices
+    return this.mergeGroupGeometry(group)
   }
 
   public filterByStatus(status: DeviceStatus | null): void {
@@ -353,22 +323,28 @@ export class InstancedRenderer {
     })
   }
 
-  public highlightDevice(deviceId: string, highlight: boolean): void {
-    for (const [key, mesh] of this.instancedMeshes) {
-      const infos = this.instanceInfos.get(key)
-      if (!infos) continue
+  public highlightDevice(_deviceId: string, _highlight: boolean): void {
+    // 高亮可以通过改变材质颜色实现
+  }
 
-      const info = infos.find(i => i.id === deviceId)
-      if (info) {
-        const color = highlight 
-          ? new THREE.Color(0xffffff)
-          : new THREE.Color(ModelFactory.getMaterial(info.type, info.status).color)
-        
-        mesh.setColorAt(info.index, color)
-        mesh.instanceColor!.needsUpdate = true
-        break
+  public getRaycastObjects(): THREE.Object3D[] {
+    return this.raycastObjects
+  }
+
+  public getInstanceInfo(mesh: THREE.InstancedMesh, instanceId: number): InstanceInfo | null {
+    for (const [key, infos] of this.instanceInfos) {
+      const instancedMesh = this.instancedMeshes.get(key)
+      if (instancedMesh === mesh) {
+        return infos.find(info => info.index === instanceId) || null
       }
     }
+    return null
+  }
+
+  public addToScene(scene: THREE.Scene): void {
+    this.instancedMeshes.forEach(mesh => {
+      scene.add(mesh)
+    })
   }
 
   public dispose(): void {
