@@ -99,6 +99,8 @@ export class InstancedRenderer {
   private mergeGroupGeometry(group: THREE.Group): THREE.BufferGeometry {
     const geometries: THREE.BufferGeometry[] = []
     
+    group.updateMatrixWorld(true)
+    
     group.traverse((child) => {
       if (child instanceof THREE.Mesh) {
         const clonedGeo = child.geometry.clone()

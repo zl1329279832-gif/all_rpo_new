@@ -40,6 +40,12 @@ export const useGameStore = defineStore('game', () => {
     if (loadSave) {
       const saved = StorageService.load(levelId);
       if (saved) {
+        if (saved.activeEvent && !saved.activeEvent.resolved) {
+          saved.phase = GamePhase.Event;
+        } else if (saved.phase !== GamePhase.Completed) {
+          saved.phase = GamePhase.Playing;
+        }
+        saved.activeEvent = saved.events.find(e => !e.resolved) || null;
         state.value = saved;
         startAutoSave();
         return;

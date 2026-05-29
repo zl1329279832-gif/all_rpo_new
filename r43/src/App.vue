@@ -289,6 +289,7 @@ html, body {
   right: 0;
   bottom: 0;
   background: #87ceeb;
+  overflow: hidden;
 }
 
 .device-detail-overlay {

@@ -30,7 +30,7 @@
             </div>
           </div>
         </div>
-        <div class="mt-2 space-y-1">
+        <div class="mt-2 space-y-2">
           <div class="flex items-center justify-between text-xs">
             <span class="text-slate-500">HP</span>
             <span class="text-slate-300">{{ ship.health }}/{{ ship.maxHealth }}</span>
@@ -42,6 +42,39 @@
               :style="{ width: (ship.health / ship.maxHealth * 100) + '%' }"
             ></div>
           </div>
+
+          <div v-if="ship.state === 'mining'" class="space-y-1">
+            <div class="flex items-center justify-between text-xs">
+              <span class="text-amber-400 flex items-center gap-1">
+                <Pickaxe class="w-3 h-3" /> 采矿进度
+              </span>
+              <span class="text-amber-300">{{ Math.floor(ship.miningProgress / 10 * 100) }}%</span>
+            </div>
+            <div class="h-2 bg-slate-700 rounded-full overflow-hidden">
+              <div
+                class="h-full bg-amber-500 transition-all"
+                :style="{ width: (ship.miningProgress / 10 * 100) + '%' }"
+              ></div>
+            </div>
+          </div>
+
+          <div v-if="ship.state === 'moving' || ship.state === 'transporting'" class="space-y-1">
+            <div class="flex items-center justify-between text-xs">
+              <span :class="ship.state === 'transporting' ? 'text-green-400' : 'text-blue-400'" class="flex items-center gap-1">
+                <component :is="ship.state === 'transporting' ? Truck : Rocket" class="w-3 h-3" />
+                {{ ship.state === 'transporting' ? '运输中' : '移动中' }} → {{ getSectorName(ship.targetSectorId!) }}
+              </span>
+              <span :class="ship.state === 'transporting' ? 'text-green-300' : 'text-blue-300'">{{ Math.floor(ship.moveProgress * 100) }}%</span>
+            </div>
+            <div class="h-2 bg-slate-700 rounded-full overflow-hidden">
+              <div
+                class="h-full transition-all"
+                :class="ship.state === 'transporting' ? 'bg-green-500' : 'bg-blue-500'"
+                :style="{ width: (ship.moveProgress * 100) + '%' }"
+              ></div>
+            </div>
+          </div>
+
           <div v-if="ship.cargo.length > 0" class="text-xs text-slate-400">
             载货: {{ getCargoTotal(ship) }}/{{ ship.cargoCapacity }}
           </div>

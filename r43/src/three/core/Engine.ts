@@ -18,21 +18,31 @@ export class ThreeEngine {
     this.scene.background = new THREE.Color(0x87ceeb)
     this.scene.fog = new THREE.Fog(0x87ceeb, 200, 800)
 
+    const width = container.clientWidth || window.innerWidth
+    const height = container.clientHeight || window.innerHeight
+
     this.camera = new THREE.PerspectiveCamera(
       60,
-      container.clientWidth / container.clientHeight,
+      width / height,
       0.1,
       2000
     )
     this.camera.position.set(150, 120, 150)
 
     this.renderer = new THREE.WebGLRenderer({ antialias: true, logarithmicDepthBuffer: true })
-    this.renderer.setSize(container.clientWidth, container.clientHeight)
+    this.renderer.setSize(width, height)
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
     this.renderer.shadowMap.enabled = true
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping
     this.renderer.toneMappingExposure = 1.0
+    this.renderer.domElement.style.position = 'absolute'
+    this.renderer.domElement.style.top = '0'
+    this.renderer.domElement.style.left = '0'
+    this.renderer.domElement.style.width = '100%'
+    this.renderer.domElement.style.height = '100%'
+
+    container.appendChild(this.renderer.domElement)
 
     this.controls = new OrbitControls(this.camera, this.renderer.domElement)
     this.controls.enableDamping = true
@@ -166,6 +176,10 @@ export class ThreeEngine {
         }
       }
     })
+
+    if (this.renderer.domElement.parentNode) {
+      this.renderer.domElement.parentNode.removeChild(this.renderer.domElement)
+    }
 
     this.renderer.dispose()
     this.onBeforeRenderCallbacks = []

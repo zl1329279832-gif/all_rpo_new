@@ -13,8 +13,7 @@
         <div
           v-for="(level, index) in levels"
           :key="level.id"
-          class="group relative bg-slate-800/50 border border-slate-700 rounded-xl overflow-hidden hover:border-blue-500 transition-all cursor-pointer"
-          @click="selectLevel(level.id)"
+          class="group relative bg-slate-800/50 border border-slate-700 rounded-xl overflow-hidden hover:border-blue-500 transition-all"
         >
           <div class="absolute inset-0 bg-gradient-to-br from-blue-600/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
           <div class="p-6">
@@ -39,10 +38,6 @@
                 v-if="index > 0 && !isUnlocked(index)"
                 class="w-5 h-5 text-slate-500"
               />
-              <Play
-                v-else
-                class="w-8 h-8 text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity"
-              />
             </div>
             <p class="text-slate-400 text-sm mb-4">{{ level.description }}</p>
             <div class="space-y-2">
@@ -61,13 +56,26 @@
                 </div>
               </div>
             </div>
-            <div v-if="hasSave(level.id)" class="mt-4 pt-4 border-t border-slate-700">
+            <div class="mt-4 pt-4 border-t border-slate-700 flex gap-2">
               <button
-                class="text-sm text-amber-400 hover:text-amber-300 flex items-center gap-1"
-                @click.stop="continueGame(level.id)"
+                v-if="hasSave(level.id)"
+                class="flex-1 px-3 py-2 bg-amber-600 hover:bg-amber-500 text-white text-sm rounded transition-colors flex items-center justify-center gap-1 disabled:bg-slate-700 disabled:cursor-not-allowed"
+                :disabled="!isUnlocked(index)"
+                @click="continueGame(level.id)"
               >
-                <RefreshCcw class="w-4 h-4" /> 继续上次进度 ({{ formatSaveTime(level.id) }})
+                <RefreshCcw class="w-4 h-4" /> 继续游戏
               </button>
+              <button
+                class="flex-1 px-3 py-2 text-sm rounded transition-colors flex items-center justify-center gap-1 disabled:bg-slate-700 disabled:cursor-not-allowed"
+                :class="isUnlocked(index) ? 'bg-blue-600 hover:bg-blue-500 text-white' : 'bg-slate-700 text-slate-500'"
+                :disabled="!isUnlocked(index)"
+                @click="selectLevel(level.id)"
+              >
+                <component :is="hasSave(level.id) ? RotateCcw : Play" class="w-4 h-4" /> {{ hasSave(level.id) ? '重新开始' : '开始游戏' }}
+              </button>
+            </div>
+            <div v-if="hasSave(level.id)" class="mt-2 text-center">
+              <span class="text-xs text-slate-500">存档时间: {{ formatSaveTime(level.id) }}</span>
             </div>
           </div>
         </div>
@@ -79,7 +87,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { Rocket, Star, Lock, Play, RefreshCcw } from 'lucide-vue-next';
+import { Rocket, Star, Lock, Play, RefreshCcw, RotateCcw } from 'lucide-vue-next';
 import { LEVEL_CONFIGS } from '../game/levels/levelData';
 import { StorageService } from '../services/StorageService';
 import { ResourceType } from '../types';
