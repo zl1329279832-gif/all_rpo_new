@@ -113,6 +113,7 @@ export interface LevelConfig {
   sectorCount: number;
   initialShips: { type: ShipType; count: number }[];
   objectives: ResourceStack[];
+  guaranteedResources: ResourceType[];
   eventFrequency: number;
   unlockCost?: ResourceStack[];
 }

@@ -52,7 +52,7 @@ export const useGameStore = defineStore('game', () => {
       }
     }
 
-    const sectors = generateStarMap(config.sectorCount);
+    const sectors = generateStarMap(config.sectorCount, config.guaranteedResources);
     const mothershipSector = sectors[0];
     const newState = createInitialGameState(config);
 
