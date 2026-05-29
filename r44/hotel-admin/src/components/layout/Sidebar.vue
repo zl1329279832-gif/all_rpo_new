@@ -161,6 +161,7 @@ const handleToggleCollapse = () => {
 <style lang="scss" scoped>
 .sidebar {
   height: 100vh;
+  flex-shrink: 0;
   background-color: var(--el-menu-bg-color);
   transition: width 0.3s ease;
   overflow: hidden;
@@ -200,17 +201,18 @@ const handleToggleCollapse = () => {
   }
 
   .sidebar-footer {
-    padding: 12px;
+    padding: 8px 12px;
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
+    justify-content: center;
     gap: 8px;
     align-items: center;
     border-top: 1px solid var(--el-border-color);
 
     .theme-toggle-btn,
     .collapse-btn {
-      width: 40px;
-      height: 40px;
+      width: 36px;
+      height: 36px;
     }
   }
 

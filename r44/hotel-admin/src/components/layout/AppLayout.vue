@@ -44,17 +44,48 @@ onMounted(() => {
 .app-layout {
   height: 100vh;
   width: 100%;
+  display: flex;
+  flex-direction: row;
+  overflow: hidden;
 
   .main-container {
-    transition: all 0.3s ease;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-width: 0;
   }
 
   .app-main {
+    flex: 1;
     padding: 20px;
     background-color: var(--el-bg-color-page);
-    min-height: calc(100vh - 60px);
-    transition: all 0.3s ease;
+    overflow-y: auto;
+    overflow-x: hidden;
   }
+}
+
+:deep(.el-container) {
+  height: 100%;
+}
+
+:deep(.el-header) {
+  height: 60px;
+  padding: 0;
+  margin: 0;
+  box-sizing: border-box;
+}
+
+:deep(.el-main) {
+  padding: 0;
+  margin: 0;
+  overflow: hidden;
+}
+
+:deep(.el-aside) {
+  margin: 0;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .fade-transform-enter-active,

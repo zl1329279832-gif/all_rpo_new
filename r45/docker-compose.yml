@@ -1,0 +1,55 @@
+services:
+  studio-order-system:
+    build: .
+    image: studio-order-system:latest
+    container_name: studio-order-system
+    network_mode: host
+    privileged: true
+    environment:
+      - DISPLAY=${DISPLAY:-:0}
+      - QT_X11_NO_MITSHM=1
+      - LANG=zh_CN.UTF-8
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - ${XAUTHORITY:-/tmp/.Xauthority}:/root/.Xauthority:ro
+      - ./studio.db:/app/studio.db
+      - ./thumbnails:/app/thumbnails
+      - ./exports:/app/exports
+      - ./backups:/app/backups
+      - ./logs:/app/logs
+    devices:
+      - /dev/dri:/dev/dri
+    stdin_open: true
+    tty: true
+    entrypoint: /usr/local/bin/docker-entrypoint.sh
+    command: python main.py
+
+  headless-demo:
+    build: .
+    image: studio-order-system:latest
+    container_name: studio-order-headless
+    profiles:
+      - headless
+    environment:
+      - QT_QPA_PLATFORM=offscreen
+      - LANG=zh_CN.UTF-8
+    volumes:
+      - ./studio.db:/app/studio.db
+      - ./thumbnails:/app/thumbnails
+      - ./exports:/app/exports
+      - ./backups:/app/backups
+      - ./logs:/app/logs
+    command: >
+      python -c "import sys; sys.path.insert(0, '/app');
+      from database.db_manager import DatabaseManager;
+      from services.order_service import OrderService;
+      from collections import Counter;
+      db = DatabaseManager();
+      svc = OrderService(db);
+      orders = svc.get_all_orders();
+      print('=== 订单统计 ===');
+      print(f'总订单数: {len(orders)}');
+      statuses = Counter(o.get('order_status') for o in orders);
+      [print(f'  {s}: {c}') for s, c in statuses.items()];
+      print(f'总客户数: {len(svc.get_all_customers())}');
+      db.close()"

@@ -261,6 +261,7 @@ const markAllAsRead = () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-shrink: 0;
   position: relative;
   transition: all 0.3s ease;
 
