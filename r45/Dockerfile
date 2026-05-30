@@ -17,6 +17,7 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
     locales \
     libxcb1 \
+    libxcb-cursor0 \
     libxcb-xinerama0 \
     libxcb-icccm4 \
     libxcb-image0 \
