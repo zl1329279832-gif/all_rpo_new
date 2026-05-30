@@ -43,6 +43,8 @@ public class ReceiptSaveDTO {
     @Data
     public static class ReceiptItemDTO {
 
+        private Long id;
+
         private Long activitySkuId;
 
         private Long productId;

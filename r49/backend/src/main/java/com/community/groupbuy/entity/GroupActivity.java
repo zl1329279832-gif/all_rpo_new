@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
 
 @Data
 @EqualsAndHashCode(callSuper = true)
-@TableName("t_group_activity")
+@TableName("group_activity")
 public class GroupActivity extends BaseEntity {
 
     private String activityName;

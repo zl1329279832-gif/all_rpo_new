@@ -10,7 +10,7 @@ import java.time.LocalDate;
 
 @Data
 @EqualsAndHashCode(callSuper = true)
-@TableName("t_product_batch")
+@TableName("product_batch")
 public class ProductBatch extends BaseEntity {
 
     private Long productId;

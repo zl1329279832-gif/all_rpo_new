@@ -9,7 +9,7 @@ import java.math.BigDecimal;
 
 @Data
 @EqualsAndHashCode(callSuper = true)
-@TableName("t_product")
+@TableName("product")
 public class Product extends BaseEntity {
 
     private String productName;
