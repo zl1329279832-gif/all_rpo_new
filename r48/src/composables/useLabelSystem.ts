@@ -3,7 +3,7 @@ import { CSS2DObject } from 'three/examples/jsm/renderers/CSS2DRenderer.js'
 import type { DeviceData, AlarmLevel } from '@/types'
 import { ALARM_LEVEL_COLORS } from '@/types'
 
-export function useLabelSystem(scene: THREE.Scene) {
+export function useLabelSystem(scene: THREE.Scene, camera: THREE.PerspectiveCamera) {
   const labels: Map<string, CSS2DObject> = new Map()
 
   const createLabel = (device: DeviceData): CSS2DObject => {
@@ -30,17 +30,17 @@ export function useLabelSystem(scene: THREE.Scene) {
 
     let paramStr = ''
     if (device.type === 'pump') {
-      paramStr = `流量: ${device.params.flow} m³/h | 压力: ${device.params.pressure} MPa`
+      paramStr = `流量: ${Number(device.params.flow).toFixed(0)} m³/h`
     } else if (device.type === 'valve') {
-      paramStr = `开度: ${device.params.opening}% | 压力: ${device.params.pressure} MPa`
+      paramStr = `开度: ${device.params.opening}%`
     } else if (device.type === 'sensor') {
-      if ('level' in device.params) paramStr = `液位: ${device.params.level} m`
-      else if ('flow' in device.params) paramStr = `流量: ${device.params.flow} m³/h`
-      else if ('pressure' in device.params) paramStr = `压力: ${device.params.pressure} MPa`
+      if ('level' in device.params) paramStr = `液位: ${Number(device.params.level).toFixed(1)} m`
+      else if ('flow' in device.params) paramStr = `流量: ${Number(device.params.flow).toFixed(0)} m³/h`
+      else if ('pressure' in device.params) paramStr = `压力: ${Number(device.params.pressure).toFixed(2)} MPa`
     } else if (device.type === 'cabinet') {
-      paramStr = `电压: ${device.params.voltage}V | 电流: ${device.params.current}A`
+      paramStr = `电流: ${device.params.current}A`
     } else if (device.type === 'pool') {
-      paramStr = `水位: ${device.params.level} m | 容量: ${device.params.capacity} m³`
+      paramStr = `水位: ${Number(device.params.level).toFixed(1)} m`
     }
 
     return `
@@ -64,6 +64,35 @@ export function useLabelSystem(scene: THREE.Scene) {
       pipe: 0.5,
     }
     return offsets[type]
+  }
+
+  const checkOcclusion = (labelPosition: THREE.Vector3, deviceGroup: THREE.Object3D): boolean => {
+    const direction = new THREE.Vector3().subVectors(camera.position, labelPosition).normalize()
+    const raycaster = new THREE.Raycaster()
+    raycaster.set(labelPosition, direction)
+    raycaster.far = camera.position.distanceTo(labelPosition) - 0.5
+
+    const allMeshes: THREE.Mesh[] = []
+    scene.traverse((child) => {
+      if (child instanceof THREE.Mesh && child !== deviceGroup && !child.userData.isLabelAnchor) {
+        allMeshes.push(child)
+      }
+    })
+
+    const intersects = raycaster.intersectObjects(allMeshes, false)
+    return intersects.length > 0
+  }
+
+  const updateOcclusion = (): void => {
+    const tmpVector = new THREE.Vector3()
+    labels.forEach((label, deviceId) => {
+      if (!label.parent) return
+      tmpVector.copy(label.position)
+      label.parent.localToWorld(tmpVector)
+      const isOccluded = checkOcclusion(tmpVector, label.parent)
+      label.element.style.opacity = isOccluded ? '0.15' : '1'
+      label.element.style.pointerEvents = isOccluded ? 'none' : 'auto'
+    })
   }
 
   const addLabels = (devices: DeviceData[], sceneGroups: Map<string, THREE.Object3D>) => {
@@ -116,5 +145,31 @@ export function useLabelSystem(scene: THREE.Scene) {
     })
   }
 
-  return { addLabels, updateLabel, removeLabels, setVisibleByArea, setFilterByAlarmLevel }
+  const setHighlight = (deviceId: string | null, highlight: boolean) => {
+    const label = labels.get(deviceId || '')
+    if (label && label.element) {
+      if (highlight) {
+        label.element.style.transform = 'scale(1.15)'
+        label.element.style.zIndex = '100'
+      } else {
+        label.element.style.transform = 'scale(1)'
+        label.element.style.zIndex = '1'
+      }
+    }
+  }
+
+  const updateAllLabels = (devices: DeviceData[]) => {
+    devices.forEach(device => updateLabel(device))
+  }
+
+  return {
+    addLabels,
+    updateLabel,
+    removeLabels,
+    setVisibleByArea,
+    setFilterByAlarmLevel,
+    setHighlight,
+    updateOcclusion,
+    updateAllLabels,
+  }
 }

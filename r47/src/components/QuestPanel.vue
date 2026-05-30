@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 import { useGameStore } from '@/stores/gameStore'
 import { storeToRefs } from 'pinia'
-import { getGoodById } from '@/game/economy/goods'
 
 const gameStore = useGameStore()
 const { quests } = storeToRefs(gameStore)
+
+const collapsed = ref(false)
 
 function getActiveStep(quest: typeof quests.value[0]) {
   return quest.steps.find((s) => !s.completed)
@@ -15,15 +16,36 @@ function getProgress(quest: typeof quests.value[0]) {
   const completed = quest.steps.filter((s) => s.completed).length
   return Math.round((completed / quest.steps.length) * 100)
 }
+
+const hasActiveQuest = computed(() => {
+  return quests.value.some((q) => q.steps.some((s) => !s.completed))
+})
 </script>
 
 <template>
-  <div class="quest-panel bg-sand-dark/95 text-sand-light w-64 flex flex-col shadow-2xl rounded-b-lg border-2 border-amber-gold border-t-0">
-    <div class="p-3 border-b border-amber-gold/30">
-      <h2 class="text-lg font-bold text-amber-gold font-cinzel">📜 任务委托</h2>
+  <div
+    :class="[
+      'quest-panel bg-sand-dark/95 text-sand-light shadow-2xl rounded-b-lg border-2 border-amber-gold border-t-0 transition-all duration-300',
+      collapsed ? 'w-48' : 'w-64',
+    ]"
+  >
+    <div
+      class="p-3 border-b border-amber-gold/30 flex items-center justify-between cursor-pointer select-none"
+      @click="collapsed = !collapsed"
+    >
+      <h2 class="text-lg font-bold text-amber-gold font-cinzel flex items-center gap-2">
+        <span>📜</span>
+        <span v-if="!collapsed">任务委托</span>
+        <span v-else>任务</span>
+        <span
+          v-if="hasActiveQuest"
+          class="w-2 h-2 bg-red-500 rounded-full animate-pulse"
+        ></span>
+      </h2>
+      <span class="text-amber-gold/70 text-sm">{{ collapsed ? '▸' : '▾' }}</span>
     </div>
 
-    <div class="flex-1 overflow-auto p-3 space-y-4">
+    <div v-if="!collapsed" class="max-h-64 overflow-auto p-3 space-y-4">
       <div
         v-for="quest in quests"
         :key="quest.id"

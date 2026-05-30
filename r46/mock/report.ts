@@ -50,7 +50,7 @@ export default [
   {
     url: '/api/report/export',
     method: 'post',
-    response: ({ body }: { body: { ids?: string[]; format?: string; department?: string; startDate?: string; endDate?: string }) => {
+    response: ({ body }: { body: { ids?: string[]; format?: string; department?: string; startDate?: string; endDate?: string } }) => {
       if (randomError()) {
         return errorResponse(500, '导出报表失败')
       }

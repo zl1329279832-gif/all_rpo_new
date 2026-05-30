@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import SceneContainer from '@/components/three/SceneContainer.vue'
 import DeviceDetailPanel from '@/components/three/DeviceDetailPanel.vue'
-import WaterLevelPlayer from '@/components/three/WaterLevelPlayer.vue'
+import TimelinePlayback from '@/components/three/TimelinePlayback.vue'
 import TopToolbar from '@/components/ui/TopToolbar.vue'
 import AlarmFilter from '@/components/ui/AlarmFilter.vue'
 import AreaSwitch from '@/components/ui/AreaSwitch.vue'
 import StatusBar from '@/components/ui/StatusBar.vue'
+import DeviceSearch from '@/components/ui/DeviceSearch.vue'
 import { useDeviceStore } from '@/stores'
 
 const deviceStore = useDeviceStore()
@@ -19,10 +20,11 @@ const deviceStore = useDeviceStore()
         <div class="overlay-top">
           <AlarmFilter />
           <AreaSwitch />
+          <DeviceSearch />
         </div>
         <SceneContainer />
         <div class="overlay-bottom">
-          <WaterLevelPlayer />
+          <TimelinePlayback />
           <StatusBar />
         </div>
       </div>
@@ -30,6 +32,7 @@ const deviceStore = useDeviceStore()
         :device="deviceStore.selectedDevice"
         :visible="deviceStore.showDetailPanel"
         @close="deviceStore.selectDevice(null)"
+        @locate="(deviceId) => deviceStore.locateDevice(deviceId)"
       />
     </div>
   </div>
@@ -59,9 +62,11 @@ const deviceStore = useDeviceStore()
   position: absolute;
   top: 12px;
   left: 12px;
+  right: 12px;
   z-index: 40;
   display: flex;
   gap: 10px;
+  align-items: center;
 }
 .overlay-bottom {
   position: absolute;

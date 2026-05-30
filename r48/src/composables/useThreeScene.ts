@@ -113,5 +113,14 @@ export function useThreeScene(containerId: string) {
     disposeScene(scene, renderer, controls)
   }
 
-  return { init, startLoop, destroy, getScene: () => scene, getCamera: () => camera, getControls: () => controls }
+  return { 
+    init, 
+    startLoop, 
+    destroy, 
+    getScene: () => scene, 
+    getCamera: () => camera, 
+    getControls: () => controls,
+    getRenderer: () => renderer,
+    getLabelRenderer: () => labelRenderer
+  }
 }

@@ -5,7 +5,7 @@ export default [
   {
     url: '/api/department/list',
     method: 'get',
-    response: ({ query }: { query: { dateRange?: string; department?: string }) => {
+    response: ({ query }: { query: { dateRange?: string; department?: string } }) => {
       if (randomError()) {
         return errorResponse(500, '获取科室数据失败')
       }
@@ -39,7 +39,7 @@ export default [
   {
     url: '/api/department/detail',
     method: 'get',
-    response: ({ query }: { query: { id?: string }) => {
+    response: ({ query }: { query: { id?: string } }) => {
       if (randomError()) {
         return errorResponse(500, '获取科室详情失败')
       }

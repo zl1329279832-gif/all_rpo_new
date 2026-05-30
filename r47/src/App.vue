@@ -9,7 +9,6 @@ import CargoPanel from '@/components/CargoPanel.vue'
 import QuestPanel from '@/components/QuestPanel.vue'
 import EventModal from '@/components/EventModal.vue'
 import GameOverScreen from '@/components/GameOverScreen.vue'
-import SaveMenu from '@/components/SaveMenu.vue'
 
 const gameStore = useGameStore()
 const { gameStarted, gameOver, victory } = storeToRefs(gameStore)
@@ -26,9 +25,6 @@ const { gameStarted, gameOver, victory } = storeToRefs(gameStore)
         <CargoPanel />
 
         <div class="flex-1 relative">
-          <div class="absolute top-4 right-4 z-20">
-            <SaveMenu />
-          </div>
           <div class="absolute top-4 left-4 z-20">
             <QuestPanel />
           </div>

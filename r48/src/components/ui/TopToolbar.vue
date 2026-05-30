@@ -1,8 +1,12 @@
 <script setup lang="ts">
-import { useRouter } from 'vue-router'
-import { Activity, BarChart3, Droplets } from 'lucide-vue-next'
+import { useRouter, useRoute } from 'vue-router'
+import { Activity, BarChart3, Droplets, AlertTriangle, BookOpen, BarChart2 } from 'lucide-vue-next'
+import { computed } from 'vue'
 
 const router = useRouter()
+const route = useRoute()
+
+const activeRoute = computed(() => route.name)
 </script>
 
 <template>
@@ -12,13 +16,45 @@ const router = useRouter()
       <span class="toolbar-title">智慧水务泵站监控系统</span>
     </div>
     <div class="toolbar-right">
-      <button class="toolbar-btn active" @click="router.push('/')">
+      <button 
+        class="toolbar-btn" 
+        :class="{ active: activeRoute === 'monitor' }" 
+        @click="router.push('/')"
+      >
         <Activity :size="16" />
         <span>三维监控</span>
       </button>
-      <button class="toolbar-btn" @click="router.push('/dashboard')">
+      <button 
+        class="toolbar-btn" 
+        :class="{ active: activeRoute === 'dashboard' }" 
+        @click="router.push('/dashboard')"
+      >
         <BarChart3 :size="16" />
         <span>数据面板</span>
+      </button>
+      <button 
+        class="toolbar-btn" 
+        :class="{ active: activeRoute === 'alarmHandle' }" 
+        @click="router.push('/alarm-handle')"
+      >
+        <AlertTriangle :size="16" />
+        <span>告警处置</span>
+      </button>
+      <button 
+        class="toolbar-btn" 
+        :class="{ active: activeRoute === 'deviceLedger' }" 
+        @click="router.push('/device-ledger')"
+      >
+        <BookOpen :size="16" />
+        <span>设备台账</span>
+      </button>
+      <button 
+        class="toolbar-btn" 
+        :class="{ active: activeRoute === 'operationStats' }" 
+        @click="router.push('/operation-stats')"
+      >
+        <BarChart2 :size="16" />
+        <span>运维统计</span>
       </button>
     </div>
   </div>

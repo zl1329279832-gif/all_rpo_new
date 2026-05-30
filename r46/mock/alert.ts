@@ -41,7 +41,7 @@ export default [
   {
     url: '/api/alert/detail',
     method: 'get',
-    response: ({ query }: { query: { id?: string }) => {
+    response: ({ query }: { query: { id?: string } }) => {
       if (randomError()) {
         return errorResponse(500, '获取预警详情失败')
       }

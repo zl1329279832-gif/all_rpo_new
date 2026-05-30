@@ -97,6 +97,13 @@ export const useGameStore = defineStore('game', {
         })
       }
 
+      this.quests = checkQuestProgress(this.quests, this.caravan, this.caravan.currentCityId)
+
+      const allQuestsComplete = this.quests.every((q) => q.steps.every((s) => s.completed))
+      if (allQuestsComplete || this.caravan.gold >= 5000) {
+        this.victory = true
+      }
+
       return true
     },
 
@@ -214,6 +221,8 @@ export const useGameStore = defineStore('game', {
       if (this.caravan.gold <= 0) {
         this.gameOver = true
       }
+
+      saveGame(1, this.$state)
     },
 
     upgradeGuard() {

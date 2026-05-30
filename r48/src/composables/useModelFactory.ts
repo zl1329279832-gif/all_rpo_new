@@ -2,42 +2,80 @@ import * as THREE from 'three'
 import type { DeviceData, DeviceType } from '@/types'
 import { STATUS_COLORS } from '@/types'
 
-function createMaterial(status: DeviceData['status'], opacity: number = 1): THREE.MeshStandardMaterial {
+const geometryCache: Map<string, THREE.BufferGeometry> = new Map()
+const materialCache: Map<string, THREE.MeshStandardMaterial> = new Map()
+
+function getOrCreateGeometry(key: string, factory: () => THREE.BufferGeometry): THREE.BufferGeometry {
+  if (!geometryCache.has(key)) {
+    geometryCache.set(key, factory())
+  }
+  return geometryCache.get(key)!
+}
+
+function getOrCreateMaterial(
+  status: DeviceData['status'],
+  opacity: number = 1,
+  key?: string
+): THREE.MeshStandardMaterial {
+  const matKey = key ?? `status-${status}-${opacity}`
+  if (!materialCache.has(matKey)) {
+    const color = STATUS_COLORS[status]
+    materialCache.set(
+      matKey,
+      new THREE.MeshStandardMaterial({
+        color,
+        emissive: status === 'alarm' ? color : 0x000000,
+        emissiveIntensity: status === 'alarm' ? 0.5 : 0,
+        roughness: 0.4,
+        metalness: 0.6,
+        transparent: opacity < 1,
+        opacity,
+      })
+    )
+  }
+  const mat = materialCache.get(matKey)!
+  return mat.clone()
+}
+
+function cloneMaterialWithStatus(mat: THREE.MeshStandardMaterial, status: DeviceData['status']): THREE.MeshStandardMaterial {
+  const clone = mat.clone()
   const color = STATUS_COLORS[status]
-  return new THREE.MeshStandardMaterial({
-    color,
-    emissive: status === 'alarm' ? color : 0x000000,
-    emissiveIntensity: status === 'alarm' ? 0.5 : 0,
-    roughness: 0.4,
-    metalness: 0.6,
-    transparent: opacity < 1,
-    opacity,
-  })
+  clone.color.setHex(color)
+  clone.emissive.setHex(status === 'alarm' ? color : 0x000000)
+  clone.emissiveIntensity = status === 'alarm' ? 0.5 : 0
+  return clone
+}
+
+function clearCache(): void {
+  geometryCache.forEach(geo => geo.dispose())
+  geometryCache.clear()
+  materialCache.forEach(mat => mat.dispose())
+  materialCache.clear()
 }
 
 function createPump(device: DeviceData): THREE.Group {
   const group = new THREE.Group()
-  const mat = createMaterial(device.status)
+  const mat = getOrCreateMaterial(device.status)
 
-  const bodyGeo = new THREE.CylinderGeometry(0.5, 0.6, 1.2, 16)
+  const bodyGeo = getOrCreateGeometry('pump-body', () => new THREE.CylinderGeometry(0.5, 0.6, 1.2, 16))
   const body = new THREE.Mesh(bodyGeo, mat)
   body.castShadow = true
   group.add(body)
 
-  const impellerGeo = new THREE.CylinderGeometry(0.35, 0.35, 0.1, 6)
+  const impellerGeo = getOrCreateGeometry('pump-impeller', () => new THREE.CylinderGeometry(0.35, 0.35, 0.1, 6))
   const impellerMat = new THREE.MeshStandardMaterial({ color: 0x8c8c8c, metalness: 0.8, roughness: 0.2 })
   const impeller = new THREE.Mesh(impellerGeo, impellerMat)
   impeller.position.y = 0.7
   impeller.name = 'impeller'
   group.add(impeller)
 
-  const pipeOutGeo = new THREE.CylinderGeometry(0.12, 0.12, 0.8, 8)
+  const pipeOutGeo = getOrCreateGeometry('pump-pipeout', () => new THREE.CylinderGeometry(0.12, 0.12, 0.8, 8))
   const pipeOut = new THREE.Mesh(pipeOutGeo, mat)
   pipeOut.rotation.z = Math.PI / 2
   pipeOut.position.set(0.5, 0.3, 0)
   group.add(pipeOut)
 
-  const baseGeo = new THREE.BoxGeometry(1.2, 0.15, 1.0)
+  const baseGeo = getOrCreateGeometry('pump-base', () => new THREE.BoxGeometry(1.2, 0.15, 1.0))
   const baseMat = new THREE.MeshStandardMaterial({ color: 0x2a3a5c, metalness: 0.5, roughness: 0.5 })
   const base = new THREE.Mesh(baseGeo, baseMat)
   base.position.y = -0.7
@@ -51,21 +89,21 @@ function createPump(device: DeviceData): THREE.Group {
 
 function createValve(device: DeviceData): THREE.Group {
   const group = new THREE.Group()
-  const mat = createMaterial(device.status)
+  const mat = getOrCreateMaterial(device.status)
 
-  const bodyGeo = new THREE.TorusGeometry(0.3, 0.1, 8, 16)
+  const bodyGeo = getOrCreateGeometry('valve-body', () => new THREE.TorusGeometry(0.3, 0.1, 8, 16))
   const body = new THREE.Mesh(bodyGeo, mat)
   body.castShadow = true
   group.add(body)
 
-  const wheelGeo = new THREE.CylinderGeometry(0.25, 0.25, 0.06, 8)
+  const wheelGeo = getOrCreateGeometry('valve-wheel', () => new THREE.CylinderGeometry(0.25, 0.25, 0.06, 8))
   const wheelMat = new THREE.MeshStandardMaterial({ color: 0x1e90ff, metalness: 0.7, roughness: 0.3 })
   const wheel = new THREE.Mesh(wheelGeo, wheelMat)
   wheel.position.y = 0.35
   wheel.rotation.y = Math.PI / 8
   group.add(wheel)
 
-  const stemGeo = new THREE.CylinderGeometry(0.04, 0.04, 0.3, 6)
+  const stemGeo = getOrCreateGeometry('valve-stem', () => new THREE.CylinderGeometry(0.04, 0.04, 0.3, 6))
   const stem = new THREE.Mesh(stemGeo, wheelMat)
   stem.position.y = 0.2
   group.add(stem)
@@ -77,23 +115,24 @@ function createValve(device: DeviceData): THREE.Group {
 
 function createSensor(device: DeviceData): THREE.Group {
   const group = new THREE.Group()
-  const mat = createMaterial(device.status)
+  const mat = getOrCreateMaterial(device.status)
 
-  const headGeo = new THREE.SphereGeometry(0.2, 16, 16)
+  const headGeo = getOrCreateGeometry('sensor-head', () => new THREE.SphereGeometry(0.2, 16, 16))
   const head = new THREE.Mesh(headGeo, mat)
   head.castShadow = true
   group.add(head)
 
-  const poleGeo = new THREE.CylinderGeometry(0.03, 0.03, 0.6, 6)
+  const poleGeo = getOrCreateGeometry('sensor-pole', () => new THREE.CylinderGeometry(0.03, 0.03, 0.6, 6))
   const poleMat = new THREE.MeshStandardMaterial({ color: 0x4a5568, metalness: 0.5, roughness: 0.4 })
   const pole = new THREE.Mesh(poleGeo, poleMat)
   pole.position.y = -0.4
   group.add(pole)
 
-  const lightGeo = new THREE.SphereGeometry(0.08, 8, 8)
+  const lightGeo = getOrCreateGeometry('sensor-light', () => new THREE.SphereGeometry(0.08, 8, 8))
+  const lightColor = device.status === 'alarm' ? 0xff4d4f : device.status === 'offline' ? 0x595959 : 0x52c41a
   const lightMat = new THREE.MeshStandardMaterial({
-    color: device.status === 'alarm' ? 0xff4d4f : 0x52c41a,
-    emissive: device.status === 'alarm' ? 0xff4d4f : 0x52c41a,
+    color: lightColor,
+    emissive: lightColor,
     emissiveIntensity: 0.8,
   })
   const light = new THREE.Mesh(lightGeo, lightMat)
@@ -108,21 +147,21 @@ function createSensor(device: DeviceData): THREE.Group {
 
 function createCabinet(device: DeviceData): THREE.Group {
   const group = new THREE.Group()
-  const mat = createMaterial(device.status)
+  const mat = getOrCreateMaterial(device.status)
 
-  const bodyGeo = new THREE.BoxGeometry(0.8, 1.6, 0.5)
+  const bodyGeo = getOrCreateGeometry('cabinet-body', () => new THREE.BoxGeometry(0.8, 1.6, 0.5))
   const body = new THREE.Mesh(bodyGeo, mat)
   body.castShadow = true
   group.add(body)
 
-  const doorGeo = new THREE.BoxGeometry(0.7, 1.4, 0.02)
+  const doorGeo = getOrCreateGeometry('cabinet-door', () => new THREE.BoxGeometry(0.7, 1.4, 0.02))
   const doorMat = new THREE.MeshStandardMaterial({ color: 0x1a2a4a, metalness: 0.3, roughness: 0.6 })
   const door = new THREE.Mesh(doorGeo, doorMat)
   door.position.z = 0.26
   group.add(door)
 
-  const lightGeo = new THREE.SphereGeometry(0.05, 8, 8)
-  const lightColor = device.status === 'running' ? 0x52c41a : device.status === 'alarm' ? 0xff4d4f : 0xfadb14
+  const lightGeo = getOrCreateGeometry('cabinet-light', () => new THREE.SphereGeometry(0.05, 8, 8))
+  const lightColor = device.status === 'running' ? 0x52c41a : device.status === 'alarm' ? 0xff4d4f : device.status === 'offline' ? 0x434343 : 0xfadb14
   const lightMat = new THREE.MeshStandardMaterial({ color: lightColor, emissive: lightColor, emissiveIntensity: 1 })
   const light1 = new THREE.Mesh(lightGeo, lightMat)
   light1.position.set(0.25, 0.6, 0.27)
@@ -142,39 +181,38 @@ function createCabinet(device: DeviceData): THREE.Group {
 function createPool(device: DeviceData): THREE.Group {
   const group = new THREE.Group()
   const wallMat = new THREE.MeshStandardMaterial({ color: 0x1a3a5c, transparent: true, opacity: 0.5, metalness: 0.3, roughness: 0.5 })
-
-  const wallThickness = 0.15
   const poolW = 3
   const poolH = 2
   const poolD = 4
+  const wallThickness = 0.15
 
-  const floorGeo = new THREE.BoxGeometry(poolW, wallThickness, poolD)
+  const floorGeo = getOrCreateGeometry('pool-floor', () => new THREE.BoxGeometry(poolW, wallThickness, poolD))
   const floor = new THREE.Mesh(floorGeo, wallMat)
   floor.position.y = -poolH / 2
   floor.receiveShadow = true
   group.add(floor)
 
-  const wallFrontGeo = new THREE.BoxGeometry(poolW, poolH, wallThickness)
+  const wallFrontGeo = getOrCreateGeometry('pool-wall-front', () => new THREE.BoxGeometry(poolW, poolH, wallThickness))
   const wallFront = new THREE.Mesh(wallFrontGeo, wallMat)
   wallFront.position.set(0, 0, poolD / 2)
   group.add(wallFront)
 
-  const wallBackGeo = new THREE.BoxGeometry(poolW, poolH, wallThickness)
+  const wallBackGeo = getOrCreateGeometry('pool-wall-back', () => new THREE.BoxGeometry(poolW, poolH, wallThickness))
   const wallBack = new THREE.Mesh(wallBackGeo, wallMat)
   wallBack.position.set(0, 0, -poolD / 2)
   group.add(wallBack)
 
-  const wallLeftGeo = new THREE.BoxGeometry(wallThickness, poolH, poolD)
+  const wallLeftGeo = getOrCreateGeometry('pool-wall-left', () => new THREE.BoxGeometry(wallThickness, poolH, poolD))
   const wallLeft = new THREE.Mesh(wallLeftGeo, wallMat)
   wallLeft.position.set(-poolW / 2, 0, 0)
   group.add(wallLeft)
 
-  const wallRightGeo = new THREE.BoxGeometry(wallThickness, poolH, poolD)
+  const wallRightGeo = getOrCreateGeometry('pool-wall-right', () => new THREE.BoxGeometry(wallThickness, poolH, poolD))
   const wallRight = new THREE.Mesh(wallRightGeo, wallMat)
   wallRight.position.set(poolW / 2, 0, 0)
   group.add(wallRight)
 
-  const waterGeo = new THREE.PlaneGeometry(poolW - wallThickness * 2, poolD - wallThickness * 2, 20, 20)
+  const waterGeo = getOrCreateGeometry('pool-water', () => new THREE.PlaneGeometry(poolW - wallThickness * 2, poolD - wallThickness * 2, 20, 20))
   const waterMat = new THREE.MeshStandardMaterial({
     color: 0x1890ff,
     transparent: true,
@@ -198,19 +236,17 @@ function createPipe(start: THREE.Vector3, end: THREE.Vector3, status: DeviceData
   const group = new THREE.Group()
   const direction = new THREE.Vector3().subVectors(end, start)
   const length = direction.length()
-  const mat = createMaterial(status, 0.85)
+  const mat = getOrCreateMaterial(status, 0.85)
 
-  const pipeGeo = new THREE.CylinderGeometry(0.1, 0.1, length, 8)
+  const pipeGeo = getOrCreateGeometry(`pipe-${length.toFixed(2)}`, () => new THREE.CylinderGeometry(0.1, 0.1, length, 8))
   const pipe = new THREE.Mesh(pipeGeo, mat)
   pipe.castShadow = true
-
   const mid = new THREE.Vector3().addVectors(start, end).multiplyScalar(0.5)
   pipe.position.copy(mid)
   pipe.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction.normalize())
-
   group.add(pipe)
 
-  const particleCount = Math.floor(length * 3)
+  const particleCount = Math.max(10, Math.floor(length * 2))
   const positions = new Float32Array(particleCount * 3)
   for (let i = 0; i < particleCount; i++) {
     const t = Math.random()
@@ -220,12 +256,12 @@ function createPipe(start: THREE.Vector3, end: THREE.Vector3, status: DeviceData
   }
   const particleGeo = new THREE.BufferGeometry()
   particleGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3))
-  const particleMat = new THREE.PointsMaterial({ color: 0x00e5ff, size: 0.05, transparent: true, opacity: 0.6 })
+  const particleMat = new THREE.PointsMaterial({ color: 0x00e5ff, size: 0.05, transparent: true, opacity: 0.6, sizeAttenuation: true })
   const particles = new THREE.Points(particleGeo, particleMat)
   particles.name = 'pipeParticles'
   group.add(particles)
 
-  group.userData = { isPipe: true }
+  group.userData = { isPipe: true, start: start.toArray(), end: end.toArray() }
   return group
 }
 
@@ -233,22 +269,16 @@ function createBuilding(): THREE.Group {
   const group = new THREE.Group()
   const wallMat = new THREE.MeshStandardMaterial({ color: 0x1a2a4a, transparent: true, opacity: 0.3, side: THREE.DoubleSide })
   const frameMat = new THREE.MeshStandardMaterial({ color: 0x2a4a6c, metalness: 0.5, roughness: 0.4 })
+  const w = 10, h = 4, d = 8
 
-  const w = 10
-  const h = 4
-  const d = 8
-
-  const roofGeo = new THREE.BoxGeometry(w + 0.4, 0.15, d + 0.4)
+  const roofGeo = getOrCreateGeometry('building-roof', () => new THREE.BoxGeometry(w + 0.4, 0.15, d + 0.4))
   const roof = new THREE.Mesh(roofGeo, frameMat)
   roof.position.y = h
   roof.castShadow = true
   group.add(roof)
 
-  const pillarGeo = new THREE.CylinderGeometry(0.1, 0.1, h, 6)
-  const corners = [
-    [-w / 2, 0], [w / 2, 0], [-w / 2, -d / 2], [w / 2, -d / 2],
-    [-w / 2, d / 2], [w / 2, d / 2],
-  ]
+  const pillarGeo = getOrCreateGeometry('building-pillar', () => new THREE.CylinderGeometry(0.1, 0.1, h, 6))
+  const corners = [[-w / 2, 0], [w / 2, 0], [-w / 2, -d / 2], [w / 2, -d / 2], [-w / 2, d / 2], [w / 2, d / 2]]
   for (const [cx, cz] of corners) {
     const pillar = new THREE.Mesh(pillarGeo, frameMat)
     pillar.position.set(cx, h / 2, cz)
@@ -256,18 +286,18 @@ function createBuilding(): THREE.Group {
     group.add(pillar)
   }
 
-  const backWallGeo = new THREE.PlaneGeometry(w, h)
+  const backWallGeo = getOrCreateGeometry('building-backwall', () => new THREE.PlaneGeometry(w, h))
   const backWall = new THREE.Mesh(backWallGeo, wallMat)
   backWall.position.set(0, h / 2, -d / 2)
   group.add(backWall)
 
-  const leftWallGeo = new THREE.PlaneGeometry(d, h)
+  const leftWallGeo = getOrCreateGeometry('building-leftwall', () => new THREE.PlaneGeometry(d, h))
   const leftWall = new THREE.Mesh(leftWallGeo, wallMat)
   leftWall.rotation.y = Math.PI / 2
   leftWall.position.set(-w / 2, h / 2, 0)
   group.add(leftWall)
 
-  const rightWallGeo = new THREE.PlaneGeometry(d, h)
+  const rightWallGeo = getOrCreateGeometry('building-rightwall', () => new THREE.PlaneGeometry(d, h))
   const rightWall = new THREE.Mesh(rightWallGeo, wallMat)
   rightWall.rotation.y = -Math.PI / 2
   rightWall.position.set(w / 2, h / 2, 0)
@@ -336,21 +366,47 @@ export function useModelFactory() {
   const updateDeviceStatus = (group: THREE.Group, device: DeviceData): void => {
     const color = STATUS_COLORS[device.status]
     group.traverse((child) => {
-      if (child instanceof THREE.Mesh && child.name !== 'impeller' && child.name !== 'indicator') {
+      if (child instanceof THREE.Mesh && child.name !== 'impeller' && child.name !== 'indicator' && child.name !== 'water') {
         const mat = child.material as THREE.MeshStandardMaterial
-        if (mat.color) {
+        if (mat.color && mat.color.setHex) {
           mat.color.setHex(color)
         }
         if (device.status === 'alarm') {
-          mat.emissive.setHex(color)
+          if (mat.emissive && mat.emissive.setHex) {
+            mat.emissive.setHex(color)
+          }
           mat.emissiveIntensity = 0.5
         } else {
-          mat.emissive.setHex(0x000000)
+          if (mat.emissive && mat.emissive.setHex) {
+            mat.emissive.setHex(0x000000)
+          }
           mat.emissiveIntensity = 0
+        }
+      }
+      if (child.name === 'indicator' && child instanceof THREE.Mesh) {
+        const mat = child.material as THREE.MeshStandardMaterial
+        const lightColor = device.status === 'alarm' ? 0xff4d4f : device.status === 'offline' ? 0x434343 : device.status === 'maintenance' ? 0xfadb14 : 0x52c41a
+        if (mat.color) mat.color.setHex(lightColor)
+        if (mat.emissive) mat.emissive.setHex(lightColor)
+      }
+    })
+  }
+
+  const highlightDevice = (group: THREE.Group, highlight: boolean): void => {
+    group.traverse((child) => {
+      if (child instanceof THREE.Mesh && child.material instanceof THREE.MeshStandardMaterial) {
+        if (highlight) {
+          child.material.emissive.setHex(0x00e5ff)
+          child.material.emissiveIntensity = 0.8
+        } else {
+          const deviceStatus = group.userData.status || 'running'
+          const originalColor = STATUS_COLORS[deviceStatus]
+          child.material.emissive.setHex(deviceStatus === 'alarm' ? originalColor : 0x000000)
+          child.material.emissiveIntensity = deviceStatus === 'alarm' ? 0.5 : 0
         }
       }
     })
   }
 
-  return { createDevice, createPipes, createPumpHouseBuilding, updateDeviceStatus }
+  return { createDevice, createPipes, createPumpHouseBuilding, updateDeviceStatus, highlightDevice, clearCache }
 }

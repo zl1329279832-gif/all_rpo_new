@@ -5,7 +5,7 @@ export default [
   {
     url: '/api/doctor/list',
     method: 'get',
-    response: ({ query }: { query: { department?: string; page?: number; pageSize?: number }) => {
+    response: ({ query }: { query: { department?: string; page?: number; pageSize?: number } }) => {
       if (randomError()) {
         return errorResponse(500, '获取医生数据失败')
       }
@@ -24,7 +24,7 @@ export default [
         const deptId = departments[randomRange(0, departments.length - 1)]
         if (department !== 'all' && deptId !== department) continue
         list.push({
-          id: `doc${start + i + 1,
+          id: `doc${start + i + 1}`,
           name: firstNames[randomRange(0, 9)] + lastNames[randomRange(0, 9)],
           department: getDepartmentName(deptId),
           departmentId: deptId,
@@ -75,7 +75,7 @@ export default [
   {
     url: '/api/doctor/detail',
     method: 'get',
-    response: ({ query }: { query: { id?: string }) => {
+    response: ({ query }: { query: { id?: string } }) => {
       if (randomError()) {
         return errorResponse(500, '获取医生详情失败')
       }

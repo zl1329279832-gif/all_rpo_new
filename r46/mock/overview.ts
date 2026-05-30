@@ -54,7 +54,7 @@ export default [
         income: 5000000,
       }
 
-      return successResponse(generateTrendData(Number(days), baseValues[type] || 1000, baseValues[type] ? baseValues[type] * 0.2))
+      return successResponse(generateTrendData(Number(days), baseValues[type] || 1000, baseValues[type] ? baseValues[type] * 0.2 : 200))
     },
   },
   {
