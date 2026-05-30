@@ -4,7 +4,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { User, Lock } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores'
-import { login } from '@/api'
+import * as dataService from '@/services/dataService'
 
 const router = useRouter()
 const route = useRoute()
@@ -29,14 +29,14 @@ const handleLogin = async (formRef: any) => {
     if (valid) {
       loading.value = true
       try {
-        const result = await login(loginForm)
-        userStore.setToken(result.data.token)
-        userStore.setUserInfo(result.data.userInfo)
+        const result = dataService.login(loginForm.username, loginForm.password)
+        userStore.setUserInfo(result.userInfo)
 
         const redirect = route.query.redirect as string
         ElMessage.success('登录成功')
         router.push(redirect || '/')
-      } catch (error) {
+      } catch (error: any) {
+        ElMessage.error(error.message || '登录失败，请检查用户名和密码')
         console.error('Login failed:', error)
       } finally {
         loading.value = false

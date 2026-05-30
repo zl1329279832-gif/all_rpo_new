@@ -1,14 +1,13 @@
-import { get } from './request'
-import type { ApiResult, CoreMetrics, AlertData, TrendData } from '@/types'
+import { getCoreMetrics as _getCoreMetrics, getTrendData as _getTrendData, getOverviewAlerts as _getOverviewAlerts } from '@/services/dataService'
 
-export const getCoreMetrics = (params?: { department?: string; dateRange?: string }) => {
-  return get<ApiResult<CoreMetrics>>('/overview/metrics', params)
+export function getCoreMetrics(params?: { department?: string; dateRange?: string }) {
+  return Promise.resolve(_getCoreMetrics(params || {}))
 }
 
-export const getTrendData = (params?: { type?: string; days?: number }) => {
-  return get<ApiResult<TrendData[]>>('/overview/trend', params)
+export function getTrendData(params?: { type?: string; days?: number }) {
+  return Promise.resolve(_getTrendData(params || {}))
 }
 
-export const getOverviewAlerts = () => {
-  return get<ApiResult<AlertData[]>>('/overview/alerts')
+export function getOverviewAlerts() {
+  return Promise.resolve(_getOverviewAlerts())
 }

@@ -1,19 +1,22 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import type { UserInfo } from '@/types'
+import * as dataService from '@/services/dataService'
+import type { UserInfo } from '@/services/dataService'
 
 export const useUserStore = defineStore(
   'user',
   () => {
     const userInfo = ref<UserInfo | null>(null)
-    const token = ref<string>('')
+
+    const initUserFromStorage = () => {
+      const stored = dataService.getCurrentUser()
+      if (stored) {
+        userInfo.value = stored
+      }
+    }
 
     const setUserInfo = (info: UserInfo) => {
       userInfo.value = info
-    }
-
-    const setToken = (t: string) => {
-      token.value = t
     }
 
     const hasPermission = (permission: string): boolean => {
@@ -23,14 +26,14 @@ export const useUserStore = defineStore(
 
     const logout = () => {
       userInfo.value = null
-      token.value = ''
+      dataService.logout()
     }
+
+    initUserFromStorage()
 
     return {
       userInfo,
-      token,
       setUserInfo,
-      setToken,
       hasPermission,
       logout,
     }

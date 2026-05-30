@@ -4,12 +4,11 @@ import { useUserStore, useMenuStore } from '@/stores'
 export function setupGuards(router: Router) {
   router.beforeEach((to, from, next) => {
     const userStore = useUserStore()
-    const token = userStore.token
 
     document.title = to.meta.title ? `${to.meta.title} - 医院运营指标系统` : '医院运营指标系统'
 
     if (to.meta.requiresAuth === false) {
-      if (token && to.path === '/login') {
+      if (userStore.userInfo && to.path === '/login') {
         next('/')
       } else {
         next()
@@ -17,7 +16,7 @@ export function setupGuards(router: Router) {
       return
     }
 
-    if (!token) {
+    if (!userStore.userInfo) {
       next({
         path: '/login',
         query: { redirect: to.fullPath },

@@ -5,7 +5,7 @@ import { GOODS, getGoodById } from '../game/economy/goods'
 import { generateInitialPrices, updatePrices } from '../game/economy/pricing'
 import { pickRandomEvent, resolveEventChoice } from '../game/events'
 import { createInitialQuests, checkQuestProgress } from '../game/quests'
-import { saveGame, loadGame } from '../game/save/saveService'
+import { saveGame, loadGame, saveAutoSave, loadAutoSave } from '../game/save/saveService'
 
 const createInitialCaravan = (): CaravanState => ({
   gold: 500,
@@ -56,6 +56,16 @@ export const useGameStore = defineStore('game', {
     loadFromSlot(slot: number) {
       const saved = loadGame(slot)
       if (saved) {
+        this.$state = JSON.parse(JSON.stringify(createInitialState()))
+        Object.assign(this.$state, saved)
+        this.gameStarted = true
+      }
+    },
+
+    loadFromAutoSave() {
+      const saved = loadAutoSave()
+      if (saved) {
+        this.$state = JSON.parse(JSON.stringify(createInitialState()))
         Object.assign(this.$state, saved)
         this.gameStarted = true
       }
@@ -222,7 +232,7 @@ export const useGameStore = defineStore('game', {
         this.gameOver = true
       }
 
-      saveGame(1, this.$state)
+      saveAutoSave(this.$state)
     },
 
     upgradeGuard() {

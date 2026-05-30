@@ -1,18 +1,17 @@
-import { get } from './request'
-import type { ApiResult, CostData } from '@/types'
+import { getCostStructure as _getCostStructure, getDrugRatioTrend as _getDrugRatioTrend, getPaymentType as _getPaymentType, getCostByDepartment as _getCostByDepartment } from '@/services/dataService'
 
-export const getCostStructure = () => {
-  return get<ApiResult<CostData[]>>('/cost/structure')
+export function getCostStructure() {
+  return Promise.resolve(_getCostStructure())
 }
 
-export const getDrugRatioTrend = () => {
-  return get<ApiResult<any[]>>('/cost/drug-ratio')
+export function getDrugRatioTrend() {
+  return Promise.resolve(_getDrugRatioTrend())
 }
 
-export const getPaymentType = () => {
-  return get<ApiResult<any[]>>('/cost/payment')
+export function getPaymentType() {
+  return Promise.resolve(_getPaymentType())
 }
 
-export const getCostByDepartment = () => {
-  return get<ApiResult<any[]>>('/cost/department')
+export function getCostByDepartment() {
+  return Promise.resolve(_getCostByDepartment())
 }

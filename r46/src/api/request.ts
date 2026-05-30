@@ -14,8 +14,8 @@ const service: AxiosInstance = axios.create({
 service.interceptors.request.use(
   (config) => {
     const userStore = useUserStore()
-    if (userStore.token) {
-      config.headers.Authorization = `Bearer ${userStore.token}`
+    if (userStore.userInfo) {
+      config.headers.Authorization = `Bearer local-user`
     }
     return config
   },

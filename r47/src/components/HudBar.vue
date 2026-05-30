@@ -2,17 +2,19 @@
 import { ref } from 'vue'
 import { useGameStore } from '@/stores/gameStore'
 import { storeToRefs } from 'pinia'
-import { getSaveSlots } from '@/game/save/saveService'
+import { getSaveSlots, deleteSave } from '@/game/save/saveService'
 
 const gameStore = useGameStore()
 const { caravan } = storeToRefs(gameStore)
 
 const showSaveMenu = ref(false)
 const saveSlots = ref(getSaveSlots())
+const saveFeedback = ref('')
 
 function openSaveMenu() {
   saveSlots.value = getSaveSlots()
   showSaveMenu.value = true
+  saveFeedback.value = ''
 }
 
 function closeSaveMenu() {
@@ -22,10 +24,19 @@ function closeSaveMenu() {
 function saveToSlot(slot: number) {
   gameStore.saveToSlot(slot)
   saveSlots.value = getSaveSlots()
+  saveFeedback.value = `已保存到存档 ${slot}`
+  setTimeout(() => { saveFeedback.value = '' }, 2000)
+}
+
+function deleteSlot(slot: number) {
+  deleteSave(slot)
+  saveSlots.value = getSaveSlots()
 }
 
 function quickSave() {
   gameStore.saveToSlot(1)
+  saveFeedback.value = '已快速保存到存档 1'
+  setTimeout(() => { saveFeedback.value = '' }, 2000)
 }
 </script>
 
@@ -65,10 +76,11 @@ function quickSave() {
         </span>
       </div>
       <div class="flex items-center gap-2 ml-4">
+        <span v-if="saveFeedback" class="text-green-400 text-sm font-bold">{{ saveFeedback }}</span>
         <button
           @click="quickSave"
           class="px-3 py-1 bg-amber-gold/30 hover:bg-amber-gold/50 rounded text-sm font-bold transition-colors border border-amber-gold/50"
-          title="快速存档"
+          title="快速存档到槽位1"
         >
           💾 保存
         </button>
@@ -89,25 +101,43 @@ function quickSave() {
       class="fixed inset-0 bg-black/70 flex items-center justify-center z-50"
       @click.self="closeSaveMenu"
     >
-      <div class="bg-sand-dark text-sand-light p-6 rounded-xl border-2 border-amber-gold shadow-2xl w-80">
-        <h2 class="text-xl font-bold text-amber-gold font-cinzel text-center mb-4">
-          💾 存档管理
+      <div class="bg-sand-dark text-sand-light p-6 rounded-xl border-2 border-amber-gold shadow-2xl w-96">
+        <h2 class="text-xl font-bold text-amber-gold font-cinzel text-center mb-2">
+          📂 存档管理
         </h2>
+        <p class="text-xs text-center opacity-50 mb-4">点击「保存」写入当前进度 | 点击「删除」清除存档</p>
 
         <div class="space-y-2">
-          <button
+          <div
             v-for="slot in saveSlots"
             :key="slot.slot"
-            @click="saveToSlot(slot.slot)"
-            class="w-full p-3 bg-sand-light/5 hover:bg-sand-light/15 border border-amber-gold/30 rounded-lg transition-all text-left"
+            class="p-3 bg-sand-light/5 border border-amber-gold/30 rounded-lg text-left"
           >
-            <div class="font-bold">存档 {{ slot.slot }}</div>
-            <div v-if="slot.exists" class="text-sm opacity-70">
-              第 {{ slot.day }} 天 | {{ slot.gold }} 金币
-              <span class="text-amber-gold/70 ml-2">(点击覆盖)</span>
+            <div class="flex items-center justify-between">
+              <div>
+                <div class="font-bold">存档 {{ slot.slot }}</div>
+                <div v-if="slot.exists" class="text-sm opacity-70 mt-1">
+                  第 {{ slot.day }} 天 | {{ slot.gold }} 金币
+                </div>
+                <div v-else class="text-sm opacity-50 mt-1">空存档</div>
+              </div>
+              <div class="flex gap-2">
+                <button
+                  @click="saveToSlot(slot.slot)"
+                  class="px-3 py-1 bg-amber-gold/30 hover:bg-amber-gold/50 rounded text-xs font-bold transition-colors border border-amber-gold/50"
+                >
+                  {{ slot.exists ? '覆盖' : '保存' }}
+                </button>
+                <button
+                  v-if="slot.exists"
+                  @click="deleteSlot(slot.slot)"
+                  class="px-3 py-1 bg-red-900/30 hover:bg-red-900/50 rounded text-xs font-bold transition-colors border border-red-500/30"
+                >
+                  删除
+                </button>
+              </div>
             </div>
-            <div v-else class="text-sm opacity-50">空存档 - 点击保存</div>
-          </button>
+          </div>
         </div>
 
         <button

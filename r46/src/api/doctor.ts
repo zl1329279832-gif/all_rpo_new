@@ -1,14 +1,13 @@
-import { get } from './request'
-import type { ApiResult, DoctorData, PageResult } from '@/types'
+import { getDoctorList as _getDoctorList, getDoctorRank as _getDoctorRank, getDoctorDetail as _getDoctorDetail } from '@/services/dataService'
 
-export const getDoctorList = (params?: { department?: string; page?: number; pageSize?: number }) => {
-  return get<ApiResult<PageResult<DoctorData>>>('/doctor/list', params)
+export function getDoctorList(params?: { department?: string; page?: number; pageSize?: number }) {
+  return Promise.resolve(_getDoctorList(params || {}))
 }
 
-export const getDoctorRank = () => {
-  return get<ApiResult<any[]>>('/doctor/rank')
+export function getDoctorRank() {
+  return Promise.resolve(_getDoctorRank())
 }
 
-export const getDoctorDetail = (params: { id: string }) => {
-  return get<ApiResult<any>>('/doctor/detail', params)
+export function getDoctorDetail(params: { id: string }) {
+  return Promise.resolve(_getDoctorDetail(params))
 }

@@ -144,8 +144,63 @@ npm run preview
 ### 类型检查
 
 ```bash
-npm run type-check
+npm run check
 ```
+
+### Docker 一键部署（推荐）
+
+系统已配置完整的 Docker 支持，无需安装 Node.js 环境即可运行。
+
+#### 方式一：使用 docker-compose（最简单）
+
+```bash
+# 构建并启动容器
+docker-compose up -d
+
+# 访问: http://localhost:8080
+
+# 查看日志
+docker-compose logs -f
+
+# 停止容器
+docker-compose down
+```
+
+#### 方式二：使用 docker build & run
+
+```bash
+# 构建镜像
+docker build -t water-pump-monitor .
+
+# 启动容器
+docker run -d -p 8080:80 --name water-pump-monitor --restart unless-stopped water-pump-monitor
+
+# 访问: http://localhost:8080
+
+# 查看容器状态
+docker ps
+
+# 查看日志
+docker logs -f water-pump-monitor
+
+# 停止容器
+docker stop water-pump-monitor
+```
+
+#### Docker 常用命令
+
+| 命令 | 说明 |
+|------|------|
+| `docker-compose up -d` | 后台启动服务 |
+| `docker-compose down` | 停止并删除服务 |
+| `docker-compose restart` | 重启服务 |
+| `docker-compose logs -f` | 实时查看日志 |
+| `docker ps` | 查看运行中的容器 |
+| `docker stop water-pump-monitor` | 停止容器 |
+| `docker rm water-pump-monitor` | 删除容器 |
+| `docker rmi water-pump-monitor` | 删除镜像 |
+
+> **提示**：首次构建会下载 Node.js 和 Nginx 镜像，需要几分钟。后续构建会使用缓存，速度很快。
 
 ## 使用说明
 

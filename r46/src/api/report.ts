@@ -1,5 +1,11 @@
-import { get, post } from './request'
-import type { ApiResult, ReportData, PageResult } from '@/types'
+import {
+  getReportList as _getReportList,
+  getReportSummary as _getReportSummary,
+  exportReport as _exportReport,
+  getReportHistory as _getReportHistory,
+  toggleFavorite as _toggleFavorite,
+  generateReport as _generateReport,
+} from '@/services/dataService'
 
 export interface ReportHistoryItem {
   id: string
@@ -11,7 +17,7 @@ export interface ReportHistoryItem {
   isFavorite: boolean
 }
 
-export const getReportList = (params?: {
+export function getReportList(params?: {
   type?: string
   department?: string
   startDate?: string
@@ -20,18 +26,15 @@ export const getReportList = (params?: {
   metrics?: string[]
   page?: number
   pageSize?: number
-}) => {
-  return get<ApiResult<PageResult<ReportData>>>('/report/list', params)
+}) {
+  return Promise.resolve(_getReportList(params || {}))
 }
 
-export const getReportHistory = (params?: {
-  page?: number
-  pageSize?: number
-}) => {
-  return get<ApiResult<PageResult<ReportHistoryItem>>>('/report/history', params)
+export function getReportSummary() {
+  return Promise.resolve(_getReportSummary())
 }
 
-export const exportReport = (params?: {
+export function exportReport(params?: {
   ids?: string[]
   format?: string
   type?: string
@@ -40,17 +43,21 @@ export const exportReport = (params?: {
   endDate?: string
   period?: string
   metrics?: string[]
-}) => {
-  return post<ApiResult<{ downloadUrl: string; filename: string; totalCount: number; format: string }>>(
-    '/report/export',
-    params
-  )
+}) {
+  return Promise.resolve(_exportReport(params || {}))
 }
 
-export const toggleFavorite = (params: { id: string; isFavorite: boolean }) => {
-  return post<ApiResult<any>>('/report/favorite', params)
+export function getReportHistory(params?: {
+  page?: number
+  pageSize?: number
+}) {
+  return Promise.resolve(_getReportHistory(params))
 }
 
-export const getReportSummary = () => {
-  return get<ApiResult<any>>('/report/summary')
+export function toggleFavorite(params: { id: string; isFavorite: boolean }) {
+  return Promise.resolve(_toggleFavorite(params))
+}
+
+export function generateReport(params: { type: string; period: string; departments: string[] }) {
+  return Promise.resolve(_generateReport(params))
 }

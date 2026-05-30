@@ -1,18 +1,20 @@
-import { get } from './request'
-import type { ApiResult, DepartmentData, PageResult } from '@/types'
+import { getDepartmentList as _getDepartmentList, getDepartmentRank as _getDepartmentRank, getDepartmentDetail as _getDepartmentDetail } from '@/services/dataService'
 
-export const getDepartmentList = (params?: { dateRange?: string; department?: string; page?: number; pageSize?: number }) => {
-  return get<ApiResult<PageResult<DepartmentData>>>('/department/list', params)
+export function getDepartmentList(params?: { dateRange?: string; department?: string; page?: number; pageSize?: number }) {
+  return Promise.resolve(_getDepartmentList(params || {}))
 }
 
-export const getDepartmentRank = () => {
-  return get<ApiResult<DepartmentData[]>>('/department/rank')
+export function getDepartmentRank() {
+  return Promise.resolve(_getDepartmentRank())
 }
 
-export const getDepartmentDetail = (params: { id: string }) => {
-  return get<ApiResult<DepartmentData>>('/department/detail', params)
-}
-
-export const getDepartmentTrend = () => {
-  return get<ApiResult<any[]>>('/department/trend')
+export function getDepartmentDetail(params: { id: string }) {
+  const result = _getDepartmentDetail(params)
+  return Promise.resolve({
+    ...result,
+    data: {
+      ...result.data,
+      rank: 1,
+    },
+  })
 }

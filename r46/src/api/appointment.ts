@@ -1,5 +1,11 @@
-import { get } from './request'
-import type { ApiResult, AppointmentTrend, PageResult } from '@/types'
+import {
+  getAppointmentTrend as _getAppointmentTrend,
+  getWaitingTime as _getWaitingTime,
+  getAppointmentByDepartment as _getAppointmentByDepartment,
+  getExaminationAppointment as _getExaminationAppointment,
+  getAppointmentList as _getAppointmentList,
+  getAppointmentOverview as _getAppointmentOverview,
+} from '@/services/dataService'
 
 export interface AppointmentListItem {
   id: string
@@ -14,38 +20,66 @@ export interface AppointmentListItem {
   remark?: string
 }
 
-export const getAppointmentList = (params?: {
+export function getAppointmentTrend() {
+  return Promise.resolve(_getAppointmentTrend())
+}
+
+export function getWaitingTime() {
+  const result = _getWaitingTime()
+  const avgWaitingTime = result.data.reduce((sum: number, item: any) => sum + item.avgWaitingTime, 0) / result.data.length
+  const maxWaitingTime = Math.max(...result.data.map((item: any) => item.maxWaitingTime))
+  return Promise.resolve({
+    ...result,
+    data: {
+      avgWaitingTime,
+      maxWaitingTime,
+      minWaitingTime: Math.floor(avgWaitingTime * 0.5),
+    },
+  })
+}
+
+export function getAppointmentByDepartment() {
+  const result = _getAppointmentByDepartment()
+  return Promise.resolve({
+    ...result,
+    data: result.data.map((item: any) => ({
+      department: item.department,
+      count: item.totalAppointments,
+    })),
+  })
+}
+
+export function getExaminationAppointment() {
+  const result = _getExaminationAppointment()
+  return Promise.resolve({
+    ...result,
+    data: result.data.map((item: any) => ({
+      name: item.type,
+      value: item.count,
+    })),
+  })
+}
+
+export function getAppointmentList(params?: {
   status?: string
   department?: string
   startDate?: string
   endDate?: string
   page?: number
   pageSize?: number
-}) => {
-  return get<ApiResult<PageResult<AppointmentListItem>>>('/appointment/list', params)
+}) {
+  return Promise.resolve(_getAppointmentList(params || {}))
 }
 
-export const getAppointmentTrend = () => {
-  return get<ApiResult<AppointmentTrend[]>>('/appointment/trend')
-}
-
-export const getWaitingTime = () => {
-  return get<ApiResult<{ avgWaitingTime: number; maxWaitingTime: number; minWaitingTime: number }>>('/appointment/waiting-time')
-}
-
-export const getAppointmentByDepartment = () => {
-  return get<ApiResult<{ department: string; count: number }[]>>('/appointment/department')
-}
-
-export const getExaminationAppointment = () => {
-  return get<ApiResult<{ name: string; value: number }[]>>('/appointment/examination')
-}
-
-export const getAppointmentOverview = () => {
-  return get<ApiResult<{
-    todayCount: number
-    pendingCount: number
-    completedCount: number
-    cancelledCount: number
-  }>>('/appointment/overview')
+export function getAppointmentOverview() {
+  const result = _getAppointmentOverview()
+  return Promise.resolve({
+    ...result,
+    data: {
+      todayCount: result.data.today,
+      pendingCount: result.data.pending,
+      completedCount: result.data.completed,
+      cancelledCount: result.data.cancelled,
+    },
+  })
 }

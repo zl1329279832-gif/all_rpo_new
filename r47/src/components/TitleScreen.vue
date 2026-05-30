@@ -1,27 +1,51 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useGameStore } from '@/stores/gameStore'
-import { hasSave, getSaveSlots } from '@/game/save/saveService'
+import { hasAnySave, hasAutoSave, getSaveSlots, getAutoSaveInfo } from '@/game/save/saveService'
 
 const gameStore = useGameStore()
 
 const showLoadMenu = ref(false)
 const saveSlots = ref<Array<{ slot: number; exists: boolean; day: number; gold: number }>>([])
+const autoSaveInfo = ref<{ exists: boolean; day: number; gold: number }>({ exists: false, day: 0, gold: 0 })
+const canContinue = ref(false)
 
 onMounted(() => {
-  saveSlots.value = getSaveSlots()
+  refreshSaveInfo()
 })
+
+function refreshSaveInfo() {
+  saveSlots.value = getSaveSlots()
+  autoSaveInfo.value = getAutoSaveInfo()
+  canContinue.value = hasAnySave()
+}
 
 function startNewGame() {
   gameStore.startNewGame()
+}
+
+function continueGame() {
+  if (hasAutoSave()) {
+    gameStore.loadFromAutoSave()
+  } else {
+    const slots = getSaveSlots()
+    const latest = slots.filter((s) => s.exists).reduce((a, b) => (a.day > b.day ? a : b), slots[0])
+    if (latest && latest.exists) {
+      gameStore.loadFromSlot(latest.slot)
+    }
+  }
 }
 
 function loadGame(slot: number) {
   gameStore.loadFromSlot(slot)
 }
 
+function loadAutoSaveGame() {
+  gameStore.loadFromAutoSave()
+}
+
 function openLoadMenu() {
-  saveSlots.value = getSaveSlots()
+  refreshSaveInfo()
   showLoadMenu.value = true
 }
 
@@ -53,11 +77,18 @@ function closeLoadMenu() {
         </button>
 
         <button
-          @click="openLoadMenu"
-          :disabled="!saveSlots.some((s) => s.exists)"
+          @click="continueGame"
+          :disabled="!canContinue"
           class="block w-72 mx-auto py-4 px-8 bg-sand-light/10 hover:bg-sand-light/20 text-sand-light text-xl font-bold rounded-lg border-2 border-amber-gold/50 transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed font-cinzel"
         >
           💾 继续游戏
+        </button>
+
+        <button
+          @click="openLoadMenu"
+          class="block w-72 mx-auto py-3 px-8 bg-sand-light/5 hover:bg-sand-light/10 text-sand-light/70 text-lg font-bold rounded-lg border border-amber-gold/30 transition-all font-cinzel"
+        >
+          📂 读取存档
         </button>
       </div>
 
@@ -75,10 +106,21 @@ function closeLoadMenu() {
       >
         <div class="bg-sand-dark text-sand-light p-8 rounded-xl border-2 border-amber-gold shadow-2xl w-96">
           <h2 class="text-2xl font-bold text-amber-gold font-cinzel text-center mb-6">
-            💾 选择存档
+            📂 读取存档
           </h2>
 
           <div class="space-y-3">
+            <button
+              v-if="autoSaveInfo.exists"
+              @click="loadAutoSaveGame()"
+              class="w-full p-4 bg-green-900/30 hover:bg-green-900/50 border border-green-500/50 rounded-lg transition-all text-left"
+            >
+              <div class="font-bold text-green-400">🔄 自动存档</div>
+              <div class="text-sm opacity-70 mt-1">
+                第 {{ autoSaveInfo.day }} 天 | {{ autoSaveInfo.gold }} 金币
+              </div>
+            </button>
+
             <button
               v-for="slot in saveSlots"
               :key="slot.slot"
