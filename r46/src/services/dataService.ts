@@ -323,13 +323,14 @@ function generateExamData() {
 function generateReportData(page: number, pageSize: number, department: string = 'all') {
   const departments = ['internal', 'surgery', 'gynecology', 'pediatrics', 'ophthalmology', 'ent', 'dermatology', 'neurology', 'cardiology', 'respiratory', 'gastroenterology', 'orthopedics', 'icu', 'emergency']
 
+  const targetDepts = department !== 'all' ? [department] : departments
+
   const list = []
   const start = (page - 1) * pageSize
   const today = new Date()
 
   for (let i = 0; i < pageSize; i++) {
-    const deptId = departments[randomRange(0, departments.length - 1)]
-    if (department !== 'all' && deptId !== department) continue
+    const deptId = targetDepts[randomRange(0, targetDepts.length - 1)]
 
     const date = new Date(today)
     date.setDate(date.getDate() - randomRange(0, 30))
@@ -352,7 +353,7 @@ function generateReportData(page: number, pageSize: number, department: string =
 
   return {
     list,
-    total: 365,
+    total: department !== 'all' ? pageSize * 10 : 365,
     page: Number(page),
     pageSize: Number(pageSize),
   }
@@ -682,7 +683,7 @@ export function getExaminationAppointment() {
   return { code: 200, message: 'success', data }
 }
 
-export function getAppointmentList(params: { department?: string; dateRange?: string; page?: number; pageSize?: number }) {
+export function getAppointmentList(params: { department?: string; status?: string; dateRange?: string; page?: number; pageSize?: number }) {
   const { page = 1, pageSize = 10 } = params
   const statuses = ['pending', 'confirmed', 'completed', 'cancelled', 'no_show']
   const statusLabels: Record<string, string> = {
@@ -693,17 +694,28 @@ export function getAppointmentList(params: { department?: string; dateRange?: st
     no_show: '未到诊',
   }
 
+  let deptName = ''
+  if (params.department && params.department !== 'all') {
+    const dept = DEPARTMENTS.find((d) => d.id === params.department)
+    if (dept) {
+      deptName = dept.name
+    }
+  }
+
   const list = []
   const start = (page - 1) * pageSize
   const firstNames = ['张', '李', '王', '刘', '陈', '杨', '黄', '赵', '周', '吴']
   const lastNames = ['伟', '芳', '娜', '敏', '静', '强', '磊', '洋', '勇', '艳']
   const depts = ['内科', '外科', '妇产科', '儿科', '骨科', '眼科']
+  const totalCount = 500
+  const allList = []
 
-  for (let i = 0; i < pageSize; i++) {
+  for (let i = 0; i < totalCount; i++) {
     const status = statuses[randomRange(0, 4)]
-    list.push({
-      id: `apt${start + i + 1}`,
+    allList.push({
+      id: `apt${i + 1}`,
       patientName: firstNames[randomRange(0, 9)] + lastNames[randomRange(0, 9)],
+      phone: '1' + String(randomRange(3000000000, 9999999999)),
       department: depts[randomRange(0, 5)],
       doctor: firstNames[randomRange(0, 9)] + '医生',
       appointmentTime: formatDate(new Date(Date.now() - randomRange(0, 86400000 * 7))),
@@ -714,12 +726,23 @@ export function getAppointmentList(params: { department?: string; dateRange?: st
     })
   }
 
+  let filteredList = allList
+  if (deptName) {
+    filteredList = filteredList.filter((item) => item.department === deptName)
+  }
+  if (params.status) {
+    filteredList = filteredList.filter((item) => item.status === params.status)
+  }
+
+  const filteredTotal = filteredList.length
+  const paginatedList = filteredList.slice(start, start + pageSize)
+
   return {
     code: 200,
     message: 'success',
     data: {
-      list,
-      total: 500,
+      list: paginatedList,
+      total: filteredTotal,
       page: Number(page),
       pageSize: Number(pageSize),
       pending: randomRange(30, 80),
@@ -730,8 +753,8 @@ export function getAppointmentList(params: { department?: string; dateRange?: st
   }
 }
 
-export function getAlertList(params: { level?: string; status?: string; page?: number; pageSize?: number }) {
-  const { level = '', status = '', page = 1, pageSize = 10 } = params
+export function getAlertList(params: { level?: string; status?: string; type?: string; page?: number; pageSize?: number }) {
+  const { level = '', status = '', type = '', page = 1, pageSize = 10 } = params
   let data = generateAlertData(50)
 
   if (level) {
@@ -740,6 +763,10 @@ export function getAlertList(params: { level?: string; status?: string; page?: n
 
   if (status) {
     data = data.filter((item) => item.status === status)
+  }
+
+  if (type) {
+    data = data.filter((item) => item.type === type)
   }
 
   const total = data.length
@@ -758,6 +785,8 @@ export function getAlertList(params: { level?: string; status?: string; page?: n
       mediumCount: data.filter((d) => d.level === 'medium').length,
       lowCount: data.filter((d) => d.level === 'low').length,
       pendingCount: data.filter((d) => d.status === 'pending').length,
+      processingCount: data.filter((d) => d.status === 'processing').length,
+      resolvedCount: data.filter((d) => d.status === 'resolved').length,
     },
   }
 }

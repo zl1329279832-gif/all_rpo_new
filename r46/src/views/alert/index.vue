@@ -76,11 +76,12 @@ const statusOptions = [
 ]
 
 const typeOptions = [
-  { value: 'bed_occupancy', label: '床位使用率' },
-  { value: 'drug_ratio', label: '药占比' },
-  { value: 'waiting_time', label: '候诊时间' },
-  { value: 'patient_satisfaction', label: '患者满意度' },
-  { value: 'medical_quality', label: '医疗质量' },
+  { value: '床位使用率过高', label: '床位使用率' },
+  { value: '药占比超标', label: '药占比' },
+  { value: '门诊量下降', label: '门诊量' },
+  { value: '收入下降', label: '收入' },
+  { value: '候诊时间过长', label: '候诊时间' },
+  { value: '患者满意度低', label: '满意度' },
 ]
 
 const metricConfigs: { key: string; label: string; unit: 'number' | 'percent' | 'money' | 'time'; color: string }[] = [

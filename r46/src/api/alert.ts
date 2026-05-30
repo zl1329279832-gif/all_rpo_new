@@ -30,8 +30,8 @@ export function getAlertList(params?: {
     ...result,
     data: {
       ...result.data,
-      processingCount: 0,
-      resolvedCount: result.data.total - result.data.pendingCount,
+      processingCount: result.data.processingCount,
+      resolvedCount: result.data.resolvedCount,
     },
   })
 }

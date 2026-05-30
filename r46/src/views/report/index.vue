@@ -242,6 +242,14 @@ const handleToggleFavorite = async (item: ReportHistoryItem) => {
   }
 }
 
+const handleViewDetail = (row: any) => {
+  const details = Object.entries(columnLabels)
+    .filter(([key]) => key in row)
+    .map(([key, label]) => `${label}：${key === 'income' ? formatMoney(row[key]) : key === 'drugRatio' || key === 'bedOccupancyRate' ? formatPercent(row[key]) : key === 'avgWaitingTime' ? `${row[key]}分钟` : row[key]}`)
+    .join('\n')
+  ElMessageBox.alert(details, '报表详情', { confirmButtonText: '确定' })
+}
+
 const getReportTypeName = (type: string) => {
   const option = reportTypeOptions.find((o) => o.value === type)
   return option?.label || type
@@ -331,7 +339,7 @@ onMounted(() => {
 
         <el-form :inline="true" class="filter-form" size="default">
           <el-form-item label="报表周期">
-            <el-select v-model="reportForm.period" style="width: 120px">
+            <el-select v-model="reportForm.period" style="width: 120px" @change="handleQuery">
               <el-option
                 v-for="item in periodOptions"
                 :key="item.value"
@@ -491,7 +499,7 @@ onMounted(() => {
                     </el-icon>
                     {{ row.isFavorite ? '取消收藏' : '收藏' }}
                   </el-button>
-                  <el-button type="primary" link size="small">
+                  <el-button type="primary" link size="small" @click="handleViewDetail(row)">
                     查看详情
                   </el-button>
                 </template>

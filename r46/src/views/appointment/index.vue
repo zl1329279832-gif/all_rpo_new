@@ -21,6 +21,7 @@ import PieChart from '@/components/charts/PieChart.vue'
 import BarChart from '@/components/charts/BarChart.vue'
 import GaugeChart from '@/components/charts/GaugeChart.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
+import DetailDrawer from '@/components/common/DetailDrawer.vue'
 
 const filterStore = useFilterStore()
 const { exportAll, exporting } = useExport()
@@ -41,6 +42,8 @@ const deptData = ref<{ department: string; count: number }[]>([])
 const examData = ref<{ name: string; value: number }[]>([])
 const appointmentList = ref<AppointmentListItem[]>([])
 const total = ref(0)
+const detailVisible = ref(false)
+const selectedAppointment = ref<AppointmentListItem | null>(null)
 
 const filterForm = reactive({
   status: '',
@@ -179,6 +182,11 @@ const exportColumns = [
   },
   { key: 'createTime', title: '创建时间' },
 ]
+
+const handleViewDetail = (row: AppointmentListItem) => {
+  selectedAppointment.value = row
+  detailVisible.value = true
+}
 
 const handleExport = () => {
   exportAll(appointmentList.value, exportColumns, `预约列表_${new Date().toISOString().slice(0, 10)}.xlsx`)
@@ -377,7 +385,7 @@ onMounted(() => {
           </el-table-column>
           <el-table-column label="操作" min-width="100" fixed="right">
             <template #default="{ row }">
-              <el-button type="primary" link size="small">查看详情</el-button>
+              <el-button type="primary" link size="small" @click="handleViewDetail(row)">查看详情</el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -395,6 +403,47 @@ onMounted(() => {
         </div>
       </div>
     </div>
+
+    <DetailDrawer v-model="detailVisible" title="预约详情" size="default">
+      <div v-if="selectedAppointment" class="appointment-detail">
+        <div class="detail-section">
+          <div class="detail-item">
+            <label>患者姓名</label>
+            <span>{{ selectedAppointment.patientName }}</span>
+          </div>
+          <div class="detail-item">
+            <label>联系电话</label>
+            <span>{{ selectedAppointment.phone }}</span>
+          </div>
+          <div class="detail-item">
+            <label>科室</label>
+            <span>{{ selectedAppointment.department }}</span>
+          </div>
+          <div class="detail-item">
+            <label>医生</label>
+            <span>{{ selectedAppointment.doctor }}</span>
+          </div>
+          <div class="detail-item">
+            <label>预约时间</label>
+            <span>{{ selectedAppointment.appointmentTime }}</span>
+          </div>
+          <div class="detail-item">
+            <label>预约类型</label>
+            <span>{{ selectedAppointment.type }}</span>
+          </div>
+          <div class="detail-item">
+            <label>状态</label>
+            <el-tag :type="getStatusTagType(selectedAppointment.status)" size="small">
+              {{ getStatusText(selectedAppointment.status) }}
+            </el-tag>
+          </div>
+          <div class="detail-item">
+            <label>创建时间</label>
+            <span>{{ selectedAppointment.createTime }}</span>
+          </div>
+        </div>
+      </div>
+    </DetailDrawer>
   </div>
 </template>
 
@@ -461,5 +510,33 @@ onMounted(() => {
   .charts-row {
     grid-template-columns: 1fr;
   }
+}
+
+.appointment-detail {
+  padding: var(--spacing-sm);
+}
+
+.detail-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.detail-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.detail-item label {
+  flex-shrink: 0;
+  width: 80px;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.detail-item span {
+  color: var(--color-text-primary);
+  font-size: var(--font-size-base);
 }
 </style>

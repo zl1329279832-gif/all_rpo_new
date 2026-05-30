@@ -76,7 +76,7 @@ const getMetricValue = (valueKey: string): number => {
 const filteredBedList = computed(() => {
   return bedList.value.filter((bed) => {
     const statusMatch = statusFilter.value === 'all' || bed.status === statusFilter.value
-    const deptMatch = departmentFilter.value === 'all' || bed.department === departmentFilter.value
+    const deptMatch = departmentFilter.value === 'all' || bed.department === getDepartmentName(departmentFilter.value)
     return statusMatch && deptMatch
   })
 })
@@ -255,7 +255,7 @@ onMounted(() => {
                 </el-tag>
               </div>
               <div class="bed-ward">{{ bed.ward }}</div>
-              <div class="bed-dept">{{ getDepartmentName(bed.department) }}</div>
+              <div class="bed-dept">{{ bed.department }}</div>
               <div v-if="bed.patientName" class="bed-patient">
                 <el-icon :size="14"><User /></el-icon>
                 {{ bed.patientName }}
@@ -285,7 +285,7 @@ onMounted(() => {
           </div>
           <div class="detail-item">
             <label>所属科室</label>
-            <span>{{ getDepartmentName(selectedBed.department) }}</span>
+            <span>{{ selectedBed.department }}</span>
           </div>
           <div class="detail-item">
             <label>床位状态</label>
