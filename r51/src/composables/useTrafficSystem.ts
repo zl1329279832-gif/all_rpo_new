@@ -151,6 +151,7 @@ export function useTrafficSystem(scene: THREE.Scene, curves: Map<string, ThreeCu
     );
 
     mesh.group.position.copy(position);
+    mesh.group.position.y = curve.getPointAt(vehicleData.progress).y + 0.1;
 
     const angle = Math.atan2(tangent.x, tangent.z);
     mesh.group.rotation.y = angle;

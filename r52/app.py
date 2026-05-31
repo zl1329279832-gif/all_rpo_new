@@ -18,7 +18,8 @@ from io import BytesIO
 import tempfile
 
 import streamlit as st
-import stpyvista as stpv
+import streamlit.components.v1 as stc
+import panel as pn
 
 from volcano_vis import (
     VolcanoDataGenerator,
@@ -54,14 +55,26 @@ def get_or_create_data(params):
 
 def show_plotter(plotter, height=600):
     try:
-        stpv.stpyvista(plotter, height=height)
+        vtk_pane = pn.pane.VTK(plotter.ren_win, width=900, height=height)
+        html_path = os.path.join(tempfile.gettempdir(), f"volcano_3d_{id(plotter)}.html")
+        vtk_pane.save(html_path)
+        with open(html_path, "r", encoding="utf-8") as f:
+            html_content = f.read()
+        try:
+            os.unlink(html_path)
+        except OSError:
+            pass
+        stc.html(html_content, height=height + 20, scrolling=False)
     except Exception:
-        img = plotter.screenshot(return_img=True, window_size=(1200, height))
-        st.image(img, use_column_width=True)
+        try:
+            img = plotter.screenshot(return_img=True, window_size=(1200, height))
+            st.image(img, width=None)
+        except Exception as e2:
+            st.warning(f"3D rendering failed: {e2}")
 
 
 def render_external_view(dataset, meshes, material_mapper, scalar_field, show_lava, show_magma, show_faults, show_layers):
-    plotter = pv.Plotter(off_screen=True, window_size=(1200, 800))
+    plotter = pv.Plotter(window_size=(1200, 800))
     plotter.set_background("white")
 
     cmap_map = {
@@ -151,7 +164,7 @@ def render_external_view(dataset, meshes, material_mapper, scalar_field, show_la
 
 
 def render_cross_section_view(dataset, meshes, material_mapper, clip_angle, show_magma, show_faults, show_layers):
-    plotter = pv.Plotter(off_screen=True, window_size=(1200, 800))
+    plotter = pv.Plotter(window_size=(1200, 800))
     plotter.set_background("white")
 
     normal = np.array([np.cos(clip_angle), np.sin(clip_angle), 0.0])
@@ -248,7 +261,7 @@ def render_cross_section_view(dataset, meshes, material_mapper, clip_angle, show
 
 
 def render_hazard_view(dataset, meshes, material_mapper, show_lava):
-    plotter = pv.Plotter(off_screen=True, window_size=(1200, 800))
+    plotter = pv.Plotter(window_size=(1200, 800))
     plotter.set_background("white")
 
     plotter.add_mesh(
@@ -288,7 +301,7 @@ def render_hazard_view(dataset, meshes, material_mapper, show_lava):
 
 
 def render_temperature_view(dataset, meshes, material_mapper, show_magma):
-    plotter = pv.Plotter(off_screen=True, window_size=(1200, 800))
+    plotter = pv.Plotter(window_size=(1200, 800))
     plotter.set_background("white")
 
     plotter.add_mesh(

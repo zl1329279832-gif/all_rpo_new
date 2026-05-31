@@ -250,7 +250,7 @@ export class BuildingComponents {
     const roofGeo = new THREE.ExtrudeGeometry(roofShape, extrudeSettings)
     const roof = new THREE.Mesh(roofGeo, MaterialLibrary.greyTileRoof)
     roof.rotation.y = -Math.PI / 2
-    roof.position.set(-roofWidth / 2, eaveY, 0)
+    roof.position.set(roofWidth / 2, eaveY, -roofDepth / 2)
     roof.castShadow = true
     roof.receiveShadow = true
     group.add(roof)
@@ -417,7 +417,7 @@ export class BuildingComponents {
     const roofGeo = new THREE.ExtrudeGeometry(roofShape, extrudeSettings)
     const roof = new THREE.Mesh(roofGeo, MaterialLibrary.greyTileRoof)
     roof.rotation.y = -Math.PI / 2
-    roof.position.set(-roofWidth / 2, eaveY, 0)
+    roof.position.set(roofWidth / 2, eaveY, -roofDepth / 2)
     roof.castShadow = true
     roof.receiveShadow = true
     group.add(roof)
@@ -529,7 +529,7 @@ export class BuildingComponents {
     const roofGeo = new THREE.ExtrudeGeometry(roofShape, extrudeSettings)
     const roof = new THREE.Mesh(roofGeo, MaterialLibrary.greyTileRoof)
     roof.rotation.y = -Math.PI / 2
-    roof.position.set(-roofWidth / 2, baseY, 0)
+    roof.position.set(roofWidth / 2, baseY, -roofDepth / 2)
     roof.castShadow = true
     roof.receiveShadow = true
     group.add(roof)

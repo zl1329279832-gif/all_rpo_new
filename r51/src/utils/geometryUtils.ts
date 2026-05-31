@@ -120,6 +120,84 @@ export function createCurbGeometry(
   return group;
 }
 
+export function createTaperedRoadGeometry(
+  leftEdge: THREE.Vector3[],
+  rightEdge: THREE.Vector3[],
+  thickness: number = 0.8,
+  taperRatio: number = 0.12
+): THREE.BufferGeometry {
+  const vertices: number[] = [];
+  const uvs: number[] = [];
+  const indices: number[] = [];
+  const n = leftEdge.length;
+  const segmentCount = n - 1;
+  const taperCount = Math.floor(segmentCount * taperRatio);
+
+  for (let i = 0; i < n; i++) {
+    const center = new THREE.Vector3().addVectors(leftEdge[i], rightEdge[i]).multiplyScalar(0.5);
+    let widthFactor = 1;
+
+    if (i < taperCount) {
+      const t = i / taperCount;
+      widthFactor = t * t * (3 - 2 * t);
+    } else if (i > n - 1 - taperCount) {
+      const t = (n - 1 - i) / taperCount;
+      widthFactor = t * t * (3 - 2 * t);
+    }
+
+    const left = new THREE.Vector3().lerpVectors(center, leftEdge[i], widthFactor);
+    const right = new THREE.Vector3().lerpVectors(center, rightEdge[i], widthFactor);
+
+    const vCoord = i / segmentCount;
+    const topOffset = 0;
+    const bottomOffset = -thickness * widthFactor;
+
+    vertices.push(left.x, left.y + topOffset, left.z);
+    vertices.push(right.x, right.y + topOffset, right.z);
+    vertices.push(left.x, left.y + bottomOffset, left.z);
+    vertices.push(right.x, right.y + bottomOffset, right.z);
+
+    uvs.push(0, vCoord * 50);
+    uvs.push(1, vCoord * 50);
+    uvs.push(0, vCoord * 50);
+    uvs.push(1, vCoord * 50);
+  }
+
+  for (let i = 0; i < segmentCount; i++) {
+    const base = i * 4;
+    const nextBase = (i + 1) * 4;
+
+    const isCollapsed = i < taperCount - 1 || i > n - 1 - taperCount + 1;
+    const isNextCollapsed = (i + 1) < taperCount - 1 || (i + 1) > n - 1 - taperCount + 1;
+
+    if (isCollapsed && isNextCollapsed) continue;
+
+    if (!isCollapsed) {
+      indices.push(base, base + 1, nextBase);
+      indices.push(base + 1, nextBase + 1, nextBase);
+    }
+
+    if (!isCollapsed && !isNextCollapsed) {
+      indices.push(base + 2, nextBase + 2, base + 3);
+      indices.push(base + 3, nextBase + 2, nextBase + 3);
+
+      indices.push(base, nextBase, base + 2);
+      indices.push(base + 2, nextBase, nextBase + 2);
+
+      indices.push(base + 1, base + 3, nextBase + 1);
+      indices.push(base + 3, nextBase + 3, nextBase + 1);
+    }
+  }
+
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+  geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+  geometry.setIndex(indices);
+  geometry.computeVertexNormals();
+
+  return geometry;
+}
+
 export function createDashedLineGeometry(
   points: THREE.Vector3[],
   dashSize: number = 1,

@@ -6,8 +6,8 @@ import {
   createGuardRailGeometry,
   createStreetLightGeometry,
   createRoadSignGeometry,
-  createCurbGeometry,
-  createTreeGeometry
+  createTreeGeometry,
+  createTaperedRoadGeometry
 } from '@/utils/geometryUtils';
 import { roadMaterials, createLineMaterial } from '@/utils/materialPresets';
 import { roadSegments, roadSignData } from '@/data/trafficData';
@@ -23,6 +23,8 @@ export interface RoadMeshData {
   lanes: number;
   level: number;
 }
+
+const TAPER_RATIO = 0.12;
 
 export function useRoadGenerator(scene: THREE.Scene) {
   const roadMeshes = new Map<string, RoadMeshData>();
@@ -54,7 +56,8 @@ export function useRoadGenerator(scene: THREE.Scene) {
     group.name = segment.id;
 
     const curve = createCatmullRomCurve(segment.points, false, 0.3);
-    const divisions = Math.max(segment.points.length * 4, 80);
+    const isRamp = segment.type === 'ramp';
+    const divisions = isRamp ? 100 : 80;
 
     let startNormal: THREE.Vector3 | undefined;
     let endNormal: THREE.Vector3 | undefined;
@@ -66,7 +69,7 @@ export function useRoadGenerator(scene: THREE.Scene) {
       endNormal = new THREE.Vector3(-segment.endDir.z, 0, segment.endDir.x).normalize();
     }
 
-    const { leftEdge, rightEdge, centerLine } = getRoadEdges(
+    const { leftEdge, rightEdge } = getRoadEdges(
       curve,
       segment.width,
       divisions,
@@ -74,30 +77,47 @@ export function useRoadGenerator(scene: THREE.Scene) {
       endNormal
     );
 
-    const roadThickness = segment.type === 'main' ? 1.2 : 0.8;
-    const roadGeo = createRoadGeometry(leftEdge, rightEdge, roadThickness);
-    const roadMat = segment.type === 'main' ? roadMaterials.asphalt : roadMaterials.asphaltDark;
-    const roadMesh = new THREE.Mesh(roadGeo, roadMat);
-    roadMesh.receiveShadow = true;
-    roadMesh.castShadow = true;
-    group.add(roadMesh);
+    const roadThickness = isRamp ? 0.8 : 1.2;
+    const roadMat = isRamp ? roadMaterials.asphaltDark : roadMaterials.asphalt;
 
-    const curbGroup = createCurbGeometry(leftEdge, rightEdge, 0.15, 0.35);
-    group.add(curbGroup);
+    if (isRamp) {
+      const taperedGeo = createTaperedRoadGeometry(
+        leftEdge, rightEdge, roadThickness, TAPER_RATIO
+      );
+      const roadMesh = new THREE.Mesh(taperedGeo, roadMat);
+      roadMesh.receiveShadow = true;
+      roadMesh.castShadow = true;
+      group.add(roadMesh);
 
-    if (segment.level > 0 || segment.type === 'ramp') {
+      const taperCount = Math.floor(divisions * TAPER_RATIO) + 4;
+      const railLeft = leftEdge.slice(taperCount, leftEdge.length - taperCount);
+      const railRight = rightEdge.slice(taperCount, rightEdge.length - taperCount);
+      if (railLeft.length > 6 && railRight.length > 6) {
+        const edgesGroup = createGuardRailGeometry(railLeft, railRight, 1.1, 0.12);
+        group.add(edgesGroup);
+      }
+    } else {
+      const roadGeo = createRoadGeometry(leftEdge, rightEdge, roadThickness);
+      const roadMesh = new THREE.Mesh(roadGeo, roadMat);
+      roadMesh.receiveShadow = true;
+      roadMesh.castShadow = true;
+      group.add(roadMesh);
+
+      const curbGroup = createCurbGeometry(leftEdge, rightEdge, 0.15, 0.35);
+      group.add(curbGroup);
+
       const edgesGroup = createGuardRailGeometry(leftEdge, rightEdge, 1.1, 0.12);
       group.add(edgesGroup);
     }
 
-    createLaneMarkings(group, curve, segment.width, segment.lanes, divisions);
+    createLaneMarkings(group, curve, segment.width, segment.lanes, divisions, isRamp ? TAPER_RATIO : 0);
 
     if (segment.type === 'main' && segment.lanes > 4) {
       createMedian(group, curve, segment.width, divisions);
     }
 
     const roadUserData = {
-      type: 'road',
+      type: 'road' as const,
       roadId: segment.id,
       roadName: segment.name,
       level: segment.level,
@@ -119,15 +139,60 @@ export function useRoadGenerator(scene: THREE.Scene) {
     };
   }
 
+  function createCurbGeometry(
+    leftEdge: THREE.Vector3[],
+    rightEdge: THREE.Vector3[],
+    height: number = 0.15,
+    width: number = 0.3
+  ): THREE.Group {
+    const group = new THREE.Group();
+
+    const createCurbSide = (edge: THREE.Vector3[], isLeft: boolean) => {
+      const curbPoints: THREE.Vector3[] = [];
+      const offset = isLeft ? -1 : 1;
+
+      for (const point of edge) {
+        curbPoints.push(new THREE.Vector3(
+          point.x + offset * width * 0.5,
+          point.y + height / 2,
+          point.z
+        ));
+      }
+
+      const CurveClass = (THREE as any).CatmullRomCurve3;
+      const curve = new CurveClass(curbPoints);
+      const tubeGeo = new THREE.TubeGeometry(curve, curbPoints.length * 2, height / 2, 6, false);
+      const curbMat = new THREE.MeshStandardMaterial({
+        color: 0x555555,
+        roughness: 0.9,
+        metalness: 0.1
+      });
+
+      return new THREE.Mesh(tubeGeo, curbMat);
+    };
+
+    group.add(createCurbSide(leftEdge, true));
+    group.add(createCurbSide(rightEdge, false));
+
+    return group;
+  }
+
   function createLaneMarkings(
     parent: THREE.Group,
     curve: ThreeCurve,
     roadWidth: number,
     lanes: number,
-    divisions: number
+    divisions: number,
+    taperRatio: number = 0
   ) {
+    const trimCount = taperRatio > 0 ? Math.floor(divisions * taperRatio) + 2 : 0;
+
     for (let i = 1; i < lanes; i++) {
       const lanePoints = getLaneLinePoints(curve, roadWidth, i, lanes, divisions);
+
+      const trimmed = trimCount > 0
+        ? lanePoints.slice(trimCount, lanePoints.length - trimCount)
+        : lanePoints;
 
       const isDashed = i !== Math.floor(lanes / 2) || lanes % 2 === 0;
       const material = createLineMaterial(
@@ -136,7 +201,7 @@ export function useRoadGenerator(scene: THREE.Scene) {
         3
       );
 
-      const lineGeo = new THREE.BufferGeometry().setFromPoints(lanePoints);
+      const lineGeo = new THREE.BufferGeometry().setFromPoints(trimmed);
       const line = new THREE.Line(lineGeo, material);
 
       if (isDashed) {
@@ -145,22 +210,6 @@ export function useRoadGenerator(scene: THREE.Scene) {
 
       parent.add(line);
     }
-
-    const edgeMat = createLineMaterial(0xffffff, false, 3);
-    const leftPoints = getLaneLinePoints(curve, roadWidth, 0, 2, divisions);
-    const rightPoints = getLaneLinePoints(curve, roadWidth, 2, 2, divisions);
-
-    const leftEdgeLine = new THREE.Line(
-      new THREE.BufferGeometry().setFromPoints(leftPoints),
-      edgeMat
-    );
-    const rightEdgeLine = new THREE.Line(
-      new THREE.BufferGeometry().setFromPoints(rightPoints),
-      edgeMat
-    );
-
-    parent.add(leftEdgeLine);
-    parent.add(rightEdgeLine);
   }
 
   function createMedian(
@@ -200,19 +249,18 @@ export function useRoadGenerator(scene: THREE.Scene) {
           const height = pos.y;
           if (height < 1.5) continue;
 
-          const pillarGeo = new THREE.CylinderGeometry(0.9, 1.1, height, 16);
+          const pillarGeo = new THREE.CylinderGeometry(0.9, 1.1, height, 12);
           const pillar = new THREE.Mesh(pillarGeo, pillarMat);
           pillar.position.set(pos.x, height / 2, pos.z);
           pillar.castShadow = true;
           pillar.receiveShadow = true;
 
-          const capGeo = new THREE.CylinderGeometry(1.8, 0.9, 0.6, 16);
+          const capGeo = new THREE.CylinderGeometry(1.8, 0.9, 0.6, 12);
           const cap = new THREE.Mesh(capGeo, pillarMat);
           cap.position.set(pos.x, height + 0.3, pos.z);
           cap.castShadow = true;
-          cap.receiveShadow = true;
 
-          const baseGeo = new THREE.CylinderGeometry(1.5, 2, 0.4, 16);
+          const baseGeo = new THREE.CylinderGeometry(1.5, 2, 0.4, 12);
           const base = new THREE.Mesh(baseGeo, pillarMat);
           base.position.set(pos.x, 0.2, pos.z);
           base.receiveShadow = true;
@@ -232,7 +280,7 @@ export function useRoadGenerator(scene: THREE.Scene) {
     lightsGroup.name = 'streetLights';
 
     let lightCount = 0;
-    const maxLights = 30;
+    const maxLights = 24;
 
     for (const segment of roadSegments) {
       if (segment.type !== 'main') continue;
@@ -240,7 +288,7 @@ export function useRoadGenerator(scene: THREE.Scene) {
       const curve = curves.get(segment.id);
       if (!curve) continue;
 
-      const spacing = 35;
+      const spacing = 40;
       const numLights = Math.min(Math.floor(curve.getLength() / spacing), Math.floor(maxLights / 3));
 
       for (let i = 0; i <= numLights; i++) {
@@ -289,7 +337,7 @@ export function useRoadGenerator(scene: THREE.Scene) {
   function createGround() {
     const groundSize = 500;
 
-    const groundGeo = new THREE.PlaneGeometry(groundSize, groundSize, 100, 100);
+    const groundGeo = new THREE.PlaneGeometry(groundSize, groundSize, 80, 80);
     const groundMat = new THREE.MeshStandardMaterial({
       color: 0x4a7c3f,
       roughness: 1,
@@ -300,22 +348,6 @@ export function useRoadGenerator(scene: THREE.Scene) {
     ground.receiveShadow = true;
     ground.position.y = -0.1;
     scene.add(ground);
-
-    const sidewalkMat = new THREE.MeshStandardMaterial({
-      color: 0x888888,
-      roughness: 0.95
-    });
-
-    for (let i = -1; i <= 1; i += 2) {
-      for (let j = -1; j <= 1; j += 2) {
-        const stripGeo = new THREE.BoxGeometry(80, 0.2, 80);
-        const strip = new THREE.Mesh(stripGeo, sidewalkMat);
-        strip.position.set(i * 120, 0.1, j * 120);
-        strip.receiveShadow = true;
-        strip.castShadow = true;
-        scene.add(strip);
-      }
-    }
   }
 
   function createTrees() {
@@ -323,22 +355,12 @@ export function useRoadGenerator(scene: THREE.Scene) {
     treesGroup.name = 'trees';
 
     const treePositions = [
-      { x: 130, z: 50 },
-      { x: 130, z: -50 },
-      { x: -130, z: 50 },
-      { x: -130, z: -50 },
-      { x: 50, z: 130 },
-      { x: -50, z: 130 },
-      { x: 50, z: -130 },
-      { x: -50, z: -130 },
-      { x: 150, z: 0 },
-      { x: -150, z: 0 },
-      { x: 0, z: 150 },
-      { x: 0, z: -150 },
-      { x: 80, z: 80 },
-      { x: -80, z: 80 },
-      { x: 80, z: -80 },
-      { x: -80, z: -80 }
+      { x: 130, z: 50 }, { x: 130, z: -50 },
+      { x: -130, z: 50 }, { x: -130, z: -50 },
+      { x: 50, z: 130 }, { x: -50, z: 130 },
+      { x: 50, z: -130 }, { x: -50, z: -130 },
+      { x: 150, z: 0 }, { x: -150, z: 0 },
+      { x: 0, z: 150 }, { x: 0, z: -150 }
     ];
 
     for (const pos of treePositions) {
