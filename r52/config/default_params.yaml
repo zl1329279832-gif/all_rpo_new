@@ -1,0 +1,33 @@
+# 火山参数默认配置
+
+# 网格范围和分辨率
+x_range: [-2000, 2000]
+y_range: [-2000, 2000]
+z_range: [-3000, 1000]
+surface_resolution: 150
+volume_resolution: 60
+
+# 火山形态参数
+volcano_height: 800.0
+volcano_base_radius: 1500.0
+crater_radius: 300.0
+crater_depth: 150.0
+
+# 岩浆系统参数
+magma_chamber_depth: -1500.0
+magma_chamber_radius: 400.0
+conduit_radius: 80.0
+
+# 动态参数
+magma_pressure: 0.7
+eruption_intensity: 0.6
+time_progress: 0.0
+lava_viscosity: 0.5
+
+# 结构参数
+num_lava_flows: 5
+num_fault_zones: 3
+num_rock_layers: 5
+
+# 随机种子
+seed: 42

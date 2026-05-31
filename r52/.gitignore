@@ -1,0 +1,78 @@
+# 虚拟环境
+.venv/
+venv/
+env/
+ENV/
+*.venv/
+
+# Python 缓存
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# 缓存文件
+*.cache
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# 导出图像和动画
+exports/
+exports/images/
+exports/animations/
+exports/meshes/
+exports/*.png
+exports/*.jpg
+exports/*.mp4
+exports/*.gif
+exports/*.vtk
+exports/*.stl
+exports/*.ply
+
+# 临时网格文件
+*.vtk
+*.stl
+*.ply
+*.obj
+*.vtu
+*.pvtu
+
+# 日志文件
+*.log
+logs/
+*.out
+*.err
+
+# 本地配置
+*.local
+*.ini
+*.conf
+config/local_config.py
+config/.env
+.env
+.env.*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+*.ipynb
+
+# 临时文件
+*.tmp
+*.temp
+tmp/
+temp/
+
+# 数据文件（可选忽略）
+data/
+*.h5
+*.npz
+*.npy

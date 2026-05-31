@@ -1,0 +1,33 @@
+# 示例参数配置 - 模拟一次中等规模的喷发
+
+# 网格范围和分辨率
+x_range: [-2500, 2500]
+y_range: [-2500, 2500]
+z_range: [-3500, 1200]
+surface_resolution: 180
+volume_resolution: 70
+
+# 火山形态参数
+volcano_height: 1000.0
+volcano_base_radius: 1800.0
+crater_radius: 350.0
+crater_depth: 180.0
+
+# 岩浆系统参数
+magma_chamber_depth: -1800.0
+magma_chamber_radius: 500.0
+conduit_radius: 100.0
+
+# 动态参数 - 中等强度喷发
+magma_pressure: 0.8
+eruption_intensity: 0.75
+time_progress: 0.5
+lava_viscosity: 0.4
+
+# 结构参数
+num_lava_flows: 6
+num_fault_zones: 4
+num_rock_layers: 5
+
+# 随机种子
+seed: 12345
