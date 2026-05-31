@@ -1,12 +1,17 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, provide } from 'vue'
+import { ref, onMounted, onUnmounted, provide, watch } from 'vue'
 import { SceneManager } from '../three/core/SceneManager'
 import { AnimationSystem } from '../three/animation/AnimationSystem'
 import { RaycasterSystem } from '../three/interaction/Raycaster'
 import type { IntersectionResult } from '../three/interaction/Raycaster'
 import { LabelSystem } from '../three/interaction/LabelSystem'
 import { partMetadata } from '../data/partMetadata'
+import type { ViewMode } from '../types'
 import * as THREE from 'three'
+
+const props = defineProps<{
+  viewMode: ViewMode
+}>()
 
 const containerRef = ref<HTMLElement | null>(null)
 let sceneManager: SceneManager | null = null
@@ -19,6 +24,8 @@ const emit = defineEmits<{
   (e: 'part-click', result: IntersectionResult): void
   (e: 'part-hover', result: IntersectionResult | null): void
   (e: 'scene-ready'): void
+  (e: 'animation-start'): void
+  (e: 'animation-complete'): void
 }>()
 
 function initScene() {
@@ -92,9 +99,47 @@ function resetCamera() {
   sceneManager?.resetCamera()
 }
 
+function setViewMode(mode: ViewMode) {
+  sceneManager?.setViewMode(mode)
+}
+
 function closeLabel() {
   labelSystem?.hideActiveLabel()
 }
+
+async function playExplodedView(): Promise<void> {
+  emit('animation-start')
+  await animationSystem?.playExplodedView(1)
+  emit('animation-complete')
+}
+
+async function resetExplodedView(): Promise<void> {
+  emit('animation-start')
+  await animationSystem?.resetExplodedView()
+  emit('animation-complete')
+}
+
+async function playInternalView(): Promise<void> {
+  emit('animation-start')
+  await animationSystem?.playInternalView()
+  emit('animation-complete')
+}
+
+async function resetInternalView(): Promise<void> {
+  emit('animation-start')
+  await animationSystem?.resetInternalView()
+  emit('animation-complete')
+}
+
+async function deploySolarPanels(): Promise<void> {
+  emit('animation-start')
+  await animationSystem?.playSolarPanelDeployment(3000)
+  emit('animation-complete')
+}
+
+watch(() => props.viewMode, (newMode) => {
+  setViewMode(newMode)
+})
 
 provide('getAnimationSystem', getAnimationSystem)
 provide('getSceneManager', getSceneManager)
@@ -105,7 +150,13 @@ defineExpose({
   getSceneManager,
   getLabelSystem,
   resetCamera,
+  setViewMode,
   closeLabel,
+  playExplodedView,
+  resetExplodedView,
+  playInternalView,
+  resetInternalView,
+  deploySolarPanels,
 })
 
 onMounted(() => {

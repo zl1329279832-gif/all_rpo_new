@@ -1,67 +1,41 @@
 <script setup lang="ts">
-import { ref, inject } from 'vue'
 import type { ViewMode } from '../types'
-import { AnimationSystem } from '../three/animation/AnimationSystem'
-import { SceneManager } from '../three/core/SceneManager'
 
 const props = defineProps<{
   currentView: ViewMode
+  isAnimating: boolean
+  isPanelOpen: boolean
 }>()
 
 const emit = defineEmits<{
   (e: 'view-change', mode: ViewMode): void
+  (e: 'toggle-exploded-view'): void
+  (e: 'toggle-internal-view'): void
+  (e: 'deploy-solar-panels'): void
+  (e: 'reset-camera'): void
   (e: 'toggle-panel'): void
 }>()
 
-const getAnimationSystem = inject<() => AnimationSystem | null>('getAnimationSystem')
-const getSceneManager = inject<() => SceneManager | null>('getSceneManager')
-
-const isDeploying = ref(false)
-
-async function toggleExplodedView() {
-  const animationSystem = getAnimationSystem?.()
-  if (!animationSystem) return
-
-  if (props.currentView === 'exploded') {
-    await animationSystem.resetExplodedView()
-    emit('view-change', 'normal')
-  } else {
-    await animationSystem.playExplodedView(1)
-    emit('view-change', 'exploded')
-  }
+function toggleExplodedView() {
+  emit('toggle-exploded-view')
 }
 
-async function toggleInternalView() {
-  const animationSystem = getAnimationSystem?.()
-  if (!animationSystem) return
-
-  if (props.currentView === 'internal') {
-    await animationSystem.resetInternalView()
-    emit('view-change', 'normal')
-  } else {
-    await animationSystem.playInternalView()
-    emit('view-change', 'internal')
-  }
+function toggleInternalView() {
+  emit('toggle-internal-view')
 }
 
-async function deploySolarPanels() {
-  const animationSystem = getAnimationSystem?.()
-  if (!animationSystem || isDeploying.value) return
-
-  isDeploying.value = true
-  await animationSystem.playSolarPanelDeployment(3000)
-  isDeploying.value = false
+function deploySolarPanels() {
+  if (!props.isAnimating) {
+    emit('deploy-solar-panels')
+  }
 }
 
 function resetView() {
-  const sceneManager = getSceneManager?.()
-  sceneManager?.resetCamera()
+  emit('reset-camera')
 }
 
 function setViewMode(mode: ViewMode) {
   emit('view-change', mode)
-  const sceneManager = getSceneManager?.()
-  sceneManager?.setViewMode(mode)
 }
 </script>
 
@@ -110,14 +84,14 @@ function setViewMode(mode: ViewMode) {
       <span class="group-label">动画控制</span>
       <button 
         class="control-btn primary"
-        :class="{ deploying: isDeploying }"
+        :class="{ deploying: isAnimating }"
         @click="deploySolarPanels"
-        :disabled="isDeploying"
+        :disabled="isAnimating"
       >
         <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <polygon points="5 3 19 12 5 21 5 3"/>
         </svg>
-        {{ isDeploying ? '展开中...' : '展开太阳翼' }}
+        {{ isAnimating ? '展开中...' : '展开太阳翼' }}
       </button>
     </div>
 
