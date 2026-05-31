@@ -3,10 +3,11 @@ import type { RoadPoint } from '@/types';
 
 type ThreeCurve = any;
 
-export function createCatmullRomCurve(points: RoadPoint[], closed = false): ThreeCurve {
+export function createCatmullRomCurve(points: RoadPoint[], closed = false, tension = 0.5): ThreeCurve {
   const threePoints = points.map(p => new THREE.Vector3(p.x, p.y, p.z));
   const CurveClass = (THREE as any).CatmullRomCurve3;
-  return new CurveClass(threePoints, closed, 'catmullrom', 0.5);
+  const curve = new CurveClass(threePoints, closed, 'catmullrom', tension);
+  return curve;
 }
 
 export function getCurvePoints(curve: ThreeCurve, divisions: number): THREE.Vector3[] {
@@ -69,7 +70,7 @@ export function getLaneLinePoints(
 
     points.push(new THREE.Vector3(
       centerPoint.x + normal.x * offset,
-      centerPoint.y + 0.02,
+      centerPoint.y + 0.03,
       centerPoint.z + normal.z * offset
     ));
   }
@@ -102,8 +103,8 @@ export function smoothHeightTransition(
   return points.map((point, index) => {
     const t = index / (points.length - 1);
     const easedT = t < 0.5
-      ? 2 * t * t
-      : 1 - Math.pow(-2 * t + 2, 2) / 2;
+      ? 4 * t * t * t
+      : 1 - Math.pow(-2 * t + 2, 3) / 2;
     return {
       ...point,
       y: startHeight + (endHeight - startHeight) * easedT
@@ -119,9 +120,9 @@ export function createRampPoints(
 ): RoadPoint[] {
   const points: RoadPoint[] = [];
   const midPoint = {
-    x: (startPoint.x + endPoint.x) / 2 + (endPoint.z - startPoint.z) * curveAmount * 0.3,
+    x: (startPoint.x + endPoint.x) / 2 + (endPoint.z - startPoint.z) * curveAmount * 0.4,
     y: (startPoint.y + endPoint.y) / 2,
-    z: (startPoint.z + endPoint.z) / 2 + (startPoint.x - endPoint.x) * curveAmount * 0.3
+    z: (startPoint.z + endPoint.z) / 2 + (startPoint.x - endPoint.x) * curveAmount * 0.4
   };
 
   for (let i = 0; i <= segments; i++) {

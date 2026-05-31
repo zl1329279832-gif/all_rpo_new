@@ -1,16 +1,15 @@
 import * as THREE from 'three';
-import type { Vehicle } from '@/types';
 import { useSceneStore } from '@/store/sceneStore';
-import { vehiclePaths } from '@/data/trafficData';
-import { getRandomVehicleColor } from '@/utils/materialPresets';
 import { getPointAtProgress } from '@/utils/curveUtils';
+import { createCarGeometry } from '@/utils/geometryUtils';
+import { vehicleColors } from '@/utils/materialPresets';
 
 interface VehicleMesh {
-  id: string;
   group: THREE.Group;
   body: THREE.Mesh;
   wheels: THREE.Mesh[];
-  headLights: THREE.SpotLight[];
+  headLightMeshes: THREE.Mesh[];
+  tailLightMeshes: THREE.Mesh[];
 }
 
 type ThreeCurve = any;
@@ -22,280 +21,243 @@ export function useTrafficSystem(scene: THREE.Scene, curves: Map<string, ThreeCu
   vehiclesGroup.name = 'vehicles';
   scene.add(vehiclesGroup);
 
-  function createVehicleMesh(type: 'car' | 'suv' | 'truck', color: number): VehicleMesh {
-    const group = new THREE.Group();
-    const wheelRadius = type === 'truck' ? 0.35 : 0.3;
+  const carBodyGeos = {
+    car: createCarGeometry('car').body,
+    suv: createCarGeometry('suv').body,
+    truck: createCarGeometry('truck').body
+  };
 
-    let bodyWidth: number, bodyHeight: number, bodyLength: number;
+  const carWheelGeo = new THREE.CylinderGeometry(0.35, 0.35, 0.25, 10);
+  carWheelGeo.rotateZ(Math.PI / 2);
 
-    if (type === 'car') {
-      bodyWidth = 1.8;
-      bodyHeight = 0.6;
-      bodyLength = 4;
-    } else if (type === 'suv') {
-      bodyWidth = 2;
-      bodyHeight = 0.8;
-      bodyLength = 4.5;
-    } else {
-      bodyWidth = 2.2;
-      bodyHeight = 1.5;
-      bodyLength = 6;
-    }
-
-    const bodyGeo = new THREE.BoxGeometry(bodyLength, bodyHeight, bodyWidth);
-    const bodyMat = new THREE.MeshStandardMaterial({
+  const vehicleMaterials = vehicleColors.map(color =>
+    new THREE.MeshStandardMaterial({
       color,
-      metalness: 0.2,
-      roughness: 0.6
-    });
+      metalness: 0.4,
+      roughness: 0.3
+    })
+  );
+
+  const wheelMaterial = new THREE.MeshStandardMaterial({
+    color: 0x1a1a1a,
+    roughness: 0.8
+  });
+
+  const headLightMat = new THREE.MeshStandardMaterial({
+    color: 0xffffcc,
+    emissive: 0xffffaa,
+    emissiveIntensity: 0.3
+  });
+
+  const tailLightMat = new THREE.MeshStandardMaterial({
+    color: 0xff0000,
+    emissive: 0xff0000,
+    emissiveIntensity: 0.3
+  });
+
+  const headLightGeo = new THREE.SphereGeometry(0.12, 6, 4);
+  const tailLightGeo = new THREE.SphereGeometry(0.1, 6, 4);
+
+  function createVehicle(vehicleId: string) {
+    const vehicleData = store.vehicles.find(v => v.id === vehicleId);
+    if (!vehicleData) return;
+
+    const curve = curves.get(vehicleData.pathId);
+    if (!curve) return;
+
+    const group = new THREE.Group();
+    group.name = vehicleId;
+
+    const bodyGeo = carBodyGeos[vehicleData.type];
+    const bodyMat = vehicleMaterials[Math.floor(Math.random() * vehicleMaterials.length)];
     const body = new THREE.Mesh(bodyGeo, bodyMat);
-    body.position.y = bodyHeight / 2 + wheelRadius;
     body.castShadow = true;
+    body.receiveShadow = true;
     group.add(body);
 
-    const roofHeight = type === 'car' ? 0.5 : type === 'suv' ? 0.6 : 0.8;
-    const roofLength = type === 'truck' ? bodyLength * 0.4 : bodyLength * 0.6;
-    const roofGeo = new THREE.BoxGeometry(roofLength, roofHeight, bodyWidth * 0.9);
-    const roofMat = new THREE.MeshStandardMaterial({
-      color: color * 0.9,
-      metalness: 0.3,
-      roughness: 0.5
-    });
-    const roof = new THREE.Mesh(roofGeo, roofMat);
-    roof.position.y = bodyHeight + roofHeight / 2 + wheelRadius;
-    roof.position.x = type === 'truck' ? -bodyLength * 0.3 : 0;
-    roof.castShadow = true;
-    group.add(roof);
-
     const wheels: THREE.Mesh[] = [];
-    const wheelGeo = new THREE.CylinderGeometry(wheelRadius, wheelRadius, 0.25, 16);
-    wheelGeo.rotateZ(Math.PI / 2);
-    const wheelMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a });
+    const wheelPositions = vehicleData.type === 'truck'
+      ? [[-1.5, 0.4, -0.7], [1.5, 0.4, -0.7], [-1.5, 0.4, 0.7], [1.5, 0.4, 0.7]]
+      : [[-1.2, 0.3, -0.6], [1.2, 0.3, -0.6], [-1.2, 0.3, 0.6], [1.2, 0.3, 0.6]];
 
-    const wheelPositions = type === 'truck'
-      ? [[-1.8, -1], [1.8, -1], [-1.8, 1], [1.8, 1]]
-      : [[-1.2, -0.8], [1.2, -0.8], [-1.2, 0.8], [1.2, 0.8]];
-
-    for (const [x, z] of wheelPositions) {
-      const wheel = new THREE.Mesh(wheelGeo, wheelMat);
-      wheel.position.set(x, wheelRadius, z);
-      wheel.castShadow = true;
+    for (const pos of wheelPositions) {
+      const wheel = new THREE.Mesh(carWheelGeo, wheelMaterial);
+      wheel.position.set(pos[0], pos[1], pos[2]);
       group.add(wheel);
       wheels.push(wheel);
     }
 
-    const headLights: THREE.SpotLight[] = [];
-    const lightGeo = new THREE.SphereGeometry(0.12, 8, 8);
-    const lightMat = new THREE.MeshStandardMaterial({
-      color: 0xffffaa,
-      emissive: 0xffff88,
-      emissiveIntensity: 0.3
-    });
+    const headLightMeshes: THREE.Mesh[] = [];
+    const tailLightMeshes: THREE.Mesh[] = [];
 
-    for (const z of [-bodyWidth / 3, bodyWidth / 3]) {
-      const lightMesh = new THREE.Mesh(lightGeo, lightMat);
-      lightMesh.position.set(bodyLength / 2 - 0.1, wheelRadius + bodyHeight * 0.3, z);
-      group.add(lightMesh);
+    const hlPositions = vehicleData.type === 'truck'
+      ? [[2.2, 0.6, -0.5], [2.2, 0.6, 0.5]]
+      : [[1.7, 0.5, -0.4], [1.7, 0.5, 0.4]];
 
-      const spotLight = new THREE.SpotLight(0xffffcc, 0, 30, Math.PI / 6, 0.5, 1);
-      spotLight.position.set(bodyLength / 2, wheelRadius + bodyHeight * 0.3, z);
-      spotLight.target.position.set(bodyLength / 2 + 10, wheelRadius, z);
-      group.add(spotLight);
-      group.add(spotLight.target);
-      headLights.push(spotLight);
+    for (const pos of hlPositions) {
+      const hl = new THREE.Mesh(headLightGeo, headLightMat);
+      hl.position.set(pos[0], pos[1], pos[2]);
+      group.add(hl);
+      headLightMeshes.push(hl);
+
+      const tl = new THREE.Mesh(tailLightGeo, tailLightMat);
+      tl.position.set(-pos[0], pos[1], pos[2]);
+      group.add(tl);
+      tailLightMeshes.push(tl);
     }
 
-    const tailLightMat = new THREE.MeshStandardMaterial({
-      color: 0xff0000,
-      emissive: 0xff0000,
-      emissiveIntensity: 0.3
-    });
-
-    for (const z of [-bodyWidth / 3, bodyWidth / 3]) {
-      const tailLight = new THREE.Mesh(lightGeo, tailLightMat);
-      tailLight.position.set(-bodyLength / 2 + 0.1, wheelRadius + bodyHeight * 0.3, z);
-      group.add(tailLight);
-    }
-
-    return { id: '', group, body, wheels, headLights };
-  }
-
-  function spawnVehicle(pathId: string): Vehicle | null {
-    const curve = curves.get(pathId);
-    if (!curve) return null;
-
-    const types: ('car' | 'suv' | 'truck')[] = ['car', 'car', 'car', 'suv', 'suv', 'truck'];
-    const type = types[Math.floor(Math.random() * types.length)];
-    const color = getRandomVehicleColor();
-
-    const vehicle: Vehicle = {
-      id: `vehicle-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      type,
-      pathId,
-      progress: Math.random() * 0.1,
-      speed: 0.0003 + Math.random() * 0.0005,
-      color,
-      lane: Math.floor(Math.random() * 3) - 1
+    group.userData = {
+      type: 'vehicle',
+      vehicleId: vehicleData.id
     };
 
-    const mesh = createVehicleMesh(type, color);
-    mesh.id = vehicle.id;
-    mesh.group.userData = { type: 'vehicle', vehicleId: vehicle.id };
-
-    vehicleMeshes.set(vehicle.id, mesh);
-    vehiclesGroup.add(mesh.group);
-    store.addVehicle(vehicle);
-
-    return vehicle;
+    vehiclesGroup.add(group);
+    vehicleMeshes.set(vehicleId, {
+      group,
+      body,
+      wheels,
+      headLightMeshes,
+      tailLightMeshes
+    });
   }
 
   function removeVehicle(vehicleId: string) {
     const mesh = vehicleMeshes.get(vehicleId);
     if (mesh) {
-      mesh.group.traverse((obj) => {
-        if (obj instanceof THREE.Mesh) {
-          obj.geometry.dispose();
-          if (Array.isArray(obj.material)) {
-            obj.material.forEach(m => m.dispose());
-          } else {
-            obj.material.dispose();
-          }
-        }
-      });
       vehiclesGroup.remove(mesh.group);
       vehicleMeshes.delete(vehicleId);
     }
-    store.removeVehicle(vehicleId);
   }
 
-  function updateVehicles(deltaTime: number, isNight: boolean, roadStatus: string) {
-    const speedMultiplier = roadStatus === 'congested' ? 0.3 : roadStatus === 'construction' ? 0.5 : 1;
+  function updateVehiclePosition(vehicleId: string, isNight: boolean) {
+    const vehicleData = store.vehicles.find(v => v.id === vehicleId);
+    if (!vehicleData) return;
 
-    const toRemove: string[] = [];
+    const curve = curves.get(vehicleData.pathId);
+    if (!curve) return;
 
-    for (const vehicle of store.vehicles) {
-      const mesh = vehicleMeshes.get(vehicle.id);
-      const curve = curves.get(vehicle.pathId);
-
-      if (!mesh || !curve) continue;
-
-      vehicle.progress += vehicle.speed * deltaTime * 60 * speedMultiplier;
-
-      if (vehicle.progress >= 1) {
-        toRemove.push(vehicle.id);
-        continue;
-      }
-
-      const roadSegment = vehiclePaths.find(p => p === vehicle.pathId);
-      const roadWidth = roadSegment?.includes('main') ? 20 : 10;
-
-      const { position, tangent } = getPointAtProgress(curve, vehicle.progress, vehicle.lane, roadWidth);
-
-      mesh.group.position.copy(position);
-      mesh.group.position.y += 0.1;
-
-      const angle = Math.atan2(tangent.x, tangent.z);
-      mesh.group.rotation.y = angle;
-
-      for (const wheel of mesh.wheels) {
-        wheel.rotation.x -= vehicle.speed * deltaTime * 300;
-      }
-
-      for (const light of mesh.headLights) {
-        light.intensity = isNight ? 2 : 0;
-      }
-
-      store.updateVehicleProgress(vehicle.id, vehicle.progress);
+    const mesh = vehicleMeshes.get(vehicleId);
+    if (!mesh) {
+      createVehicle(vehicleId);
+      return;
     }
 
-    for (const id of toRemove) {
-      removeVehicle(id);
-    }
-  }
+    const laneOffset = (vehicleData.lane - vehicleData.lanes / 2 + 0.5) / (vehicleData.lanes / 2);
+    const { position, tangent } = getPointAtProgress(
+      curve,
+      vehicleData.progress,
+      laneOffset,
+      vehicleData.roadWidth
+    );
 
-  function updateTrafficDensity(density: number) {
-    const targetCount = Math.floor(density * 60);
-    const currentCount = store.vehicles.length;
+    mesh.group.position.copy(position);
 
-    if (currentCount < targetCount) {
-      const toSpawn = Math.min(targetCount - currentCount, 5);
-      for (let i = 0; i < toSpawn; i++) {
-        const pathId = vehiclePaths[Math.floor(Math.random() * vehiclePaths.length)];
-        setTimeout(() => spawnVehicle(pathId), i * 200);
-      }
-    } else if (currentCount > targetCount) {
-      const toRemove = currentCount - targetCount;
-      const vehicles = [...store.vehicles].sort((a, b) => b.progress - a.progress);
-      for (let i = 0; i < toRemove && i < vehicles.length; i++) {
-        if (vehicles[i].progress > 0.5) {
-          removeVehicle(vehicles[i].id);
-        }
-      }
+    const angle = Math.atan2(tangent.x, tangent.z);
+    mesh.group.rotation.y = angle;
+
+    const wheelRotation = vehicleData.progress * 20;
+    for (const wheel of mesh.wheels) {
+      wheel.rotation.x = wheelRotation;
     }
 
-    const avgSpeed = store.vehicles.length > 0
-      ? store.vehicles.reduce((sum, v) => sum + v.speed, 0) / store.vehicles.length * 10000
-      : 0;
-
-    store.updateStats({
-      totalVehicles: store.vehicles.length,
-      averageSpeed: Math.round(avgSpeed * 3.6),
-      congestionLevel: density > 0.7 ? 3 : density > 0.4 ? 2 : 1
-    });
-  }
-
-  function getSelectedVehiclePosition(): THREE.Vector3 | null {
-    const selectedId = store.state.selectedVehicleId;
-    if (!selectedId) return null;
-
-    const vehicle = store.vehicles.find(v => v.id === selectedId);
-    const mesh = vehicleMeshes.get(selectedId);
-
-    if (!vehicle || !mesh) {
-      const available = store.vehicles[0];
-      if (available) {
-        store.selectVehicle(available.id);
-        const availableMesh = vehicleMeshes.get(available.id);
-        return availableMesh ? availableMesh.group.position.clone() : null;
-      }
-      return null;
+    const headIntensity = isNight ? 1 : 0.1;
+    const tailIntensity = isNight ? 0.8 : 0.2;
+    for (const hl of mesh.headLightMeshes) {
+      (hl.material as THREE.MeshStandardMaterial).emissiveIntensity = headIntensity;
+    }
+    for (const tl of mesh.tailLightMeshes) {
+      (tl.material as THREE.MeshStandardMaterial).emissiveIntensity = tailIntensity;
     }
 
-    return mesh.group.position.clone();
+    const bodyMat = mesh.body.material as THREE.MeshStandardMaterial;
+    if (store.state.selectedVehicleId === vehicleId) {
+      bodyMat.emissive.set(0x00ff00);
+      bodyMat.emissiveIntensity = 0.3;
+    } else {
+      bodyMat.emissive.set(0x000000);
+      bodyMat.emissiveIntensity = 0;
+    }
   }
 
   function selectRandomVehicle() {
-    if (store.vehicles.length > 0) {
-      const randomIndex = Math.floor(Math.random() * store.vehicles.length);
-      store.selectVehicle(store.vehicles[randomIndex].id);
+    const vehicleIds = Array.from(vehicleMeshes.keys());
+    if (vehicleIds.length > 0) {
+      const randomId = vehicleIds[Math.floor(Math.random() * vehicleIds.length)];
+      store.selectVehicle(randomId);
+    }
+  }
+
+  function getSelectedVehiclePosition(): THREE.Vector3 {
+    const selectedId = store.state.selectedVehicleId;
+    if (selectedId) {
+      const mesh = vehicleMeshes.get(selectedId);
+      if (mesh) {
+        return mesh.group.position.clone();
+      }
+    }
+    return new THREE.Vector3(0, 2, 0);
+  }
+
+  function updateTrafficDensity(density: number) {
+    store.setTrafficDensity(density);
+  }
+
+  let lastUpdate = 0;
+  const updateInterval = 1 / 30;
+
+  function updateVehicles(deltaTime: number, isNight: boolean, roadStatus: string) {
+    lastUpdate += deltaTime;
+
+    if (lastUpdate < updateInterval) return;
+    lastUpdate = 0;
+
+    const speedMultiplier = roadStatus === 'congested' ? 0.3 : roadStatus === 'construction' ? 0.5 : 1;
+
+    for (const vehicle of store.vehicles) {
+      const baseSpeed = vehicle.speed * 0.0003 * speedMultiplier;
+      vehicle.progress += baseSpeed;
+
+      if (vehicle.progress >= 1) {
+        vehicle.progress = 0;
+      }
+
+      updateVehiclePosition(vehicle.id, isNight);
+    }
+
+    for (const [vehicleId] of vehicleMeshes) {
+      const exists = store.vehicles.some(v => v.id === vehicleId);
+      if (!exists) {
+        removeVehicle(vehicleId);
+      }
     }
   }
 
   function dispose() {
-    for (const vehicle of store.vehicles) {
-      const mesh = vehicleMeshes.get(vehicle.id);
-      if (mesh) {
-        mesh.group.traverse((obj) => {
-          if (obj instanceof THREE.Mesh) {
-            obj.geometry.dispose();
-            if (obj.material instanceof THREE.Material) {
-              obj.material.dispose();
-            }
-          }
-        });
-      }
+    for (const mesh of vehicleMeshes.values()) {
+      vehiclesGroup.remove(mesh.group);
     }
     vehicleMeshes.clear();
-    store.vehicles.length = 0;
+
+    for (const geo of Object.values(carBodyGeos)) {
+      geo.dispose();
+    }
+    carWheelGeo.dispose();
+    headLightGeo.dispose();
+    tailLightGeo.dispose();
+
+    for (const mat of vehicleMaterials) {
+      mat.dispose();
+    }
+    wheelMaterial.dispose();
+    headLightMat.dispose();
+    tailLightMat.dispose();
   }
 
   return {
-    spawnVehicle,
-    removeVehicle,
     updateVehicles,
     updateTrafficDensity,
-    getSelectedVehiclePosition,
     selectRandomVehicle,
+    getSelectedVehiclePosition,
     dispose
   };
 }

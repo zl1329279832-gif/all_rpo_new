@@ -172,15 +172,22 @@ export class SceneManager {
     return this.rootGroup
   }
 
+  private lastAnimTime: number = 0
+  private readonly ANIM_INTERVAL: number = 0.1
+
   animate(time: number): void {
-    this.environmentGroup.traverse(obj => {
+    if (time - this.lastAnimTime < this.ANIM_INTERVAL) return
+    this.lastAnimTime = time
+
+    const children = this.environmentGroup.children
+    for (let i = 0; i < children.length; i++) {
+      const obj = children[i]
       if (obj.userData.componentId === 'tree') {
         obj.rotation.y = Math.sin(time * 0.3 + obj.position.x) * 0.02
+      } else if (obj instanceof THREE.PointLight) {
+        obj.intensity = 1.2 + Math.sin(time * 2 + obj.position.x) * 0.15
       }
-      if (obj instanceof THREE.PointLight) {
-        obj.intensity = 1.2 + Math.sin(time * 3 + obj.position.x) * 0.2
-      }
-    })
+    }
   }
 
   dispose(): void {

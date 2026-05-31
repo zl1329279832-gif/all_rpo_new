@@ -66,21 +66,25 @@ export class LightingSystem {
     this.setMode('day')
   }
 
+  private lastUpdateTime: number = 0
+  private readonly UPDATE_INTERVAL: number = 0.15
+
   private initLights(): void {
     this.ambientLight = new THREE.AmbientLight(0xffffff, 0.5)
     this.scene.add(this.ambientLight)
 
     this.directionalLight = new THREE.DirectionalLight(0xffffff, 1)
     this.directionalLight.castShadow = true
-    this.directionalLight.shadow.mapSize.width = 2048
-    this.directionalLight.shadow.mapSize.height = 2048
+    this.directionalLight.shadow.mapSize.width = 1024
+    this.directionalLight.shadow.mapSize.height = 1024
     this.directionalLight.shadow.camera.near = 0.5
-    this.directionalLight.shadow.camera.far = 100
-    this.directionalLight.shadow.camera.left = -30
-    this.directionalLight.shadow.camera.right = 30
-    this.directionalLight.shadow.camera.top = 30
-    this.directionalLight.shadow.camera.bottom = -30
+    this.directionalLight.shadow.camera.far = 80
+    this.directionalLight.shadow.camera.left = -25
+    this.directionalLight.shadow.camera.right = 25
+    this.directionalLight.shadow.camera.top = 25
+    this.directionalLight.shadow.camera.bottom = -25
     this.directionalLight.shadow.bias = -0.0005
+    this.directionalLight.shadow.normalBias = 0.02
     this.scene.add(this.directionalLight)
 
     this.hemisphereLight = new THREE.HemisphereLight(0x87ceeb, 0x8b7355, 0.4)
@@ -143,10 +147,14 @@ export class LightingSystem {
   }
 
   update(time: number): void {
+    if (time - this.lastUpdateTime < this.UPDATE_INTERVAL) return
+    this.lastUpdateTime = time
+
     if (this.currentMode === 'night') {
-      this.pointLights.forEach((light, index) => {
-        light.intensity = 1.5 + Math.sin(time * 2 + index) * 0.2
-      })
+      const lights = this.pointLights
+      for (let i = 0; i < lights.length; i++) {
+        lights[i].intensity = 1.5 + Math.sin(time * 2 + i) * 0.15
+      }
     }
   }
 

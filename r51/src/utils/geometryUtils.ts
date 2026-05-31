@@ -3,14 +3,15 @@ import * as THREE from 'three';
 export function createRoadGeometry(
   leftEdge: THREE.Vector3[],
   rightEdge: THREE.Vector3[],
-  thickness: number = 0.3
+  thickness: number = 1.2
 ): THREE.BufferGeometry {
   const vertices: number[] = [];
   const uvs: number[] = [];
+  const normals: number[] = [];
   const indices: number[] = [];
 
-  const topOffset = thickness / 2;
-  const bottomOffset = -thickness / 2;
+  const topOffset = 0;
+  const bottomOffset = -thickness;
 
   const segmentCount = leftEdge.length - 1;
 
@@ -24,10 +25,25 @@ export function createRoadGeometry(
     vertices.push(left.x, left.y + bottomOffset, left.z);
     vertices.push(right.x, right.y + bottomOffset, right.z);
 
-    uvs.push(0, vCoord);
-    uvs.push(1, vCoord);
-    uvs.push(0, vCoord);
-    uvs.push(1, vCoord);
+    uvs.push(0, vCoord * 50);
+    uvs.push(1, vCoord * 50);
+    uvs.push(0, vCoord * 50);
+    uvs.push(1, vCoord * 50);
+
+    const tangent = new THREE.Vector3();
+    if (i < segmentCount) {
+      const nextLeft = leftEdge[i + 1];
+      tangent.subVectors(nextLeft, left).normalize();
+    } else {
+      const prevLeft = leftEdge[i - 1];
+      tangent.subVectors(left, prevLeft).normalize();
+    }
+    const normal = new THREE.Vector3(-tangent.z, 0, tangent.x).normalize();
+
+    normals.push(0, 1, 0);
+    normals.push(0, 1, 0);
+    normals.push(0, 1, 0);
+    normals.push(0, 1, 0);
   }
 
   for (let i = 0; i < segmentCount; i++) {
@@ -59,10 +75,49 @@ export function createRoadGeometry(
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
   geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+  geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
   geometry.setIndex(indices);
   geometry.computeVertexNormals();
 
   return geometry;
+}
+
+export function createCurbGeometry(
+  leftEdge: THREE.Vector3[],
+  rightEdge: THREE.Vector3[],
+  height: number = 0.15,
+  width: number = 0.3
+): THREE.Group {
+  const group = new THREE.Group();
+
+  const createCurbSide = (edge: THREE.Vector3[], isLeft: boolean) => {
+    const curbPoints: THREE.Vector3[] = [];
+    const offset = isLeft ? -1 : 1;
+
+    for (const point of edge) {
+      curbPoints.push(new THREE.Vector3(
+        point.x + offset * width * 0.5,
+        point.y + height / 2,
+        point.z
+      ));
+    }
+
+    const CurveClass = (THREE as any).CatmullRomCurve3;
+    const curve = new CurveClass(curbPoints);
+    const tubeGeo = new THREE.TubeGeometry(curve, curbPoints.length * 2, height / 2, 6, false);
+    const curbMat = new THREE.MeshStandardMaterial({
+      color: 0x555555,
+      roughness: 0.9,
+      metalness: 0.1
+    });
+
+    return new THREE.Mesh(tubeGeo, curbMat);
+  };
+
+  group.add(createCurbSide(leftEdge, true));
+  group.add(createCurbSide(rightEdge, false));
+
+  return group;
 }
 
 export function createDashedLineGeometry(
@@ -77,8 +132,8 @@ export function createDashedLineGeometry(
 export function createGuardRailGeometry(
   leftEdge: THREE.Vector3[],
   rightEdge: THREE.Vector3[],
-  height: number = 0.8,
-  thickness: number = 0.1
+  height: number = 1,
+  thickness: number = 0.12
 ): THREE.Group {
   const group = new THREE.Group();
 
@@ -99,8 +154,8 @@ export function createGuardRailGeometry(
     const topCurve = new CurveClass(topPoints);
     const midCurve = new CurveClass(midPoints);
 
-    const tubeGeo1 = new THREE.TubeGeometry(topCurve, edge.length * 3, thickness / 2, 8, false);
-    const tubeGeo2 = new THREE.TubeGeometry(midCurve, edge.length * 3, thickness / 2, 8, false);
+    const tubeGeo1 = new THREE.TubeGeometry(topCurve, edge.length * 2, thickness / 2, 6, false);
+    const tubeGeo2 = new THREE.TubeGeometry(midCurve, edge.length * 2, thickness / 2, 6, false);
 
     const material = new THREE.MeshStandardMaterial({
       color: 0x888888,
@@ -111,11 +166,12 @@ export function createGuardRailGeometry(
     railGroup.add(new THREE.Mesh(tubeGeo1, material));
     railGroup.add(new THREE.Mesh(tubeGeo2, material));
 
-    for (let i = 0; i < edge.length; i += 3) {
+    for (let i = 0; i < edge.length; i += 4) {
       const point = edge[i];
-      const postGeo = new THREE.BoxGeometry(thickness, height, thickness);
+      const postGeo = new THREE.BoxGeometry(thickness * 1.2, height, thickness * 1.2);
       const post = new THREE.Mesh(postGeo, material);
       post.position.set(point.x, point.y + height / 2, point.z);
+      post.castShadow = true;
       railGroup.add(post);
     }
 
@@ -130,7 +186,7 @@ export function createGuardRailGeometry(
 
 export function createCarGeometry(type: 'car' | 'suv' | 'truck'): { body: THREE.BufferGeometry; wheels: THREE.BufferGeometry[] } {
   const wheelGeos: THREE.BufferGeometry[] = [];
-  const wheelGeo = new THREE.CylinderGeometry(0.3, 0.3, 0.2, 16);
+  const wheelGeo = new THREE.CylinderGeometry(0.35, 0.35, 0.25, 12);
   wheelGeo.rotateZ(Math.PI / 2);
 
   for (let i = 0; i < 4; i++) {
@@ -143,89 +199,65 @@ export function createCarGeometry(type: 'car' | 'suv' | 'truck'): { body: THREE.
 
   if (type === 'car') {
     const bodyShape = new ShapeClass();
-    bodyShape.moveTo(-1.5, -0.4);
-    bodyShape.lineTo(1.5, -0.4);
-    bodyShape.lineTo(1.5, 0.1);
-    bodyShape.lineTo(1, 0.5);
-    bodyShape.lineTo(-1, 0.5);
-    bodyShape.lineTo(-1.5, 0.1);
-    bodyShape.closePath();
-
-    const extrudeSettings = { depth: 0.8, bevelEnabled: true, bevelSize: 0.05, bevelThickness: 0.05 };
-    bodyGeo = new THREE.ExtrudeGeometry(bodyShape, extrudeSettings);
-    bodyGeo.rotateX(Math.PI / 2);
-    bodyGeo.translate(0, 0.4, 0);
-  } else if (type === 'suv') {
-    const bodyShape = new ShapeClass();
     bodyShape.moveTo(-1.8, -0.5);
     bodyShape.lineTo(1.8, -0.5);
-    bodyShape.lineTo(1.8, 0.2);
-    bodyShape.lineTo(1.5, 0.7);
-    bodyShape.lineTo(-1.5, 0.7);
-    bodyShape.lineTo(-1.8, 0.2);
+    bodyShape.lineTo(1.8, 0.1);
+    bodyShape.lineTo(1.2, 0.6);
+    bodyShape.lineTo(-1.2, 0.6);
+    bodyShape.lineTo(-1.8, 0.1);
     bodyShape.closePath();
 
-    const extrudeSettings = { depth: 1, bevelEnabled: true, bevelSize: 0.05, bevelThickness: 0.05 };
+    const extrudeSettings = { depth: 1, bevelEnabled: true, bevelSize: 0.08, bevelThickness: 0.08 };
     bodyGeo = new THREE.ExtrudeGeometry(bodyShape, extrudeSettings);
     bodyGeo.rotateX(Math.PI / 2);
     bodyGeo.translate(0, 0.5, 0);
+  } else if (type === 'suv') {
+    const bodyShape = new ShapeClass();
+    bodyShape.moveTo(-2, -0.6);
+    bodyShape.lineTo(2, -0.6);
+    bodyShape.lineTo(2, 0.2);
+    bodyShape.lineTo(1.6, 0.8);
+    bodyShape.lineTo(-1.6, 0.8);
+    bodyShape.lineTo(-2, 0.2);
+    bodyShape.closePath();
+
+    const extrudeSettings = { depth: 1.2, bevelEnabled: true, bevelSize: 0.08, bevelThickness: 0.08 };
+    bodyGeo = new THREE.ExtrudeGeometry(bodyShape, extrudeSettings);
+    bodyGeo.rotateX(Math.PI / 2);
+    bodyGeo.translate(0, 0.6, 0);
   } else {
-    const group = new THREE.Group();
-
-    const cargoGeo = new THREE.BoxGeometry(2.5, 1.2, 1.2);
-    const cargo = new THREE.Mesh(cargoGeo);
-    cargo.position.set(0.5, 0.6, 0);
-
-    const cabShape = new ShapeClass();
-    cabShape.moveTo(-1.2, -0.5);
-    cabShape.lineTo(-0.2, -0.5);
-    cabShape.lineTo(-0.2, 0.2);
-    cabShape.lineTo(-0.5, 0.7);
-    cabShape.lineTo(-1.2, 0.7);
-    cabShape.closePath();
-
-    const extrudeSettings = { depth: 1.1, bevelEnabled: true, bevelSize: 0.05, bevelThickness: 0.05 };
-    const cabGeo = new THREE.ExtrudeGeometry(cabShape, extrudeSettings);
-    cabGeo.rotateX(Math.PI / 2);
-    const cab = new THREE.Mesh(cabGeo);
-    cab.position.set(0, 0.5, 0);
-
-    group.add(cargo);
-    group.add(cab);
-
-    const mergedGeo = new THREE.BoxGeometry(4, 1.5, 1.5);
-    bodyGeo = mergedGeo;
+    bodyGeo = new THREE.BoxGeometry(4.5, 1.8, 1.8);
+    bodyGeo.translate(0, 0.9, 0);
   }
 
   return { body: bodyGeo, wheels: wheelGeos };
 }
 
 export function createStreetLightGeometry(): { pole: THREE.Mesh; lamp: THREE.Mesh; light: THREE.PointLight } {
-  const poleGeo = new THREE.CylinderGeometry(0.08, 0.12, 6, 8);
-  const poleMat = new THREE.MeshStandardMaterial({ color: 0x333333, metalness: 0.9, roughness: 0.2 });
+  const poleGeo = new THREE.CylinderGeometry(0.1, 0.15, 7, 8);
+  const poleMat = new THREE.MeshStandardMaterial({ color: 0x2a2a2a, metalness: 0.9, roughness: 0.2 });
   const pole = new THREE.Mesh(poleGeo, poleMat);
-  pole.position.y = 3;
+  pole.position.y = 3.5;
 
-  const armGeo = new THREE.CylinderGeometry(0.04, 0.04, 2, 6);
-  armGeo.rotateZ(Math.PI / 2);
+  const armGeo = new THREE.CylinderGeometry(0.05, 0.05, 2.5, 6);
+  armGeo.rotateZ(Math.PI / 2.5);
   const arm = new THREE.Mesh(armGeo, poleMat);
-  arm.position.set(1, 5.5, 0);
+  arm.position.set(1.2, 6, 0);
   pole.add(arm);
 
-  const lampGeo = new THREE.SphereGeometry(0.2, 12, 8);
+  const lampGeo = new THREE.SphereGeometry(0.25, 12, 8);
   const lampMat = new THREE.MeshStandardMaterial({
     color: 0xffffaa,
     emissive: 0xffff88,
-    emissiveIntensity: 0.5
+    emissiveIntensity: 0.3
   });
   const lamp = new THREE.Mesh(lampGeo, lampMat);
-  lamp.position.set(2, 5.5, 0);
+  lamp.position.set(2.5, 5.8, 0);
   pole.add(lamp);
 
-  const light = new THREE.PointLight(0xffffcc, 0, 20, 2);
-  light.position.set(2, 5.2, 0);
-  light.castShadow = true;
-  light.shadow.mapSize.set(512, 512);
+  const light = new THREE.PointLight(0xffffcc, 0, 25, 2);
+  light.position.set(2.5, 5.5, 0);
+  light.castShadow = false;
 
   return { pole, lamp, light };
 }
@@ -237,23 +269,24 @@ export function createBuildingGeometry(width: number, height: number, depth: num
 
   if (style === 'office') {
     material = new THREE.MeshPhysicalMaterial({
-      color: 0x8899aa,
+      color: 0xaabbcc,
       metalness: 0.1,
-      roughness: 0.2,
+      roughness: 0.3,
       transparent: true,
-      opacity: 0.8,
-      transmission: 0.3
+      opacity: 0.7,
+      transmission: 0.5,
+      reflectivity: 0.5
     });
   } else if (style === 'residential') {
     material = new THREE.MeshStandardMaterial({
-      color: 0xccbb99,
-      roughness: 0.7
+      color: 0xddccaa,
+      roughness: 0.8
     });
   } else {
     material = new THREE.MeshStandardMaterial({
-      color: 0x778899,
-      metalness: 0.3,
-      roughness: 0.5
+      color: 0x8899aa,
+      metalness: 0.2,
+      roughness: 0.6
     });
   }
 
@@ -266,17 +299,49 @@ export function createBuildingGeometry(width: number, height: number, depth: num
 export function createRoadSignGeometry(text: string): THREE.Group {
   const group = new THREE.Group();
 
-  const poleGeo = new THREE.CylinderGeometry(0.05, 0.05, 4, 6);
-  const poleMat = new THREE.MeshStandardMaterial({ color: 0x444444 });
+  const poleGeo = new THREE.CylinderGeometry(0.06, 0.08, 5, 6);
+  const poleMat = new THREE.MeshStandardMaterial({ color: 0x555555, metalness: 0.5 });
   const pole = new THREE.Mesh(poleGeo, poleMat);
-  pole.position.y = 2;
+  pole.position.y = 2.5;
   group.add(pole);
 
-  const signGeo = new THREE.BoxGeometry(2, 0.8, 0.1);
-  const signMat = new THREE.MeshStandardMaterial({ color: 0x1a5fb4, side: THREE.DoubleSide });
+  const signGeo = new THREE.BoxGeometry(2.5, 1, 0.1);
+  const signMat = new THREE.MeshStandardMaterial({
+    color: 0x1a5fb4,
+    side: THREE.DoubleSide,
+    metalness: 0.1
+  });
   const sign = new THREE.Mesh(signGeo, signMat);
-  sign.position.y = 4;
+  sign.position.y = 5;
+  sign.castShadow = true;
   group.add(sign);
+
+  const frameGeo = new THREE.BoxGeometry(2.7, 1.2, 0.05);
+  const frameMat = new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 0.3 });
+  const frame = new THREE.Mesh(frameGeo, frameMat);
+  frame.position.y = 5;
+  frame.position.z = -0.03;
+  group.add(frame);
+
+  return group;
+}
+
+export function createTreeGeometry(): THREE.Group {
+  const group = new THREE.Group();
+
+  const trunkGeo = new THREE.CylinderGeometry(0.15, 0.25, 2, 8);
+  const trunkMat = new THREE.MeshStandardMaterial({ color: 0x8B4513, roughness: 0.9 });
+  const trunk = new THREE.Mesh(trunkGeo, trunkMat);
+  trunk.position.y = 1;
+  trunk.castShadow = true;
+  group.add(trunk);
+
+  const foliageGeo = new THREE.SphereGeometry(1.5, 8, 6);
+  const foliageMat = new THREE.MeshStandardMaterial({ color: 0x228B22, roughness: 0.8 });
+  const foliage = new THREE.Mesh(foliageGeo, foliageMat);
+  foliage.position.y = 3.5;
+  foliage.castShadow = true;
+  group.add(foliage);
 
   return group;
 }

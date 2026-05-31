@@ -12,52 +12,59 @@ export function useThreeScene(container: HTMLElement) {
   const clock = new THREE.Clock();
 
   const scene = new THREE.Scene();
-  scene.fog = new THREE.FogExp2(0x87ceeb, 0.002);
+  scene.fog = new THREE.FogExp2(0x87ceeb, 0.003);
 
   const renderer = new THREE.WebGLRenderer({
     antialias: true,
-    alpha: true
+    alpha: true,
+    powerPreference: 'high-performance'
   });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
   renderer.setSize(container.clientWidth, container.clientHeight);
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1;
+  renderer.toneMappingExposure = 1.2;
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
   container.appendChild(renderer.domElement);
 
-  const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+  const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
   scene.add(ambientLight);
 
-  const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-  directionalLight.position.set(100, 150, 100);
+  const directionalLight = new THREE.DirectionalLight(0xffffff, 1.2);
+  directionalLight.position.set(80, 120, 60);
   directionalLight.castShadow = true;
-  directionalLight.shadow.mapSize.set(2048, 2048);
-  directionalLight.shadow.camera.left = -200;
-  directionalLight.shadow.camera.right = 200;
-  directionalLight.shadow.camera.top = 200;
-  directionalLight.shadow.camera.bottom = -200;
-  directionalLight.shadow.camera.near = 0.5;
-  directionalLight.shadow.camera.far = 500;
-  directionalLight.shadow.bias = -0.0001;
+  directionalLight.shadow.mapSize.set(1024, 1024);
+  directionalLight.shadow.camera.left = -150;
+  directionalLight.shadow.camera.right = 150;
+  directionalLight.shadow.camera.top = 150;
+  directionalLight.shadow.camera.bottom = -150;
+  directionalLight.shadow.camera.near = 10;
+  directionalLight.shadow.camera.far = 400;
+  directionalLight.shadow.bias = -0.0005;
+  directionalLight.shadow.normalBias = 0.02;
   scene.add(directionalLight);
 
-  const hemisphereLight = new THREE.HemisphereLight(0x87ceeb, 0x3d6b2f, 0.4);
+  const hemisphereLight = new THREE.HemisphereLight(0x87ceeb, 0x5a7d4a, 0.5);
   scene.add(hemisphereLight);
 
+  const fillLight = new THREE.DirectionalLight(0xccddff, 0.3);
+  fillLight.position.set(-50, 50, -50);
+  scene.add(fillLight);
+
   const moonLight = new THREE.DirectionalLight(0x6688cc, 0);
-  moonLight.position.set(-100, 150, -100);
+  moonLight.position.set(-80, 100, -80);
   scene.add(moonLight);
 
-  const skyGeo = new THREE.SphereGeometry(500, 32, 32);
+  const skyGeo = new THREE.SphereGeometry(600, 32, 32);
   const sky = new THREE.Mesh(skyGeo, environmentMaterials.skyDay);
   scene.add(sky);
 
   const starsGeometry = new THREE.BufferGeometry();
-  const starCount = 1000;
+  const starCount = 500;
   const starPositions = new Float32Array(starCount * 3);
   for (let i = 0; i < starCount * 3; i += 3) {
-    const radius = 400 + Math.random() * 100;
+    const radius = 450 + Math.random() * 100;
     const theta = Math.random() * Math.PI * 2;
     const phi = Math.random() * Math.PI;
     starPositions[i] = radius * Math.sin(phi) * Math.cos(theta);
@@ -65,7 +72,7 @@ export function useThreeScene(container: HTMLElement) {
     starPositions[i + 2] = radius * Math.sin(phi) * Math.sin(theta);
   }
   starsGeometry.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
-  const starsMaterial = new THREE.PointsMaterial({ color: 0xffffff, size: 1.5, transparent: true, opacity: 0 });
+  const starsMaterial = new THREE.PointsMaterial({ color: 0xffffff, size: 2, transparent: true, opacity: 0 });
   const stars = new THREE.Points(starsGeometry, starsMaterial);
   scene.add(stars);
 
@@ -96,26 +103,26 @@ export function useThreeScene(container: HTMLElement) {
       height: b.height
     };
 
-    const windowMat = new THREE.MeshStandardMaterial({
-      color: 0xffffcc,
-      emissive: 0xffffaa,
-      emissiveIntensity: 0
-    });
+    if (b.style === 'office' || b.style === 'commercial') {
+      const windowMat = new THREE.MeshStandardMaterial({
+        color: 0xffffcc,
+        emissive: 0xffffaa,
+        emissiveIntensity: 0
+      });
 
-    for (let wy = 1; wy < b.height - 2; wy += 3) {
-      for (let wx = -b.width / 2 + 2; wx < b.width / 2; wx += 4) {
-        for (let wz = -b.depth / 2 + 2; wz < b.depth / 2; wz += 4) {
-          if (Math.random() > 0.3) {
-            const windowGeo = new THREE.PlaneGeometry(1.5, 2);
-            const windowMesh = new THREE.Mesh(windowGeo, windowMat);
-            windowMesh.position.set(wx, wy, wz + (Math.abs(wz) > b.depth / 2 - 2.1 ? 0.01 : b.depth / 2 + 0.01));
-            if (Math.abs(wz) > Math.abs(wx)) {
-              windowMesh.rotation.y = wz > 0 ? 0 : Math.PI;
-            } else {
-              windowMesh.rotation.y = wx > 0 ? Math.PI / 2 : -Math.PI / 2;
-            }
-            building.add(windowMesh);
-          }
+      const windowGeo = new THREE.PlaneGeometry(2, 2.5);
+
+      const step = 5;
+      for (let wy = 3; wy < b.height - 2; wy += step) {
+        for (let wx = -b.width / 2 + 3; wx < b.width / 2; wx += step) {
+          const windowMesh = new THREE.Mesh(windowGeo, windowMat);
+          windowMesh.position.set(wx, wy, b.depth / 2 + 0.02);
+          building.add(windowMesh);
+
+          const windowMesh2 = windowMesh.clone();
+          windowMesh2.position.z = -b.depth / 2 - 0.02;
+          windowMesh2.rotation.y = Math.PI;
+          building.add(windowMesh2);
         }
       }
     }
@@ -156,8 +163,8 @@ export function useThreeScene(container: HTMLElement) {
 
     const sprite = new THREE.Sprite(spriteMat);
     sprite.position.copy(position);
-    sprite.position.y += 5;
-    sprite.scale.set(10, 2.5, 1);
+    sprite.position.y += 6;
+    sprite.scale.set(12, 3, 1);
 
     return sprite;
   }
@@ -198,23 +205,24 @@ export function useThreeScene(container: HTMLElement) {
 
     sky.material = isDay ? environmentMaterials.skyDay : environmentMaterials.skyNight;
 
-    ambientLight.intensity = isDay ? 0.6 : 0.15;
-    directionalLight.intensity = isDay ? 1 : 0;
-    hemisphereLight.intensity = isDay ? 0.4 : 0.1;
-    moonLight.intensity = isDay ? 0 : 0.3;
+    ambientLight.intensity = isDay ? 0.5 : 0.1;
+    directionalLight.intensity = isDay ? 1.2 : 0;
+    hemisphereLight.intensity = isDay ? 0.5 : 0.05;
+    fillLight.intensity = isDay ? 0.3 : 0;
+    moonLight.intensity = isDay ? 0 : 0.4;
 
-    starsMaterial.opacity = isDay ? 0 : 0.8;
+    starsMaterial.opacity = isDay ? 0 : 0.9;
 
-    renderer.toneMappingExposure = isDay ? 1 : 0.8;
+    renderer.toneMappingExposure = isDay ? 1.2 : 0.7;
 
     for (const { light } of streetLights) {
-      light.intensity = isDay ? 0 : 1.5;
+      light.intensity = isDay ? 0 : 2;
     }
 
     scene.traverse((obj) => {
       if (obj instanceof THREE.Mesh && obj.material instanceof THREE.MeshStandardMaterial) {
         if (obj.material.emissive && obj.material.emissiveIntensity > 0) {
-          obj.material.emissiveIntensity = isDay ? 0.1 : 1;
+          obj.material.emissiveIntensity = isDay ? 0.05 : 0.8;
         }
       }
     });
@@ -265,12 +273,19 @@ export function useThreeScene(container: HTMLElement) {
   renderer.domElement.addEventListener('click', handleRaycast);
 
   let animationId: number;
+  let lastTime = 0;
+  const MAX_DELTA = 0.1;
 
   function animate() {
     animationId = requestAnimationFrame(animate);
 
-    const deltaTime = clock.getDelta();
-    const elapsedTime = clock.getElapsedTime();
+    const currentTime = clock.getElapsedTime();
+    let deltaTime = currentTime - lastTime;
+    lastTime = currentTime;
+
+    if (deltaTime > MAX_DELTA) {
+      deltaTime = MAX_DELTA;
+    }
 
     trafficSystem.updateVehicles(deltaTime, store.state.timeOfDay === 'night', store.state.roadStatus);
 
@@ -295,8 +310,8 @@ export function useThreeScene(container: HTMLElement) {
     for (let i = 0; i < streetLights.length; i++) {
       const { light } = streetLights[i];
       if (light.intensity > 0) {
-        const flicker = Math.sin(elapsedTime * 3 + i) * 0.05 + 0.95;
-        light.intensity = store.state.timeOfDay === 'night' ? 1.5 * flicker : 0;
+        const flicker = Math.sin(currentTime * 2 + i * 0.5) * 0.03 + 0.97;
+        light.intensity = store.state.timeOfDay === 'night' ? 2 * flicker : 0;
       }
     }
 

@@ -366,12 +366,12 @@ def main():
     """主函数"""
 
     with st.sidebar:
-        selected = option_menu(
-            "火山地质结构三维可视化",
+        st.title("🌋 火山地质结构三维可视化")
+        selected = st.radio(
+            "视图选择",
             ["外部视图", "剖面视图", "危险区域", "热力分布", "参数设置", "数据导出", "图例说明"],
-            icons=["globe", "layers", "exclamation-triangle", "thermometer-half", "sliders", "download", "info-circle"],
-            menu_icon="volcano",
-            default_index=0,
+            index=0,
+            label_visibility="collapsed",
         )
 
         st.markdown("---")

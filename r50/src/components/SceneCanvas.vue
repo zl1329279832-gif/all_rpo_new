@@ -24,6 +24,9 @@ let cameraControls: CameraControls | null = null
 let labelSystem: ComponentLabelSystem | null = null
 let animationFrameId: number = 0
 let clock: THREE.Clock = new THREE.Clock()
+let lastRenderTime: number = 0
+const TARGET_FPS: number = 60
+const FRAME_INTERVAL: number = 1000 / TARGET_FPS
 
 function initScene() {
   if (!containerRef.value) return
@@ -39,14 +42,19 @@ function initScene() {
 
   renderer = new THREE.WebGLRenderer({
     antialias: true,
-    powerPreference: 'high-performance'
+    powerPreference: 'high-performance',
+    alpha: false,
+    stencil: false,
+    preserveDrawingBuffer: false
   })
   renderer.setSize(containerRef.value.clientWidth, containerRef.value.clientHeight)
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, window.devicePixelRatio > 1.5 ? 1.5 : window.devicePixelRatio))
   renderer.shadowMap.enabled = true
   renderer.shadowMap.type = THREE.PCFSoftShadowMap
   renderer.toneMapping = THREE.ACESFilmicToneMapping
   renderer.toneMappingExposure = 1.0
+  renderer.outputColorSpace = THREE.SRGBColorSpace
+  renderer.info.autoReset = true
   containerRef.value.appendChild(renderer.domElement)
 
   sceneManager = new SceneManager(scene)
@@ -70,6 +78,7 @@ function initScene() {
 function animate() {
   animationFrameId = requestAnimationFrame(animate)
 
+  const now = performance.now()
   const delta = clock.getDelta()
   const elapsed = clock.getElapsedTime()
 
@@ -77,20 +86,24 @@ function animate() {
     cameraControls.update(delta)
   }
 
-  if (sceneManager) {
-    sceneManager.animate(elapsed)
-  }
+  if (now - lastRenderTime >= FRAME_INTERVAL) {
+    lastRenderTime = now
 
-  if (lightingSystem) {
-    lightingSystem.update(elapsed)
-  }
+    if (sceneManager) {
+      sceneManager.animate(elapsed)
+    }
 
-  if (labelSystem) {
-    labelSystem.update()
-  }
+    if (lightingSystem) {
+      lightingSystem.update(elapsed)
+    }
 
-  if (renderer && scene && camera) {
-    renderer.render(scene, camera)
+    if (labelSystem) {
+      labelSystem.update()
+    }
+
+    if (renderer && scene && camera) {
+      renderer.render(scene, camera)
+    }
   }
 }
 

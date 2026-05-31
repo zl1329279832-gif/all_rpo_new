@@ -1,6 +1,58 @@
 import * as THREE from 'three'
 import { MaterialLibrary } from '@/materials/MaterialLibrary'
 
+function mergeGeometries(geometries: THREE.BufferGeometry[]): THREE.BufferGeometry {
+  const mergedGeo = new THREE.BufferGeometry()
+  const positions: number[] = []
+  const normals: number[] = []
+  const uvs: number[] = []
+  const indices: number[] = []
+  let indexOffset = 0
+
+  for (const geo of geometries) {
+    const posAttr = geo.getAttribute('position')
+    const normAttr = geo.getAttribute('normal')
+    const uvAttr = geo.getAttribute('uv')
+    const indexAttr = geo.index
+
+    if (posAttr) {
+      for (let i = 0; i < posAttr.count; i++) {
+        positions.push(posAttr.getX(i), posAttr.getY(i), posAttr.getZ(i))
+        if (normAttr) {
+          normals.push(normAttr.getX(i), normAttr.getY(i), normAttr.getZ(i))
+        }
+        if (uvAttr) {
+          uvs.push(uvAttr.getX(i), uvAttr.getY(i))
+        }
+      }
+    }
+
+    if (indexAttr) {
+      for (let i = 0; i < indexAttr.count; i++) {
+        indices.push(indexAttr.getX(i) + indexOffset)
+      }
+    } else {
+      for (let i = 0; i < posAttr.count; i++) {
+        indices.push(i + indexOffset)
+      }
+    }
+
+    indexOffset += posAttr ? posAttr.count : 0
+  }
+
+  mergedGeo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3))
+  if (normals.length > 0) {
+    mergedGeo.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3))
+  }
+  if (uvs.length > 0) {
+    mergedGeo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2))
+  }
+  mergedGeo.setIndex(indices)
+  mergedGeo.computeBoundingSphere()
+
+  return mergedGeo
+}
+
 export class BaseComponents {
   static createColumn(
     radius: number = 0.25,
@@ -65,42 +117,35 @@ export class BaseComponents {
     const woodMaterial = MaterialLibrary.darkWoodBeam
     const goldMaterial = MaterialLibrary.goldDecorative
 
-    const baseBlock = new THREE.Mesh(
-      new THREE.BoxGeometry(size, size * 0.25, size),
-      woodMaterial
-    )
-    baseBlock.position.y = 0
-    baseBlock.castShadow = true
-    group.add(baseBlock)
+    const woodGeometries: THREE.BoxGeometry[] = []
+
+    const baseGeo = new THREE.BoxGeometry(size, size * 0.25, size)
+    baseGeo.translate(0, 0, 0)
+    woodGeometries.push(baseGeo)
 
     for (let i = 0; i < 4; i++) {
       const angle = (i * Math.PI) / 2
-      const arm = new THREE.Mesh(
-        new THREE.BoxGeometry(size * 0.8, size * 0.15, size * 0.15),
-        woodMaterial
-      )
-      arm.position.set(
-        Math.cos(angle) * size * 0.4,
-        size * 0.2,
-        Math.sin(angle) * size * 0.4
-      )
-      arm.rotation.y = angle
-      arm.castShadow = true
-      group.add(arm)
+      const cos = Math.cos(angle)
+      const sin = Math.sin(angle)
 
-      const bow = new THREE.Mesh(
-        new THREE.BoxGeometry(size * 0.15, size * 0.2, size * 0.5),
-        woodMaterial
-      )
-      bow.position.set(
-        Math.cos(angle) * size * 0.6,
-        size * 0.35,
-        Math.sin(angle) * size * 0.6
-      )
-      bow.rotation.y = angle
-      bow.castShadow = true
-      group.add(bow)
+      const armGeo = new THREE.BoxGeometry(size * 0.8, size * 0.15, size * 0.15)
+      armGeo.translate(cos * size * 0.4, size * 0.2, sin * size * 0.4)
+      armGeo.rotateY(angle)
+      woodGeometries.push(armGeo)
+
+      const bowGeo = new THREE.BoxGeometry(size * 0.15, size * 0.2, size * 0.5)
+      bowGeo.translate(cos * size * 0.6, size * 0.35, sin * size * 0.6)
+      bowGeo.rotateY(angle)
+      woodGeometries.push(bowGeo)
     }
+
+    const mergedWoodGeo = mergeGeometries(woodGeometries)
+    const woodMesh = new THREE.Mesh(mergedWoodGeo, woodMaterial)
+    woodMesh.castShadow = true
+    woodMesh.receiveShadow = true
+    group.add(woodMesh)
+
+    woodGeometries.forEach(g => g.dispose())
 
     const topBlock = new THREE.Mesh(
       new THREE.BoxGeometry(size * 0.9, size * 0.2, size * 0.9),

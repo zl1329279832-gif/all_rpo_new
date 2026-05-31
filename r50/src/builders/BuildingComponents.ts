@@ -62,19 +62,24 @@ export class BuildingComponents {
     const group = new THREE.Group()
     group.userData.componentId = 'main-hall'
 
-    const foundation = this.createFoundation(width + 2, depth + 2, 1.0)
-    foundation.position.y = 0
+    const baseY = 1.0
+
+    const foundation = this.createFoundation(width + 2, depth + 2, baseY)
     group.add(foundation)
 
-    const columnsGroup = this.createColumnsStructure(width, depth, columnHeight, 1.0)
+    const columnsGroup = this.createColumnsStructure(width, depth, columnHeight, baseY)
     columnsGroup.userData.layer = 'columns'
     group.add(columnsGroup)
 
-    const wallsGroup = this.createWalls(width, depth, columnHeight, 1.0)
+    const wallsGroup = this.createWalls(width, depth, columnHeight, baseY)
     wallsGroup.userData.layer = 'walls'
     group.add(wallsGroup)
 
-    const roofGroup = this.createMainRoof(width + 2, depth + 2, columnHeight + 1.0)
+    const floorGroup = this.createFloorStructure(width, depth, baseY + columnHeight)
+    floorGroup.userData.layer = 'columns'
+    group.add(floorGroup)
+
+    const roofGroup = this.createMainRoof(width + 2, depth + 2, baseY + columnHeight)
     roofGroup.userData.layer = 'roof'
     group.add(roofGroup)
 
@@ -97,8 +102,8 @@ export class BuildingComponents {
     group.add(platformRailRight)
 
     const lanternPositions = [
-      { x: -width / 2 + 0.5, y: columnHeight - 0.5, z: depth / 2 - 0.3 },
-      { x: width / 2 - 0.5, y: columnHeight - 0.5, z: depth / 2 - 0.3 }
+      { x: -width / 2 + 0.5, y: baseY + columnHeight - 0.5, z: depth / 2 - 0.3 },
+      { x: width / 2 - 0.5, y: baseY + columnHeight - 0.5, z: depth / 2 - 0.3 }
     ]
     lanternPositions.forEach(pos => {
       const lantern = BaseComponents.createLantern(0.35, new THREE.Vector3(pos.x, pos.y, pos.z), false)
@@ -107,6 +112,33 @@ export class BuildingComponents {
     })
 
     group.position.copy(position)
+    return group
+  }
+
+  private static createFloorStructure(
+    width: number,
+    depth: number,
+    baseY: number
+  ): THREE.Group {
+    const group = new THREE.Group()
+
+    const floorGeo = new THREE.BoxGeometry(width - 0.2, 0.15, depth - 0.2)
+    const floor = new THREE.Mesh(floorGeo, MaterialLibrary.darkWoodBeam)
+    floor.position.y = baseY - 0.08
+    floor.receiveShadow = true
+    floor.castShadow = true
+    group.add(floor)
+
+    const joistCount = 4
+    for (let i = 0; i < joistCount; i++) {
+      const z = -depth / 2 + 0.5 + i * ((depth - 1) / (joistCount - 1))
+      const joistGeo = new THREE.BoxGeometry(width - 0.3, 0.12, 0.18)
+      const joist = new THREE.Mesh(joistGeo, MaterialLibrary.darkWoodBeam)
+      joist.position.set(0, baseY - 0.22, z)
+      joist.castShadow = true
+      group.add(joist)
+    }
+
     return group
   }
 
@@ -162,6 +194,28 @@ export class BuildingComponents {
     rightTopBeam.rotation.y = -Math.PI / 2
     group.add(rightTopBeam)
 
+    const frontLintelGeo = new THREE.BoxGeometry(width, 0.35, 0.25)
+    const frontLintel = new THREE.Mesh(frontLintelGeo, MaterialLibrary.redWoodColumn)
+    frontLintel.position.set(0, baseY + columnHeight * 0.6, depth / 2 + 0.05)
+    frontLintel.castShadow = true
+    group.add(frontLintel)
+
+    const backLintelGeo = new THREE.BoxGeometry(width, 0.35, 0.25)
+    const backLintel = new THREE.Mesh(backLintelGeo, MaterialLibrary.redWoodColumn)
+    backLintel.position.set(0, baseY + columnHeight * 0.6, -depth / 2 - 0.05)
+    backLintel.castShadow = true
+    group.add(backLintel)
+
+    for (let i = 1; i < frontColumnCount - 1; i++) {
+      const x = -width / 2 + i * (width / (frontColumnCount - 1))
+      const frontQueti = this.createQueti(0.25, 0.35, new THREE.Vector3(x, baseY + columnHeight * 0.3, depth / 2 + 0.15))
+      group.add(frontQueti)
+
+      const backQueti = this.createQueti(0.25, 0.35, new THREE.Vector3(x, baseY + columnHeight * 0.3, -depth / 2 - 0.15))
+      backQueti.rotation.y = Math.PI
+      group.add(backQueti)
+    }
+
     const secondaryBeamCount = frontColumnCount - 1
     for (let i = 0; i < secondaryBeamCount; i++) {
       const x = -width / 2 + (i + 0.5) * (width / (frontColumnCount - 1))
@@ -170,6 +224,34 @@ export class BuildingComponents {
       group.add(secondaryBeam)
     }
 
+    return group
+  }
+
+  private static createQueti(
+    width: number,
+    height: number,
+    position: THREE.Vector3
+  ): THREE.Group {
+    const group = new THREE.Group()
+
+    const bodyGeo = new THREE.BoxGeometry(width * 0.6, height, width * 0.4)
+    const body = new THREE.Mesh(bodyGeo, MaterialLibrary.darkWoodBeam)
+    body.castShadow = true
+    group.add(body)
+
+    const armGeo = new THREE.BoxGeometry(width, 0.08, width * 0.3)
+    const arm = new THREE.Mesh(armGeo, MaterialLibrary.darkWoodBeam)
+    arm.position.set(0, height * 0.3, 0)
+    arm.castShadow = true
+    group.add(arm)
+
+    const tipGeo = new THREE.ConeGeometry(width * 0.15, width * 0.3, 6)
+    const tip = new THREE.Mesh(tipGeo, MaterialLibrary.goldDecorative)
+    tip.position.set(0, height * 0.6, 0)
+    tip.castShadow = true
+    group.add(tip)
+
+    group.position.copy(position)
     return group
   }
 
@@ -182,11 +264,25 @@ export class BuildingComponents {
     const group = new THREE.Group()
 
     const wallHeight = columnHeight - 0.4
-    const wallThickness = 0.15
+    const wallThickness = 0.35
 
-    const backWallGeo = new THREE.BoxGeometry(width - 0.6, wallHeight, wallThickness)
+    const frontWallLeftGeo = new THREE.BoxGeometry(width / 2 - 1.8, wallHeight, wallThickness)
+    const frontWallLeft = new THREE.Mesh(frontWallLeftGeo, MaterialLibrary.brickWall)
+    frontWallLeft.position.set(-width / 4 - 0.9, baseY + wallHeight / 2 + 0.2, depth / 2 + wallThickness / 2 - 0.05)
+    frontWallLeft.castShadow = true
+    frontWallLeft.receiveShadow = true
+    group.add(frontWallLeft)
+
+    const frontWallRightGeo = new THREE.BoxGeometry(width / 2 - 1.8, wallHeight, wallThickness)
+    const frontWallRight = new THREE.Mesh(frontWallRightGeo, MaterialLibrary.brickWall)
+    frontWallRight.position.set(width / 4 + 0.9, baseY + wallHeight / 2 + 0.2, depth / 2 + wallThickness / 2 - 0.05)
+    frontWallRight.castShadow = true
+    frontWallRight.receiveShadow = true
+    group.add(frontWallRight)
+
+    const backWallGeo = new THREE.BoxGeometry(width, wallHeight, wallThickness)
     const backWall = new THREE.Mesh(backWallGeo, MaterialLibrary.brickWall)
-    backWall.position.set(0, baseY + wallHeight / 2 + 0.2, -depth / 2 + 0.15)
+    backWall.position.set(0, baseY + wallHeight / 2 + 0.2, -depth / 2 - wallThickness / 2 + 0.05)
     backWall.castShadow = true
     backWall.receiveShadow = true
     group.add(backWall)
@@ -196,21 +292,21 @@ export class BuildingComponents {
       { x: 2, y: baseY + wallHeight / 2 + 0.3 }
     ]
     backWindowPositions.forEach(pos => {
-      const window = BaseComponents.createWindow(1.4, 1.6, new THREE.Vector3(pos.x, pos.y, -depth / 2 + 0.23))
+      const window = BaseComponents.createWindow(1.4, 1.6, new THREE.Vector3(pos.x, pos.y, -depth / 2 - wallThickness / 2 + 0.15))
       window.rotation.y = Math.PI
       group.add(window)
     })
 
-    const leftWallGeo = new THREE.BoxGeometry(wallThickness, wallHeight, depth - 0.6)
+    const leftWallGeo = new THREE.BoxGeometry(wallThickness, wallHeight, depth)
     const leftWall = new THREE.Mesh(leftWallGeo, MaterialLibrary.brickWall)
-    leftWall.position.set(-width / 2 + 0.15, baseY + wallHeight / 2 + 0.2, 0)
+    leftWall.position.set(-width / 2 - wallThickness / 2 + 0.05, baseY + wallHeight / 2 + 0.2, 0)
     leftWall.castShadow = true
     leftWall.receiveShadow = true
     group.add(leftWall)
 
-    const rightWallGeo = new THREE.BoxGeometry(wallThickness, wallHeight, depth - 0.6)
+    const rightWallGeo = new THREE.BoxGeometry(wallThickness, wallHeight, depth)
     const rightWall = new THREE.Mesh(rightWallGeo, MaterialLibrary.brickWall)
-    rightWall.position.set(width / 2 - 0.15, baseY + wallHeight / 2 + 0.2, 0)
+    rightWall.position.set(width / 2 + wallThickness / 2 - 0.05, baseY + wallHeight / 2 + 0.2, 0)
     rightWall.castShadow = true
     rightWall.receiveShadow = true
     group.add(rightWall)
@@ -220,33 +316,33 @@ export class BuildingComponents {
       { z: 1.5, rot: -Math.PI / 2 }
     ]
     sideWindowPositions.forEach(swp => {
-      const leftWindow = BaseComponents.createWindow(1.4, 1.6, new THREE.Vector3(-width / 2 + 0.23, baseY + wallHeight / 2 + 0.3, swp.z))
+      const leftWindow = BaseComponents.createWindow(1.4, 1.6, new THREE.Vector3(-width / 2 - wallThickness / 2 + 0.15, baseY + wallHeight / 2 + 0.3, swp.z))
       leftWindow.rotation.y = swp.rot
       group.add(leftWindow)
 
-      const rightWindow = BaseComponents.createWindow(1.4, 1.6, new THREE.Vector3(width / 2 - 0.23, baseY + wallHeight / 2 + 0.3, swp.z))
+      const rightWindow = BaseComponents.createWindow(1.4, 1.6, new THREE.Vector3(width / 2 + wallThickness / 2 - 0.15, baseY + wallHeight / 2 + 0.3, swp.z))
       rightWindow.rotation.y = -swp.rot
       group.add(rightWindow)
     })
 
-    const door = BaseComponents.createDoor(2.2, 3.2, new THREE.Vector3(0, baseY + 1.8, depth / 2 + 0.1))
+    const door = BaseComponents.createDoor(2.2, 3.2, new THREE.Vector3(0, baseY + 1.8, depth / 2 + wallThickness / 2 - 0.05))
     group.add(door)
 
-    const doorLeftWindow = BaseComponents.createWindow(1.2, 2.0, new THREE.Vector3(-2.5, baseY + 1.6, depth / 2 + 0.1))
+    const doorLeftWindow = BaseComponents.createWindow(1.2, 2.0, new THREE.Vector3(-2.5, baseY + 1.6, depth / 2 + wallThickness / 2 - 0.05))
     group.add(doorLeftWindow)
 
-    const doorRightWindow = BaseComponents.createWindow(1.2, 2.0, new THREE.Vector3(2.5, baseY + 1.6, depth / 2 + 0.1))
+    const doorRightWindow = BaseComponents.createWindow(1.2, 2.0, new THREE.Vector3(2.5, baseY + 1.6, depth / 2 + wallThickness / 2 - 0.05))
     group.add(doorRightWindow)
 
-    const gableLeftGeo = new THREE.BoxGeometry(0.12, 1.5, depth + 0.5)
+    const gableLeftGeo = new THREE.BoxGeometry(0.2, 1.8, depth + 1)
     const gableLeft = new THREE.Mesh(gableLeftGeo, MaterialLibrary.brickWall)
-    gableLeft.position.set(-width / 2 - 0.2, baseY + columnHeight + 1.2, 0)
+    gableLeft.position.set(-width / 2 - 0.3, baseY + columnHeight + 1.2, 0)
     gableLeft.castShadow = true
     group.add(gableLeft)
 
-    const gableRightGeo = new THREE.BoxGeometry(0.12, 1.5, depth + 0.5)
+    const gableRightGeo = new THREE.BoxGeometry(0.2, 1.8, depth + 1)
     const gableRight = new THREE.Mesh(gableRightGeo, MaterialLibrary.brickWall)
-    gableRight.position.set(width / 2 + 0.2, baseY + columnHeight + 1.2, 0)
+    gableRight.position.set(width / 2 + 0.3, baseY + columnHeight + 1.2, 0)
     gableRight.castShadow = true
     group.add(gableRight)
 
@@ -261,65 +357,87 @@ export class BuildingComponents {
     const group = new THREE.Group()
     group.userData.componentId = 'roof-main'
 
-    const ridgeHeight = 1.8
-    const eaveOverhang = 1.2
+    const ridgeHeight = 2.2
+    const eaveOverhang = 1.5
 
-    const roofShape = new THREE.Shape()
-    roofShape.moveTo(-width / 2 - eaveOverhang, 0)
-    roofShape.lineTo(-width / 2 - eaveOverhang + 0.5, 0.2)
-    roofShape.lineTo(-width / 4, ridgeHeight)
-    roofShape.lineTo(width / 4, ridgeHeight)
-    roofShape.lineTo(width / 2 + eaveOverhang - 0.5, 0.2)
-    roofShape.lineTo(width / 2 + eaveOverhang, 0)
-    roofShape.lineTo(-width / 2 - eaveOverhang, 0)
+    const roofThickness = 0.25
 
-    const extrudeSettings = {
-      steps: 1,
-      depth: depth + eaveOverhang * 2,
-      bevelEnabled: false
+    const frontSlopeGeo = new THREE.PlaneGeometry(width + eaveOverhang * 2, Math.sqrt(Math.pow(depth / 2 + eaveOverhang, 2) + Math.pow(ridgeHeight, 2)))
+    const frontSlope = new THREE.Mesh(frontSlopeGeo, MaterialLibrary.greyTileRoof)
+    frontSlope.rotation.x = -Math.atan2(ridgeHeight, depth / 2 + eaveOverhang)
+    frontSlope.position.set(0, baseY + 1.2 + ridgeHeight / 2, depth / 4)
+    frontSlope.castShadow = true
+    frontSlope.receiveShadow = true
+    group.add(frontSlope)
+
+    const backSlopeGeo = new THREE.PlaneGeometry(width + eaveOverhang * 2, Math.sqrt(Math.pow(depth / 2 + eaveOverhang, 2) + Math.pow(ridgeHeight, 2)))
+    const backSlope = new THREE.Mesh(backSlopeGeo, MaterialLibrary.greyTileRoof)
+    backSlope.rotation.x = Math.PI + Math.atan2(ridgeHeight, depth / 2 + eaveOverhang)
+    backSlope.position.set(0, baseY + 1.2 + ridgeHeight / 2, -depth / 4)
+    backSlope.castShadow = true
+    backSlope.receiveShadow = true
+    group.add(backSlope)
+
+    const leftSlopeGeo = new THREE.PlaneGeometry(depth + eaveOverhang * 2, Math.sqrt(Math.pow(width / 4, 2) + Math.pow(ridgeHeight, 2)))
+    const leftSlope = new THREE.Mesh(leftSlopeGeo, MaterialLibrary.greyTileRoof)
+    leftSlope.rotation.y = -Math.PI / 2
+    leftSlope.rotation.x = -Math.atan2(ridgeHeight, width / 4)
+    leftSlope.position.set(-width / 4 - eaveOverhang / 2, baseY + 1.2 + ridgeHeight / 2, 0)
+    leftSlope.castShadow = true
+    leftSlope.receiveShadow = true
+    group.add(leftSlope)
+
+    const rightSlopeGeo = new THREE.PlaneGeometry(depth + eaveOverhang * 2, Math.sqrt(Math.pow(width / 4, 2) + Math.pow(ridgeHeight, 2)))
+    const rightSlope = new THREE.Mesh(rightSlopeGeo, MaterialLibrary.greyTileRoof)
+    rightSlope.rotation.y = Math.PI / 2
+    rightSlope.rotation.x = -Math.atan2(ridgeHeight, width / 4)
+    rightSlope.position.set(width / 4 + eaveOverhang / 2, baseY + 1.2 + ridgeHeight / 2, 0)
+    rightSlope.castShadow = true
+    rightSlope.receiveShadow = true
+    group.add(rightSlope)
+
+    const purlinCount = 5
+    for (let i = 0; i < purlinCount; i++) {
+      const z = -depth / 2 - eaveOverhang * 0.5 + i * ((depth + eaveOverhang) / (purlinCount - 1))
+      const yRatio = 1 - Math.abs(z) / (depth / 2 + eaveOverhang)
+      const y = baseY + 1.2 + ridgeHeight * yRatio
+      const purlinGeo = new THREE.CylinderGeometry(0.08, 0.08, width + eaveOverhang * 2, 8)
+      const purlin = new THREE.Mesh(purlinGeo, MaterialLibrary.darkWoodBeam)
+      purlin.rotation.z = Math.PI / 2
+      purlin.position.set(0, y, z)
+      purlin.castShadow = true
+      group.add(purlin)
     }
 
-    const roofGeo = new THREE.ExtrudeGeometry(roofShape, extrudeSettings)
-    const roof = new THREE.Mesh(roofGeo, MaterialLibrary.greyTileRoof)
-    roof.rotation.x = -Math.PI / 2
-    roof.position.set(0, baseY + 1.0, -(depth / 2 + eaveOverhang))
-    roof.castShadow = true
-    roof.receiveShadow = true
-    group.add(roof)
+    const rafterCount = 12
+    for (let i = 0; i < rafterCount; i++) {
+      const x = -width / 2 - eaveOverhang + i * ((width + eaveOverhang * 2) / (rafterCount - 1))
+      const rafterGeo = new THREE.BoxGeometry(0.08, 0.12, depth + eaveOverhang * 2)
+      const rafter = new THREE.Mesh(rafterGeo, MaterialLibrary.darkWoodBeam)
+      rafter.rotation.x = -Math.atan2(ridgeHeight, depth / 2 + eaveOverhang)
+      rafter.position.set(x, baseY + 1.2 + ridgeHeight / 2 - 0.15, 0)
+      rafter.castShadow = true
+      group.add(rafter)
+    }
 
-    const ridge = BaseComponents.createRidge(width - 0.5, new THREE.Vector3(0, baseY + 1.0 + ridgeHeight + 0.3, 0))
+    const ridge = BaseComponents.createRidge(width + eaveOverhang * 2 - 1, new THREE.Vector3(0, baseY + 1.2 + ridgeHeight + 0.3, 0))
     ridge.rotation.y = Math.PI / 2
     group.add(ridge)
 
-    const frontEave = BaseComponents.createEave(width, eaveOverhang, 0.5, new THREE.Vector3(0, baseY + 1.0, depth / 2 + eaveOverhang / 2))
+    const frontEave = BaseComponents.createEave(width + eaveOverhang * 2, eaveOverhang, 0.5, new THREE.Vector3(0, baseY + 1.0, depth / 2 + eaveOverhang / 2))
     group.add(frontEave)
 
-    const backEave = BaseComponents.createEave(width, eaveOverhang, 0.5, new THREE.Vector3(0, baseY + 1.0, -depth / 2 - eaveOverhang / 2))
+    const backEave = BaseComponents.createEave(width + eaveOverhang * 2, eaveOverhang, 0.5, new THREE.Vector3(0, baseY + 1.0, -depth / 2 - eaveOverhang / 2))
     backEave.rotation.y = Math.PI
     group.add(backEave)
 
-    const leftEave = BaseComponents.createEave(depth, eaveOverhang * 0.8, 0.4, new THREE.Vector3(-width / 2 - eaveOverhang / 2, baseY + 1.0, 0))
+    const leftEave = BaseComponents.createEave(depth + eaveOverhang * 1.6, eaveOverhang * 0.8, 0.4, new THREE.Vector3(-width / 2 - eaveOverhang / 2, baseY + 1.0, 0))
     leftEave.rotation.y = Math.PI / 2
     group.add(leftEave)
 
-    const rightEave = BaseComponents.createEave(depth, eaveOverhang * 0.8, 0.4, new THREE.Vector3(width / 2 + eaveOverhang / 2, baseY + 1.0, 0))
+    const rightEave = BaseComponents.createEave(depth + eaveOverhang * 1.6, eaveOverhang * 0.8, 0.4, new THREE.Vector3(width / 2 + eaveOverhang / 2, baseY + 1.0, 0))
     rightEave.rotation.y = -Math.PI / 2
     group.add(rightEave)
-
-    const diagonalRidgeCount = 2
-    for (let i = 0; i < diagonalRidgeCount; i++) {
-      const diagRidgeGeo = new THREE.BoxGeometry(depth * 0.7, 0.15, 0.2)
-      const diagRidge = new THREE.Mesh(diagRidgeGeo, MaterialLibrary.goldDecorative)
-      diagRidge.position.set(
-        (i * 2 - 1) * (width / 4),
-        baseY + 1.0 + ridgeHeight * 0.5,
-        0
-      )
-      diagRidge.rotation.z = (i * 2 - 1) * 0.4
-      diagRidge.rotation.y = Math.PI / 2
-      diagRidge.castShadow = true
-      group.add(diagRidge)
-    }
 
     return group
   }
@@ -334,7 +452,9 @@ export class BuildingComponents {
     const group = new THREE.Group()
     group.userData.componentId = 'wing-room'
 
-    const foundation = this.createFoundation(width + 1, depth + 1, 0.7)
+    const baseY = 0.7
+
+    const foundation = this.createFoundation(width + 1, depth + 1, baseY)
     group.add(foundation)
 
     const columnsGroup = new THREE.Group()
@@ -343,24 +463,30 @@ export class BuildingComponents {
     const frontColumnCount = 4
     for (let i = 0; i < frontColumnCount; i++) {
       const x = -width / 2 + i * (width / (frontColumnCount - 1))
-      const column = BaseComponents.createColumn(0.22, columnHeight, new THREE.Vector3(x, 0.7, depth / 2))
+      const column = BaseComponents.createColumn(0.22, columnHeight, new THREE.Vector3(x, baseY, depth / 2))
       columnsGroup.add(column)
 
-      const backColumn = BaseComponents.createColumn(0.22, columnHeight, new THREE.Vector3(x, 0.7, -depth / 2))
+      const backColumn = BaseComponents.createColumn(0.22, columnHeight, new THREE.Vector3(x, baseY, -depth / 2))
       columnsGroup.add(backColumn)
     }
 
     for (let i = 0; i < frontColumnCount; i++) {
       const x = -width / 2 + i * (width / (frontColumnCount - 1))
-      const dougong = BaseComponents.createDougong(0.5, new THREE.Vector3(x, 0.7 + columnHeight, depth / 2))
+      const dougong = BaseComponents.createDougong(0.5, new THREE.Vector3(x, baseY + columnHeight, depth / 2))
       columnsGroup.add(dougong)
     }
 
-    const frontBeam = BaseComponents.createBeam(0.25, 0.3, width, new THREE.Vector3(0, 0.7 + columnHeight + 0.4, depth / 2))
+    const frontBeam = BaseComponents.createBeam(0.25, 0.3, width, new THREE.Vector3(0, baseY + columnHeight + 0.4, depth / 2))
     columnsGroup.add(frontBeam)
 
-    const backBeam = BaseComponents.createBeam(0.25, 0.3, width, new THREE.Vector3(0, 0.7 + columnHeight + 0.4, -depth / 2))
+    const backBeam = BaseComponents.createBeam(0.25, 0.3, width, new THREE.Vector3(0, baseY + columnHeight + 0.4, -depth / 2))
     columnsGroup.add(backBeam)
+
+    const frontLintelGeo = new THREE.BoxGeometry(width, 0.28, 0.2)
+    const frontLintel = new THREE.Mesh(frontLintelGeo, MaterialLibrary.redWoodColumn)
+    frontLintel.position.set(0, baseY + columnHeight * 0.55, depth / 2 + 0.05)
+    frontLintel.castShadow = true
+    columnsGroup.add(frontLintel)
 
     group.add(columnsGroup)
 
@@ -368,39 +494,62 @@ export class BuildingComponents {
     wallsGroup.userData.layer = 'walls'
 
     const wallHeight = columnHeight - 0.3
-    const backWallGeo = new THREE.BoxGeometry(width - 0.4, wallHeight, 0.12)
+    const wallThickness = 0.3
+
+    const frontWallLeftGeo = new THREE.BoxGeometry(width / 2 - 1.4, wallHeight, wallThickness)
+    const frontWallLeft = new THREE.Mesh(frontWallLeftGeo, MaterialLibrary.brickWall)
+    frontWallLeft.position.set(-width / 4 - 0.7, baseY + wallHeight / 2 + 0.15, depth / 2 + wallThickness / 2 - 0.05)
+    frontWallLeft.castShadow = true
+    frontWallLeft.receiveShadow = true
+    wallsGroup.add(frontWallLeft)
+
+    const frontWallRightGeo = new THREE.BoxGeometry(width / 2 - 1.4, wallHeight, wallThickness)
+    const frontWallRight = new THREE.Mesh(frontWallRightGeo, MaterialLibrary.brickWall)
+    frontWallRight.position.set(width / 4 + 0.7, baseY + wallHeight / 2 + 0.15, depth / 2 + wallThickness / 2 - 0.05)
+    frontWallRight.castShadow = true
+    frontWallRight.receiveShadow = true
+    wallsGroup.add(frontWallRight)
+
+    const backWallGeo = new THREE.BoxGeometry(width, wallHeight, wallThickness)
     const backWall = new THREE.Mesh(backWallGeo, MaterialLibrary.brickWall)
-    backWall.position.set(0, 0.7 + wallHeight / 2 + 0.15, -depth / 2 + 0.12)
+    backWall.position.set(0, baseY + wallHeight / 2 + 0.15, -depth / 2 - wallThickness / 2 + 0.05)
     backWall.castShadow = true
+    backWall.receiveShadow = true
     wallsGroup.add(backWall)
 
-    const sideWallGeo = new THREE.BoxGeometry(0.12, wallHeight, depth - 0.4)
+    const sideWallGeo = new THREE.BoxGeometry(wallThickness, wallHeight, depth)
     const leftWall = new THREE.Mesh(sideWallGeo, MaterialLibrary.brickWall)
-    leftWall.position.set(-width / 2 + 0.12, 0.7 + wallHeight / 2 + 0.15, 0)
+    leftWall.position.set(-width / 2 - wallThickness / 2 + 0.05, baseY + wallHeight / 2 + 0.15, 0)
     leftWall.castShadow = true
+    leftWall.receiveShadow = true
     wallsGroup.add(leftWall)
 
     const rightWall = new THREE.Mesh(sideWallGeo, MaterialLibrary.brickWall)
-    rightWall.position.set(width / 2 - 0.12, 0.7 + wallHeight / 2 + 0.15, 0)
+    rightWall.position.set(width / 2 + wallThickness / 2 - 0.05, baseY + wallHeight / 2 + 0.15, 0)
     rightWall.castShadow = true
+    rightWall.receiveShadow = true
     wallsGroup.add(rightWall)
 
-    const door = BaseComponents.createDoor(1.8, 2.6, new THREE.Vector3(0, 0.7 + 1.5, depth / 2 + 0.08))
+    const door = BaseComponents.createDoor(1.8, 2.6, new THREE.Vector3(0, baseY + 1.5, depth / 2 + wallThickness / 2 - 0.05))
     wallsGroup.add(door)
 
-    const sideWindow1 = BaseComponents.createWindow(1.0, 1.4, new THREE.Vector3(-1.8, 0.7 + 1.3, depth / 2 + 0.08))
+    const sideWindow1 = BaseComponents.createWindow(1.0, 1.4, new THREE.Vector3(-1.8, baseY + 1.3, depth / 2 + wallThickness / 2 - 0.05))
     wallsGroup.add(sideWindow1)
 
-    const sideWindow2 = BaseComponents.createWindow(1.0, 1.4, new THREE.Vector3(1.8, 0.7 + 1.3, depth / 2 + 0.08))
+    const sideWindow2 = BaseComponents.createWindow(1.0, 1.4, new THREE.Vector3(1.8, baseY + 1.3, depth / 2 + wallThickness / 2 - 0.05))
     wallsGroup.add(sideWindow2)
 
-    const backWindow = BaseComponents.createWindow(1.2, 1.2, new THREE.Vector3(0, 0.7 + 1.3, -depth / 2 + 0.18))
+    const backWindow = BaseComponents.createWindow(1.2, 1.2, new THREE.Vector3(0, baseY + 1.3, -depth / 2 - wallThickness / 2 + 0.15))
     backWindow.rotation.y = Math.PI
     wallsGroup.add(backWindow)
 
     group.add(wallsGroup)
 
-    const roofGroup = this.createSideRoof(width + 1, depth + 1, columnHeight + 0.7)
+    const floorGroup = this.createFloorStructure(width, depth, baseY + columnHeight)
+    floorGroup.userData.layer = 'columns'
+    group.add(floorGroup)
+
+    const roofGroup = this.createSideRoof(width + 1, depth + 1, columnHeight + baseY)
     roofGroup.userData.layer = 'roof'
     group.add(roofGroup)
 
@@ -421,30 +570,52 @@ export class BuildingComponents {
     const group = new THREE.Group()
     group.userData.componentId = 'roof-side'
 
-    const ridgeHeight = 1.2
-    const eaveOverhang = 0.8
+    const ridgeHeight = 1.5
+    const eaveOverhang = 0.9
 
-    const roofShape = new THREE.Shape()
-    roofShape.moveTo(-width / 2 - eaveOverhang, 0)
-    roofShape.lineTo(-width / 4, ridgeHeight)
-    roofShape.lineTo(width / 4, ridgeHeight)
-    roofShape.lineTo(width / 2 + eaveOverhang, 0)
-    roofShape.lineTo(-width / 2 - eaveOverhang, 0)
+    const slopeLength = Math.sqrt(Math.pow(depth / 2 + eaveOverhang / 2, 2) + Math.pow(ridgeHeight, 2))
 
-    const extrudeSettings = {
-      steps: 1,
-      depth: depth + eaveOverhang,
-      bevelEnabled: false
+    const frontSlopeGeo = new THREE.PlaneGeometry(width, slopeLength)
+    const frontSlope = new THREE.Mesh(frontSlopeGeo, MaterialLibrary.greyTileRoof)
+    frontSlope.rotation.x = -Math.atan2(ridgeHeight, depth / 2 + eaveOverhang / 2)
+    frontSlope.position.set(0, baseY + 0.7 + ridgeHeight / 2, depth / 4)
+    frontSlope.castShadow = true
+    frontSlope.receiveShadow = true
+    group.add(frontSlope)
+
+    const backSlopeGeo = new THREE.PlaneGeometry(width, slopeLength)
+    const backSlope = new THREE.Mesh(backSlopeGeo, MaterialLibrary.greyTileRoof)
+    backSlope.rotation.x = Math.PI + Math.atan2(ridgeHeight, depth / 2 + eaveOverhang / 2)
+    backSlope.position.set(0, baseY + 0.7 + ridgeHeight / 2, -depth / 4)
+    backSlope.castShadow = true
+    backSlope.receiveShadow = true
+    group.add(backSlope)
+
+    const purlinCount = 4
+    for (let i = 0; i < purlinCount; i++) {
+      const z = -depth / 2 - eaveOverhang * 0.3 + i * ((depth + eaveOverhang * 0.6) / (purlinCount - 1))
+      const yRatio = 1 - Math.abs(z) / (depth / 2 + eaveOverhang / 2)
+      const y = baseY + 0.7 + ridgeHeight * yRatio
+      const purlinGeo = new THREE.CylinderGeometry(0.06, 0.06, width, 8)
+      const purlin = new THREE.Mesh(purlinGeo, MaterialLibrary.darkWoodBeam)
+      purlin.rotation.z = Math.PI / 2
+      purlin.position.set(0, y, z)
+      purlin.castShadow = true
+      group.add(purlin)
     }
 
-    const roofGeo = new THREE.ExtrudeGeometry(roofShape, extrudeSettings)
-    const roof = new THREE.Mesh(roofGeo, MaterialLibrary.greyTileRoof)
-    roof.rotation.x = -Math.PI / 2
-    roof.position.set(0, baseY + 0.6, -(depth / 2 + eaveOverhang / 2))
-    roof.castShadow = true
-    group.add(roof)
+    const rafterCount = 8
+    for (let i = 0; i < rafterCount; i++) {
+      const x = -width / 2 + 0.3 + i * ((width - 0.6) / (rafterCount - 1))
+      const rafterGeo = new THREE.BoxGeometry(0.06, 0.1, depth + eaveOverhang)
+      const rafter = new THREE.Mesh(rafterGeo, MaterialLibrary.darkWoodBeam)
+      rafter.rotation.x = -Math.atan2(ridgeHeight, depth / 2 + eaveOverhang / 2)
+      rafter.position.set(x, baseY + 0.7 + ridgeHeight / 2 - 0.12, 0)
+      rafter.castShadow = true
+      group.add(rafter)
+    }
 
-    const ridge = BaseComponents.createRidge(width - 0.5, new THREE.Vector3(0, baseY + 0.6 + ridgeHeight + 0.2, 0))
+    const ridge = BaseComponents.createRidge(width - 0.5, new THREE.Vector3(0, baseY + 0.7 + ridgeHeight + 0.2, 0))
     ridge.rotation.y = Math.PI / 2
     group.add(ridge)
 
@@ -455,15 +626,15 @@ export class BuildingComponents {
     backEave.rotation.y = Math.PI
     group.add(backEave)
 
-    const gableLeftGeo = new THREE.BoxGeometry(0.1, ridgeHeight + 0.3, depth + eaveOverhang)
+    const gableLeftGeo = new THREE.BoxGeometry(0.15, ridgeHeight + 0.6, depth + eaveOverhang)
     const gableLeft = new THREE.Mesh(gableLeftGeo, MaterialLibrary.brickWall)
-    gableLeft.position.set(-width / 2 - 0.3, baseY + 0.6 + (ridgeHeight + 0.3) / 2, 0)
+    gableLeft.position.set(-width / 2 - 0.25, baseY + 0.6 + (ridgeHeight + 0.6) / 2, 0)
     gableLeft.castShadow = true
     group.add(gableLeft)
 
-    const gableRightGeo = new THREE.BoxGeometry(0.1, ridgeHeight + 0.3, depth + eaveOverhang)
+    const gableRightGeo = new THREE.BoxGeometry(0.15, ridgeHeight + 0.6, depth + eaveOverhang)
     const gableRight = new THREE.Mesh(gableRightGeo, MaterialLibrary.brickWall)
-    gableRight.position.set(width / 2 + 0.3, baseY + 0.6 + (ridgeHeight + 0.3) / 2, 0)
+    gableRight.position.set(width / 2 + 0.25, baseY + 0.6 + (ridgeHeight + 0.6) / 2, 0)
     gableRight.castShadow = true
     group.add(gableRight)
 
@@ -494,6 +665,15 @@ export class BuildingComponents {
       const dougong = BaseComponents.createDougong(0.6, new THREE.Vector3(x, 0.5 + columnHeight, 0))
       columnsGroup.add(dougong)
     })
+
+    for (let i = 0; i < 3; i++) {
+      const lintelGeo = new THREE.BoxGeometry(width + 1, 0.35, 0.25)
+      const lintel = new THREE.Mesh(lintelGeo, MaterialLibrary.redWoodColumn)
+      lintel.position.set(0, 0.5 + height - 3.5 + i * 0.5, 0)
+      lintel.rotation.y = Math.PI / 2
+      lintel.castShadow = true
+      columnsGroup.add(lintel)
+    }
 
     group.add(columnsGroup)
 
@@ -563,25 +743,23 @@ export class BuildingComponents {
     const ridgeHeight = 0.6
     const eaveOverhang = 0.5
 
-    const roofShape = new THREE.Shape()
-    roofShape.moveTo(-depth / 2 - eaveOverhang, 0)
-    roofShape.lineTo(-depth / 4, ridgeHeight)
-    roofShape.lineTo(depth / 4, ridgeHeight)
-    roofShape.lineTo(depth / 2 + eaveOverhang, 0)
-    roofShape.lineTo(-depth / 2 - eaveOverhang, 0)
+    const slopeLength = Math.sqrt(Math.pow(depth / 2 + eaveOverhang, 2) + Math.pow(ridgeHeight, 2))
 
-    const extrudeSettings = {
-      steps: 1,
-      depth: width,
-      bevelEnabled: false
-    }
+    const frontSlopeGeo = new THREE.PlaneGeometry(width, slopeLength)
+    const frontSlope = new THREE.Mesh(frontSlopeGeo, MaterialLibrary.greyTileRoof)
+    frontSlope.rotation.x = -Math.atan2(ridgeHeight, depth / 2 + eaveOverhang)
+    frontSlope.position.set(0, baseY + ridgeHeight / 2, 0)
+    frontSlope.castShadow = true
+    frontSlope.receiveShadow = true
+    group.add(frontSlope)
 
-    const roofGeo = new THREE.ExtrudeGeometry(roofShape, extrudeSettings)
-    const roof = new THREE.Mesh(roofGeo, MaterialLibrary.greyTileRoof)
-    roof.rotation.x = -Math.PI / 2
-    roof.position.set(-width / 2, baseY, depth / 2 + eaveOverhang)
-    roof.castShadow = true
-    group.add(roof)
+    const backSlopeGeo = new THREE.PlaneGeometry(width, slopeLength)
+    const backSlope = new THREE.Mesh(backSlopeGeo, MaterialLibrary.greyTileRoof)
+    backSlope.rotation.x = Math.PI + Math.atan2(ridgeHeight, depth / 2 + eaveOverhang)
+    backSlope.position.set(0, baseY + ridgeHeight / 2, 0)
+    backSlope.castShadow = true
+    backSlope.receiveShadow = true
+    group.add(backSlope)
 
     const ridgeGeo = new THREE.BoxGeometry(width, 0.2, 0.25)
     const ridge = new THREE.Mesh(ridgeGeo, MaterialLibrary.goldDecorative)
@@ -608,7 +786,7 @@ export class BuildingComponents {
     const group = new THREE.Group()
     group.userData.componentId = 'wall'
 
-    const wallThickness = 0.3
+    const wallThickness = 0.4
 
     const createWall = (w: number, h: number, d: number, pos: THREE.Vector3, rotY: number = 0) => {
       const wallGroup = new THREE.Group()
@@ -621,17 +799,24 @@ export class BuildingComponents {
       wall.receiveShadow = true
       wallGroup.add(wall)
 
-      const copingGeo = new THREE.BoxGeometry(w + 0.1, 0.15, d + 0.1)
+      const copingGeo = new THREE.BoxGeometry(w + 0.15, 0.2, d + 0.15)
       const coping = new THREE.Mesh(copingGeo, MaterialLibrary.greyTileRoof)
-      coping.position.y = h + 0.075
+      coping.position.y = h + 0.1
       coping.castShadow = true
       wallGroup.add(coping)
 
-      const tileGeo = new THREE.BoxGeometry(w, 0.08, d + 0.15)
+      const tileGeo = new THREE.BoxGeometry(w, 0.1, d + 0.2)
       const tile = new THREE.Mesh(tileGeo, MaterialLibrary.greyTileRoof)
-      tile.position.y = h + 0.19
+      tile.position.y = h + 0.25
       tile.castShadow = true
       wallGroup.add(tile)
+
+      const baseGeo = new THREE.BoxGeometry(w + 0.1, 0.25, d + 0.1)
+      const base = new THREE.Mesh(baseGeo, MaterialLibrary.stoneFoundation)
+      base.position.y = 0.125
+      base.castShadow = true
+      base.receiveShadow = true
+      wallGroup.add(base)
 
       wallGroup.position.copy(pos)
       wallGroup.rotation.y = rotY
@@ -653,6 +838,20 @@ export class BuildingComponents {
       new THREE.Vector3(courtyardWidth / 4 + 2.5, 0, -courtyardDepth / 2)
     )
     group.add(frontWallRight)
+
+    const gatePillarLeftGeo = new THREE.BoxGeometry(0.6, wallHeight + 0.5, 0.6)
+    const gatePillarLeft = new THREE.Mesh(gatePillarLeftGeo, MaterialLibrary.stoneFoundation)
+    gatePillarLeft.position.set(-4.5, (wallHeight + 0.5) / 2, -courtyardDepth / 2)
+    gatePillarLeft.castShadow = true
+    gatePillarLeft.userData.layer = 'walls'
+    group.add(gatePillarLeft)
+
+    const gatePillarRightGeo = new THREE.BoxGeometry(0.6, wallHeight + 0.5, 0.6)
+    const gatePillarRight = new THREE.Mesh(gatePillarRightGeo, MaterialLibrary.stoneFoundation)
+    gatePillarRight.position.set(4.5, (wallHeight + 0.5) / 2, -courtyardDepth / 2)
+    gatePillarRight.castShadow = true
+    gatePillarRight.userData.layer = 'walls'
+    group.add(gatePillarRight)
 
     const backWall = createWall(
       courtyardWidth,

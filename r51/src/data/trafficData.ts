@@ -11,7 +11,7 @@ function createStraightRoad(
   endX: number,
   endZ: number,
   y: number,
-  segments: number = 20
+  segments: number = 30
 ): RoadPoint[] {
   const points: RoadPoint[] = [];
   for (let i = 0; i <= segments; i++) {
@@ -33,18 +33,50 @@ function createCurveRoad(
   endAngle: number,
   startY: number,
   endY: number,
-  segments: number = 30
+  segments: number = 40
 ): RoadPoint[] {
   const points: RoadPoint[] = [];
   for (let i = 0; i <= segments; i++) {
     const t = i / segments;
     const angle = startAngle + (endAngle - startAngle) * t;
-    const easedT = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+    const easedT = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
     points.push({
       x: centerX + Math.cos(angle) * radius,
       y: startY + (endY - startY) * easedT,
       z: centerZ + Math.sin(angle) * radius
     });
+  }
+  return points;
+}
+
+function createTransitionRamp(
+  startX: number, startZ: number, startY: number,
+  endX: number, endZ: number, endY: number,
+  curveAmount: number = 1,
+  segments: number = 35
+): RoadPoint[] {
+  const midPoint = {
+    x: (startX + endX) / 2 + (endZ - startZ) * curveAmount * 0.35,
+    y: (startY + endY) / 2,
+    z: (startZ + endZ) / 2 + (startX - endX) * curveAmount * 0.35
+  };
+
+  const points: RoadPoint[] = [];
+  for (let i = 0; i <= segments; i++) {
+    const t = i / segments;
+    const easedT = t < 0.3
+      ? 4 * t * t * t / 0.027
+      : t > 0.7
+        ? 1 - Math.pow(1 - t, 3) / 0.027
+        : t;
+    const finalT = Math.min(1, Math.max(0, easedT > 1 ? 1 : easedT));
+
+    const mt = 1 - finalT;
+    const x = mt * mt * startX + 2 * mt * finalT * midPoint.x + finalT * finalT * endX;
+    const y = startY + (endY - startY) * (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
+    const z = mt * mt * startZ + 2 * mt * finalT * midPoint.z + finalT * finalT * endZ;
+
+    points.push({ x, y, z });
   }
   return points;
 }
@@ -55,7 +87,7 @@ export const roadSegments: RoadSegment[] = [
     name: '东西主干道 (地面层)',
     type: 'main',
     level: 0,
-    points: createStraightRoad(-150, 0, 150, 0, LEVEL_0),
+    points: createStraightRoad(-150, 0, 150, 0, LEVEL_0, 40),
     width: 24,
     lanes: 6,
     direction: 'bidirectional'
@@ -65,7 +97,7 @@ export const roadSegments: RoadSegment[] = [
     name: '南北主干道 (一层)',
     type: 'main',
     level: 1,
-    points: createStraightRoad(0, -150, 0, 150, LEVEL_1),
+    points: createStraightRoad(0, -150, 0, 150, LEVEL_1, 40),
     width: 24,
     lanes: 6,
     direction: 'bidirectional'
@@ -75,7 +107,7 @@ export const roadSegments: RoadSegment[] = [
     name: '东西快速路 (二层)',
     type: 'main',
     level: 2,
-    points: createStraightRoad(-120, 40, 120, 40, LEVEL_2),
+    points: createStraightRoad(-120, 40, 120, 40, LEVEL_2, 35),
     width: 20,
     lanes: 4,
     direction: 'forward'
@@ -86,12 +118,7 @@ export const roadSegments: RoadSegment[] = [
     type: 'ramp',
     level: 0,
     points: smoothHeightTransition(
-      createRampPoints(
-        { x: 50, y: LEVEL_0, z: -20 },
-        { x: 20, y: LEVEL_1, z: -50 },
-        25,
-        1.5
-      ),
+      createTransitionRamp(50, -20, LEVEL_0, 20, -50, LEVEL_1, 1.5, 35),
       LEVEL_0,
       LEVEL_1
     ),
@@ -105,12 +132,7 @@ export const roadSegments: RoadSegment[] = [
     type: 'ramp',
     level: 1,
     points: smoothHeightTransition(
-      createRampPoints(
-        { x: -20, y: LEVEL_1, z: 50 },
-        { x: -50, y: LEVEL_2, z: 40 },
-        25,
-        -1.2
-      ),
+      createTransitionRamp(-20, 50, LEVEL_1, -50, 40, LEVEL_2, -1.2, 35),
       LEVEL_1,
       LEVEL_2
     ),
@@ -131,7 +153,7 @@ export const roadSegments: RoadSegment[] = [
       -Math.PI * 0.5,
       LEVEL_2,
       LEVEL_0,
-      40
+      45
     ),
     width: 10,
     lanes: 2,
@@ -143,12 +165,7 @@ export const roadSegments: RoadSegment[] = [
     type: 'ramp',
     level: 0,
     points: smoothHeightTransition(
-      createRampPoints(
-        { x: -50, y: LEVEL_0, z: 20 },
-        { x: -20, y: LEVEL_1, z: 50 },
-        25,
-        -1.5
-      ),
+      createTransitionRamp(-50, 20, LEVEL_0, -20, 50, LEVEL_1, -1.5, 35),
       LEVEL_0,
       LEVEL_1
     ),
@@ -161,7 +178,7 @@ export const roadSegments: RoadSegment[] = [
     name: '北向连接路',
     type: 'main',
     level: 1,
-    points: createStraightRoad(30, -80, 30, -30, LEVEL_1),
+    points: createStraightRoad(30, -80, 30, -30, LEVEL_1, 25),
     width: 12,
     lanes: 3,
     direction: 'forward'
@@ -179,7 +196,7 @@ export const roadSegments: RoadSegment[] = [
       Math.PI,
       LEVEL_1,
       LEVEL_1,
-      25
+      30
     ),
     width: 10,
     lanes: 2,

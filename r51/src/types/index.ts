@@ -23,6 +23,8 @@ export interface Vehicle {
   speed: number;
   color: number;
   lane: number;
+  lanes: number;
+  roadWidth: number;
 }
 
 export interface SceneState {
