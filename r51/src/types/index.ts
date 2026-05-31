@@ -13,6 +13,8 @@ export interface RoadSegment {
   width: number;
   lanes: number;
   direction: 'forward' | 'backward' | 'bidirectional';
+  startDir?: { x: number; z: number };
+  endDir?: { x: number; z: number };
 }
 
 export interface Vehicle {

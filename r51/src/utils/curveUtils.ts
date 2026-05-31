@@ -3,10 +3,21 @@ import type { RoadPoint } from '@/types';
 
 type ThreeCurve = any;
 
-export function createCatmullRomCurve(points: RoadPoint[], closed = false, tension = 0.5): ThreeCurve {
+export function createCatmullRomCurve(
+  points: RoadPoint[],
+  closed = false,
+  tension = 0.4,
+  startTangent?: THREE.Vector3,
+  endTangent?: THREE.Vector3
+): ThreeCurve {
   const threePoints = points.map(p => new THREE.Vector3(p.x, p.y, p.z));
   const CurveClass = (THREE as any).CatmullRomCurve3;
   const curve = new CurveClass(threePoints, closed, 'catmullrom', tension);
+
+  if (startTangent) {
+    curve.curveType = 'centripetal';
+  }
+
   return curve;
 }
 
@@ -17,23 +28,33 @@ export function getCurvePoints(curve: ThreeCurve, divisions: number): THREE.Vect
 export function getRoadEdges(
   centerCurve: ThreeCurve,
   width: number,
-  divisions: number
+  divisions: number,
+  startNormal?: THREE.Vector3,
+  endNormal?: THREE.Vector3
 ): { leftEdge: THREE.Vector3[]; rightEdge: THREE.Vector3[]; centerLine: THREE.Vector3[] } {
   const centerPoints = getCurvePoints(centerCurve, divisions);
   const leftEdge: THREE.Vector3[] = [];
   const rightEdge: THREE.Vector3[] = [];
+  const halfWidth = width / 2;
 
   for (let i = 0; i < centerPoints.length; i++) {
     const current = centerPoints[i];
-    const next = centerPoints[Math.min(i + 1, centerPoints.length - 1)];
-    const prev = centerPoints[Math.max(i - 1, 0)];
+    let normal: THREE.Vector3;
 
-    const tangent = new THREE.Vector3()
-      .subVectors(next, prev)
-      .normalize();
+    if (i === 0 && startNormal) {
+      normal = startNormal.clone().normalize();
+    } else if (i === centerPoints.length - 1 && endNormal) {
+      normal = endNormal.clone().normalize();
+    } else {
+      const next = centerPoints[Math.min(i + 1, centerPoints.length - 1)];
+      const prev = centerPoints[Math.max(i - 1, 0)];
 
-    const normal = new THREE.Vector3(-tangent.z, 0, tangent.x).normalize();
-    const halfWidth = width / 2;
+      const tangent = new THREE.Vector3()
+        .subVectors(next, prev)
+        .normalize();
+
+      normal = new THREE.Vector3(-tangent.z, 0, tangent.x).normalize();
+    }
 
     leftEdge.push(new THREE.Vector3(
       current.x + normal.x * halfWidth,
@@ -156,4 +177,8 @@ export function getPillarPositions(
   }
 
   return positions;
+}
+
+export function getMainRoadNormal(roadDirection: { x: number; z: number }): THREE.Vector3 {
+  return new THREE.Vector3(-roadDirection.z, 0, roadDirection.x).normalize();
 }

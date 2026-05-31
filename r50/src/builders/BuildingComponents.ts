@@ -249,15 +249,13 @@ export class BuildingComponents {
 
     const roofGeo = new THREE.ExtrudeGeometry(roofShape, extrudeSettings)
     const roof = new THREE.Mesh(roofGeo, MaterialLibrary.greyTileRoof)
-    roof.rotation.x = -Math.PI / 2
-    roof.rotation.z = Math.PI / 2
-    roof.position.set(roofWidth / 2, eaveY, -roofDepth / 2)
+    roof.rotation.y = -Math.PI / 2
+    roof.position.set(-roofWidth / 2, eaveY, 0)
     roof.castShadow = true
     roof.receiveShadow = true
     group.add(roof)
 
     const ridge = BaseComponents.createRidge(roofWidth - 0.5, new THREE.Vector3(0, eaveY + ridgeHeight + 0.2, 0))
-    ridge.rotation.y = Math.PI / 2
     group.add(ridge)
 
     group.add(BaseComponents.createEave(roofWidth, eaveOverhang, 0.4, new THREE.Vector3(0, eaveY, depth / 2 + eaveOverhang / 2)))
@@ -418,15 +416,13 @@ export class BuildingComponents {
 
     const roofGeo = new THREE.ExtrudeGeometry(roofShape, extrudeSettings)
     const roof = new THREE.Mesh(roofGeo, MaterialLibrary.greyTileRoof)
-    roof.rotation.x = -Math.PI / 2
-    roof.rotation.z = Math.PI / 2
-    roof.position.set(roofWidth / 2, eaveY, -roofDepth / 2)
+    roof.rotation.y = -Math.PI / 2
+    roof.position.set(-roofWidth / 2, eaveY, 0)
     roof.castShadow = true
     roof.receiveShadow = true
     group.add(roof)
 
     const ridge = BaseComponents.createRidge(roofWidth - 0.3, new THREE.Vector3(0, eaveY + ridgeHeight + 0.15, 0))
-    ridge.rotation.y = Math.PI / 2
     group.add(ridge)
 
     group.add(BaseComponents.createEave(roofWidth, eaveOverhang, 0.3, new THREE.Vector3(0, eaveY, depth / 2 + eaveOverhang / 2)))
@@ -463,7 +459,6 @@ export class BuildingComponents {
       const lintelGeo = new THREE.BoxGeometry(width + 0.5, 0.3, 0.2)
       const lintel = new THREE.Mesh(lintelGeo, MaterialLibrary.redWoodColumn)
       lintel.position.set(0, 0.5 + height - 3.5 + i * 0.45, 0)
-      lintel.rotation.y = Math.PI / 2
       lintel.castShadow = true
       columnsGroup.add(lintel)
     }
@@ -474,26 +469,26 @@ export class BuildingComponents {
     roofGroup.userData.layer = 'roof'
 
     const mainRoof = this.createSmallRoof(width + 1.5, 2.5, height - 0.8)
-    mainRoof.rotation.y = Math.PI / 2
+    mainRoof.rotation.y = Math.PI
     roofGroup.add(mainRoof)
 
     const leftSideRoof = this.createSmallRoof(3.5, 2, height - 2.2)
     leftSideRoof.position.x = -2.5
-    leftSideRoof.rotation.y = Math.PI / 2
+    leftSideRoof.rotation.y = Math.PI
     roofGroup.add(leftSideRoof)
 
     const rightSideRoof = this.createSmallRoof(3.5, 2, height - 2.2)
     rightSideRoof.position.x = 2.5
-    rightSideRoof.rotation.y = Math.PI / 2
+    rightSideRoof.rotation.y = Math.PI
     roofGroup.add(rightSideRoof)
 
     const plaqueGeo = new THREE.BoxGeometry(2.5, 0.8, 0.15)
     const plaque = new THREE.Mesh(plaqueGeo, MaterialLibrary.redWoodColumn)
-    plaque.position.set(0, height - 1.5, 0.4)
+    plaque.position.set(0, height - 1.5, -0.4)
     roofGroup.add(plaque)
     const plaqueFrameGeo = new THREE.BoxGeometry(2.7, 1.0, 0.08)
     const plaqueFrame = new THREE.Mesh(plaqueFrameGeo, MaterialLibrary.goldDecorative)
-    plaqueFrame.position.set(0, height - 1.5, 0.49)
+    plaqueFrame.position.set(0, height - 1.5, -0.49)
     roofGroup.add(plaqueFrame)
 
     group.add(roofGroup)
@@ -533,9 +528,8 @@ export class BuildingComponents {
 
     const roofGeo = new THREE.ExtrudeGeometry(roofShape, extrudeSettings)
     const roof = new THREE.Mesh(roofGeo, MaterialLibrary.greyTileRoof)
-    roof.rotation.x = -Math.PI / 2
-    roof.rotation.z = Math.PI / 2
-    roof.position.set(roofWidth / 2, baseY, -roofDepth / 2)
+    roof.rotation.y = -Math.PI / 2
+    roof.position.set(-roofWidth / 2, baseY, 0)
     roof.castShadow = true
     roof.receiveShadow = true
     group.add(roof)

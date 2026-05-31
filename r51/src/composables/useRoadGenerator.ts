@@ -54,8 +54,25 @@ export function useRoadGenerator(scene: THREE.Scene) {
     group.name = segment.id;
 
     const curve = createCatmullRomCurve(segment.points, false, 0.3);
-    const divisions = Math.max(segment.points.length * 4, 60);
-    const { leftEdge, rightEdge, centerLine } = getRoadEdges(curve, segment.width, divisions);
+    const divisions = Math.max(segment.points.length * 4, 80);
+
+    let startNormal: THREE.Vector3 | undefined;
+    let endNormal: THREE.Vector3 | undefined;
+
+    if (segment.startDir) {
+      startNormal = new THREE.Vector3(-segment.startDir.z, 0, segment.startDir.x).normalize();
+    }
+    if (segment.endDir) {
+      endNormal = new THREE.Vector3(-segment.endDir.z, 0, segment.endDir.x).normalize();
+    }
+
+    const { leftEdge, rightEdge, centerLine } = getRoadEdges(
+      curve,
+      segment.width,
+      divisions,
+      startNormal,
+      endNormal
+    );
 
     const roadThickness = segment.type === 'main' ? 1.2 : 0.8;
     const roadGeo = createRoadGeometry(leftEdge, rightEdge, roadThickness);

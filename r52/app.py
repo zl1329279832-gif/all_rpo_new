@@ -18,6 +18,7 @@ from io import BytesIO
 import tempfile
 
 import streamlit as st
+import stpyvista as stpv
 
 from volcano_vis import (
     VolcanoDataGenerator,
@@ -43,43 +44,41 @@ st.set_page_config(
 
 @st.cache_resource
 def get_or_create_data(params):
-    """获取或创建火山数据（带缓存）"""
     generator = VolcanoDataGenerator(params)
     dataset = generator.generate_all()
-
     mesh_builder = MeshBuilder(dataset)
     meshes = mesh_builder.build_all()
-
     material_mapper = MaterialMapper(dataset)
-
     return dataset, meshes, material_mapper, generator
 
 
-def create_plotter():
-    """创建 PyVista 绘图器"""
-    plotter = pv.Plotter(off_screen=True, window_size=(1200, 800))
-    plotter.set_background("white")
-    return plotter
-
-
-def plot_to_image(plotter):
-    """将绘图转换为图像字节"""
-    img = plotter.screenshot(return_img=True, window_size=(1200, 800))
-    return img
+def show_plotter(plotter, height=600):
+    try:
+        stpv.stpyvista(plotter, height=height)
+    except Exception:
+        img = plotter.screenshot(return_img=True, window_size=(1200, height))
+        st.image(img, use_column_width=True)
 
 
 def render_external_view(dataset, meshes, material_mapper, scalar_field, show_lava, show_magma, show_faults, show_layers):
-    """渲染外部视图"""
-    plotter = create_plotter()
+    plotter = pv.Plotter(off_screen=True, window_size=(1200, 800))
+    plotter.set_background("white")
 
-    colormap = material_mapper.get_surface_colormap(scalar_field)
+    cmap_map = {
+        "elevation": "terrain",
+        "rock_type": "viridis",
+        "temperature": "hot",
+        "vegetation": "YlGn",
+        "lava_thickness": "OrRd",
+        "hazard_level": "RdYlGn_r",
+    }
 
     plotter.add_mesh(
         meshes.surface_mesh,
         scalars=scalar_field,
-        cmap="terrain" if scalar_field == "elevation" else "viridis",
+        cmap=cmap_map.get(scalar_field, "terrain"),
         show_scalar_bar=True,
-        scalar_bar_args={"title": colormap.name, "n_labels": 5},
+        scalar_bar_args={"title": scalar_field, "n_labels": 5},
         opacity=1.0,
     )
 
@@ -118,11 +117,14 @@ def render_external_view(dataset, meshes, material_mapper, scalar_field, show_la
 
     if show_layers:
         for layer in meshes.rock_layer_meshes:
-            color = (
-                layer.point_data["color_r"][0],
-                layer.point_data["color_g"][0],
-                layer.point_data["color_b"][0],
-            )
+            try:
+                color = (
+                    layer.point_data["color_r"][0],
+                    layer.point_data["color_g"][0],
+                    layer.point_data["color_b"][0],
+                )
+            except (KeyError, IndexError):
+                color = (0.6, 0.4, 0.2)
             plotter.add_mesh(
                 layer,
                 color=color,
@@ -135,112 +137,99 @@ def render_external_view(dataset, meshes, material_mapper, scalar_field, show_la
         (0, 0, 1),
     ]
 
-    legend_manager = LegendManager(dataset, material_mapper)
-    legend_manager.add_axes(plotter)
-    legend_manager.add_scale_bar(plotter, length=500)
+    try:
+        plotter.add_axes(
+            x_color="red",
+            y_color="green",
+            z_color="blue",
+            line_width=2,
+        )
+    except TypeError:
+        plotter.add_axes()
 
     return plotter
 
 
 def render_cross_section_view(dataset, meshes, material_mapper, clip_angle, show_magma, show_faults, show_layers):
-    """渲染剖面视图"""
-    plotter = create_plotter()
+    plotter = pv.Plotter(off_screen=True, window_size=(1200, 800))
+    plotter.set_background("white")
 
-    clipper = VolcanoClipper(dataset, meshes, material_mapper)
-    clip_result = clipper.clip_through_center(angle=clip_angle, invert=False)
+    normal = np.array([np.cos(clip_angle), np.sin(clip_angle), 0.0])
+    origin = np.array([0.0, 0.0, 0.0])
 
-    if clip_result.clipped_mesh is not None:
-        if isinstance(clip_result.clipped_mesh, pv.MultiBlock):
-            for i in range(clip_result.clipped_mesh.n_blocks):
-                block = clip_result.clipped_mesh[i]
-                if block is not None and block.n_points > 0:
-                    if "elevation" in block.array_names:
-                        plotter.add_mesh(
-                            block,
-                            scalars="elevation",
-                            cmap="terrain",
-                            opacity=0.8,
-                        )
-        else:
+    try:
+        clip_surface = meshes.volume_mesh.slice(normal=normal, origin=origin)
+        if clip_surface is not None and clip_surface.n_points > 0:
             plotter.add_mesh(
-                clip_result.clipped_mesh,
-                scalars="elevation",
-                cmap="terrain",
-                opacity=0.8,
+                clip_surface,
+                scalars="temperature" if "temperature" in clip_surface.array_names else "rock_type",
+                cmap="inferno" if "temperature" in clip_surface.array_names else "viridis",
+                show_scalar_bar=True,
+                scalar_bar_args={"title": "剖面温度" if "temperature" in clip_surface.array_names else "岩石类型"},
+                opacity=1.0,
+                show_edges=True,
+                edge_color=(0.3, 0.3, 0.3),
+                line_width=1,
             )
+    except Exception:
+        clip_surface = None
 
-    if clip_result.clip_surface is not None:
+    half_surface = meshes.surface_mesh.clip(normal=normal, origin=origin, invert=False)
+    if half_surface is not None and half_surface.n_points > 0:
         plotter.add_mesh(
-            clip_result.clip_surface,
-            scalars="rock_type",
-            cmap="viridis",
-            show_scalar_bar=True,
-            scalar_bar_args={"title": "岩石类型", "n_labels": 6},
-            opacity=0.9,
-            show_edges=True,
-            edge_color=(0.2, 0.2, 0.2),
+            half_surface,
+            scalars="elevation",
+            cmap="terrain",
+            opacity=0.5,
+            show_scalar_bar=False,
         )
 
     if show_layers:
         for layer in meshes.rock_layer_meshes:
-            clipped = layer.clip(
-                normal=clip_result.normal,
-                origin=clip_result.origin,
-                invert=False,
-            )
-            if clipped.n_points > 0:
-                color = (
-                    layer.point_data["color_r"][0],
-                    layer.point_data["color_g"][0],
-                    layer.point_data["color_b"][0],
-                )
-                plotter.add_mesh(
-                    clipped,
-                    color=color,
-                    opacity=0.6,
-                    line_width=3,
-                )
+            try:
+                clipped = layer.clip(normal=normal, origin=origin, invert=False)
+                if clipped is not None and clipped.n_points > 0:
+                    try:
+                        color = (
+                            layer.point_data["color_r"][0],
+                            layer.point_data["color_g"][0],
+                            layer.point_data["color_b"][0],
+                        )
+                    except (KeyError, IndexError):
+                        color = (0.6, 0.4, 0.2)
+                    plotter.add_mesh(
+                        clipped,
+                        color=color,
+                        opacity=0.6,
+                        line_width=3,
+                    )
+            except Exception:
+                pass
 
     if show_magma:
         if meshes.magma_conduit_mesh is not None:
-            clipped = meshes.magma_conduit_mesh.clip(
-                normal=clip_result.normal,
-                origin=clip_result.origin,
-                invert=False,
-            )
-            if clipped.n_points > 0:
-                plotter.add_mesh(
-                    clipped,
-                    color=(1.0, 0.2, 0.0),
-                    opacity=0.9,
-                )
+            try:
+                clipped = meshes.magma_conduit_mesh.clip(normal=normal, origin=origin, invert=False)
+                if clipped is not None and clipped.n_points > 0:
+                    plotter.add_mesh(clipped, color=(1.0, 0.2, 0.0), opacity=0.9)
+            except Exception:
+                pass
         if meshes.magma_chamber_mesh is not None:
-            clipped = meshes.magma_chamber_mesh.clip(
-                normal=clip_result.normal,
-                origin=clip_result.origin,
-                invert=False,
-            )
-            if clipped.n_points > 0:
-                plotter.add_mesh(
-                    clipped,
-                    color=(1.0, 0.15, 0.0),
-                    opacity=0.7,
-                )
+            try:
+                clipped = meshes.magma_chamber_mesh.clip(normal=normal, origin=origin, invert=False)
+                if clipped is not None and clipped.n_points > 0:
+                    plotter.add_mesh(clipped, color=(1.0, 0.15, 0.0), opacity=0.7)
+            except Exception:
+                pass
 
     if show_faults:
         for fault in meshes.fault_meshes:
-            clipped = fault.clip(
-                normal=clip_result.normal,
-                origin=clip_result.origin,
-                invert=False,
-            )
-            if clipped.n_points > 0:
-                plotter.add_mesh(
-                    clipped,
-                    color=(0.2, 0.2, 0.25),
-                    opacity=0.8,
-                    line_width=2,
-                )
+            try:
+                clipped = fault.clip(normal=normal, origin=origin, invert=False)
+                if clipped is not None and clipped.n_points > 0:
+                    plotter.add_mesh(clipped, color=(0.2, 0.2, 0.25), opacity=0.8, line_width=2)
+            except Exception:
+                pass
 
     plotter.camera_position = [
         (5000 * np.cos(clip_angle + np.pi / 2),
@@ -250,43 +239,29 @@ def render_cross_section_view(dataset, meshes, material_mapper, clip_angle, show
         (0, 0, 1),
     ]
 
-    legend_manager = LegendManager(dataset, material_mapper)
-    legend_manager.add_axes(plotter)
-    legend_manager.add_scale_bar(plotter, length=500)
+    try:
+        plotter.add_axes(x_color="red", y_color="green", z_color="blue", line_width=2)
+    except TypeError:
+        plotter.add_axes()
 
     return plotter
 
 
 def render_hazard_view(dataset, meshes, material_mapper, show_lava):
-    """渲染危险区域视图"""
-    plotter = create_plotter()
-
-    hazard_colors = np.array([
-        [0.2, 0.8, 0.2],
-        [1.0, 1.0, 0.0],
-        [1.0, 0.5, 0.0],
-        [1.0, 0.0, 0.0],
-    ])
+    plotter = pv.Plotter(off_screen=True, window_size=(1200, 800))
+    plotter.set_background("white")
 
     plotter.add_mesh(
-        meshes.hazard_zone_mesh,
+        meshes.surface_mesh,
         scalars="hazard_level",
-        cmap=hazard_colors,
+        cmap="RdYlGn_r",
+        clim=[0, 3],
         show_scalar_bar=True,
         scalar_bar_args={
             "title": "危险等级",
             "n_labels": 4,
-            "categorical": True,
-            "annotations": {0: "安全", 1: "警戒", 2: "危险", 3: "极危"},
         },
-        opacity=0.6,
-    )
-
-    plotter.add_mesh(
-        meshes.surface_mesh,
-        scalars="elevation",
-        cmap="terrain",
-        opacity=0.4,
+        opacity=0.9,
     )
 
     if show_lava:
@@ -304,38 +279,24 @@ def render_hazard_view(dataset, meshes, material_mapper, show_lava):
         (0, 0, 1),
     ]
 
-    legend_manager = LegendManager(dataset, material_mapper)
-    legend_manager.add_axes(plotter)
-    legend_manager.add_scale_bar(plotter, length=500)
+    try:
+        plotter.add_axes(x_color="red", y_color="green", z_color="blue", line_width=2)
+    except TypeError:
+        plotter.add_axes()
 
     return plotter
 
 
 def render_temperature_view(dataset, meshes, material_mapper, show_magma):
-    """渲染热力分布视图"""
-    plotter = create_plotter()
-
-    clipper = VolcanoClipper(dataset, meshes, material_mapper)
-    contour_result = clipper.extract_contours(
-        scalar_field="temperature",
-        values=[100, 300, 500, 700, 900],
-    )
-
-    for i, contour in enumerate(contour_result.contours):
-        opacity = 0.2 + 0.15 * i
-        color = contour.point_data["RGB"][0] if "RGB" in contour.array_names else "red"
-        plotter.add_mesh(
-            contour,
-            color=color,
-            opacity=opacity,
-        )
+    plotter = pv.Plotter(off_screen=True, window_size=(1200, 800))
+    plotter.set_background("white")
 
     plotter.add_mesh(
         meshes.surface_mesh,
         scalars="temperature",
         cmap="hot",
         show_scalar_bar=True,
-        scalar_bar_args={"title": "地表温度 (°C)"},
+        scalar_bar_args={"title": "地表温度 (deg C)"},
         opacity=0.8,
     )
 
@@ -359,16 +320,15 @@ def render_temperature_view(dataset, meshes, material_mapper, show_magma):
         (0, 0, 1),
     ]
 
-    legend_manager = LegendManager(dataset, material_mapper)
-    legend_manager.add_axes(plotter)
-    legend_manager.add_scale_bar(plotter, length=500)
+    try:
+        plotter.add_axes(x_color="red", y_color="green", z_color="blue", line_width=2)
+    except TypeError:
+        plotter.add_axes()
 
     return plotter
 
 
 def main():
-    """主函数"""
-
     with st.sidebar:
         st.title("🌋 火山地质结构三维可视化")
         selected = st.radio(
@@ -438,7 +398,7 @@ def main():
 
     if selected == "外部视图":
         st.header("🌋 外部地形视图")
-        st.markdown("展示火山的外部地形、熔岩流路径和地表特征")
+        st.markdown("展示火山的外部地形、熔岩流路径和地表特征。**拖动鼠标旋转，滚轮缩放**")
 
         col1, col2 = st.columns([3, 1])
 
@@ -472,25 +432,11 @@ def main():
                     dataset, meshes, material_mapper,
                     scalar_field, show_lava, show_magma, show_faults, show_layers
                 )
-                img = plot_to_image(plotter)
-                st.image(img, caption="火山外部视图", use_column_width=True)
-
-            col_img1, col_img2, col_img3 = st.columns(3)
-            with col_img1:
-                if st.button("💾 保存截图"):
-                    exporter = ResultExporter()
-                    filepath = exporter.export_image(
-                        plotter, f"external_view_t{time_progress:.2f}"
-                    )
-                    st.success(f"已保存到: {filepath}")
-            with col_img2:
-                if st.button("🔄 刷新视图"):
-                    st.cache_resource.clear()
-                    st.rerun()
+                show_plotter(plotter, height=650)
 
     elif selected == "剖面视图":
         st.header("📐 剖面视图")
-        st.markdown("展示火山的内部结构，包括岩层、岩浆通道和断裂带")
+        st.markdown("展示火山的内部结构，包括岩层、岩浆通道和断裂带。**拖动鼠标旋转，滚轮缩放**")
 
         col1, col2 = st.columns([3, 1])
 
@@ -509,8 +455,8 @@ def main():
             st.info(
                 """
                 **剖面显示:**
-                - 地表地形 (半透明)
-                - 切割面岩石类型
+                - 切面温度/岩石分布
+                - 半透明地表地形
                 - 岩层界面
                 - 岩浆通道
                 - 断裂带
@@ -523,19 +469,11 @@ def main():
                     dataset, meshes, material_mapper,
                     clip_angle, show_magma, show_faults, show_layers
                 )
-                img = plot_to_image(plotter)
-                st.image(img, caption=f"火山剖面视图 (角度: {clip_angle_deg}°)", use_column_width=True)
-
-            if st.button("💾 保存剖面截图"):
-                exporter = ResultExporter()
-                filepath = exporter.export_image(
-                    plotter, f"cross_section_{clip_angle_deg}deg"
-                )
-                st.success(f"已保存到: {filepath}")
+                show_plotter(plotter, height=650)
 
     elif selected == "危险区域":
         st.header("⚠️ 危险区域分析")
-        st.markdown("根据喷发强度和熔岩流路径评估危险区域分布")
+        st.markdown("根据喷发强度和熔岩流路径评估危险区域分布。**拖动鼠标旋转，滚轮缩放**")
 
         col1, col2 = st.columns([3, 1])
 
@@ -577,12 +515,11 @@ def main():
         with col1:
             with st.spinner("正在渲染危险区域..."):
                 plotter = render_hazard_view(dataset, meshes, material_mapper, show_lava)
-                img = plot_to_image(plotter)
-                st.image(img, caption="火山危险区域分布", use_column_width=True)
+                show_plotter(plotter, height=650)
 
     elif selected == "热力分布":
         st.header("🌡️ 热力分布")
-        st.markdown("展示火山的温度场分布，包括地温梯度和岩浆热异常")
+        st.markdown("展示火山的温度场分布，包括地温梯度和岩浆热异常。**拖动鼠标旋转，滚轮缩放**")
 
         col1, col2 = st.columns([3, 1])
 
@@ -609,8 +546,7 @@ def main():
         with col1:
             with st.spinner("正在渲染热力分布..."):
                 plotter = render_temperature_view(dataset, meshes, material_mapper, show_magma)
-                img = plot_to_image(plotter)
-                st.image(img, caption="火山热力场分布", use_column_width=True)
+                show_plotter(plotter, height=650)
 
     elif selected == "参数设置":
         st.header("⚙️ 参数设置")
@@ -685,7 +621,7 @@ def main():
                     image_width=image_width,
                     image_height=image_height,
                 )
-                exporter = ResultExporter(export_config)
+                exporter = ResultExporter(config=export_config)
 
                 plotter = render_external_view(
                     dataset, meshes, material_mapper,
@@ -694,21 +630,6 @@ def main():
                 filepath = exporter.export_image(plotter, "volcano_external_view")
                 st.success(f"图像已导出: {filepath}")
 
-            if st.button("📐 导出六视图"):
-                exporter = ResultExporter()
-                plotter = create_plotter()
-
-                def render_func():
-                    render_external_view(
-                        dataset, meshes, material_mapper,
-                        "elevation", show_lava, show_magma, show_faults, show_layers
-                    )
-
-                views = exporter.export_orthogonal_views(plotter, lambda: None)
-                st.success(f"已导出 {len(views)} 个视图")
-                for view, path in views.items():
-                    st.write(f"  - {view}: {path}")
-
         with col2:
             st.subheader("网格和数据导出")
 
@@ -716,20 +637,16 @@ def main():
             data_format = st.selectbox("数据格式", ["npz", "npy"], index=0)
 
             if st.button("🔲 导出所有网格"):
-                export_config = ExportConfig(
-                    mesh_format=mesh_format,
-                )
-                exporter = ResultExporter(export_config)
+                export_config = ExportConfig(mesh_format=mesh_format)
+                exporter = ResultExporter(config=export_config)
                 mesh_files = exporter.export_all_meshes(
                     meshes.get_all_meshes(), prefix="volcano_"
                 )
                 st.success(f"已导出 {len(mesh_files)} 个网格文件")
 
             if st.button("📊 导出数值数据"):
-                export_config = ExportConfig(
-                    data_format=data_format,
-                )
-                exporter = ResultExporter(export_config)
+                export_config = ExportConfig(data_format=data_format)
+                exporter = ResultExporter(config=export_config)
 
                 data_to_export = {
                     "surface_elevation": dataset.surface_elevation,
@@ -745,17 +662,6 @@ def main():
                 filepath = exporter.export_data(data_to_export, "volcano_dataset")
                 st.success(f"数据已导出: {filepath}")
 
-        st.markdown("---")
-
-        with st.expander("📋 导出摘要"):
-            exporter = ResultExporter()
-            summary = exporter.get_export_summary()
-            st.write(f"输出目录: {summary['output_dir']}")
-            st.write(f"图像文件: {summary['total_images']}")
-            st.write(f"动画文件: {summary['total_animations']}")
-            st.write(f"网格文件: {summary['total_meshes']}")
-            st.write(f"数据文件: {summary['total_data']}")
-
     elif selected == "图例说明":
         st.header("📖 图例说明")
         st.markdown("了解火山各部分的含义和颜色编码")
@@ -766,90 +672,77 @@ def main():
 
         with col1:
             st.subheader("岩石类型图例")
-            rock_legend = legend_manager.get_rock_type_legend()
-            for item in rock_legend:
-                color_hex = f"#{int(item.color[0]*255):02x}{int(item.color[1]*255):02x}{int(item.color[2]*255):02x}"
-                st.markdown(
-                    f"""
-                    <div style='display: flex; align-items: center; margin: 5px 0;'>
-                        <div style='width: 30px; height: 30px; background: {color_hex}; border-radius: 5px; margin-right: 10px; border: 1px solid #ccc;'></div>
-                        <div>
-                            <b>{item.label}</b><br>
-                            <span style='color: #666; font-size: 0.9em;'>{item.description}</span>
+            try:
+                rock_legend = legend_manager.get_rock_type_legend()
+                for item in rock_legend:
+                    color_hex = f"#{int(item.color[0]*255):02x}{int(item.color[1]*255):02x}{int(item.color[2]*255):02x}"
+                    desc = getattr(item, 'description', '')
+                    st.markdown(
+                        f"""
+                        <div style='display: flex; align-items: center; margin: 5px 0;'>
+                            <div style='width: 30px; height: 30px; background: {color_hex}; border-radius: 5px; margin-right: 10px; border: 1px solid #ccc;'></div>
+                            <div><b>{item.label}</b>{'<br><span style="color: #666; font-size: 0.9em;">' + desc + '</span>' if desc else ''}</div>
                         </div>
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
+                        """,
+                        unsafe_allow_html=True,
+                    )
+            except Exception:
+                st.info("岩石类型图例不可用")
 
             st.subheader("地质构造图例")
-            struct_legend = legend_manager.get_structural_legend()
-            for item in struct_legend:
-                color_hex = f"#{int(item.color[0]*255):02x}{int(item.color[1]*255):02x}{int(item.color[2]*255):02x}"
-                st.markdown(
-                    f"""
-                    <div style='display: flex; align-items: center; margin: 5px 0;'>
-                        <div style='width: 30px; height: 30px; background: {color_hex}; border-radius: 5px; margin-right: 10px; border: 1px solid #ccc;'></div>
-                        <div>
-                            <b>{item.label}</b><br>
-                            <span style='color: #666; font-size: 0.9em;'>{item.description}</span>
+            try:
+                struct_legend = legend_manager.get_structural_legend()
+                for item in struct_legend:
+                    color_hex = f"#{int(item.color[0]*255):02x}{int(item.color[1]*255):02x}{int(item.color[2]*255):02x}"
+                    desc = getattr(item, 'description', '')
+                    st.markdown(
+                        f"""
+                        <div style='display: flex; align-items: center; margin: 5px 0;'>
+                            <div style='width: 30px; height: 30px; background: {color_hex}; border-radius: 5px; margin-right: 10px; border: 1px solid #ccc;'></div>
+                            <div><b>{item.label}</b>{'<br><span style="color: #666; font-size: 0.9em;">' + desc + '</span>' if desc else ''}</div>
                         </div>
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
+                        """,
+                        unsafe_allow_html=True,
+                    )
+            except Exception:
+                st.info("地质构造图例不可用")
 
         with col2:
             st.subheader("地下岩石图例")
-            volume_legend = legend_manager.get_volume_rock_legend()
-            for item in volume_legend:
-                color_hex = f"#{int(item.color[0]*255):02x}{int(item.color[1]*255):02x}{int(item.color[2]*255):02x}"
-                st.markdown(
-                    f"""
-                    <div style='display: flex; align-items: center; margin: 5px 0;'>
-                        <div style='width: 30px; height: 30px; background: {color_hex}; border-radius: 5px; margin-right: 10px; border: 1px solid #ccc;'></div>
-                        <div>
-                            <b>{item.label}</b><br>
-                            <span style='color: #666; font-size: 0.9em;'>{item.description}</span>
+            try:
+                volume_legend = legend_manager.get_volume_rock_legend()
+                for item in volume_legend:
+                    color_hex = f"#{int(item.color[0]*255):02x}{int(item.color[1]*255):02x}{int(item.color[2]*255):02x}"
+                    desc = getattr(item, 'description', '')
+                    st.markdown(
+                        f"""
+                        <div style='display: flex; align-items: center; margin: 5px 0;'>
+                            <div style='width: 30px; height: 30px; background: {color_hex}; border-radius: 5px; margin-right: 10px; border: 1px solid #ccc;'></div>
+                            <div><b>{item.label}</b>{'<br><span style="color: #666; font-size: 0.9em;">' + desc + '</span>' if desc else ''}</div>
                         </div>
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
+                        """,
+                        unsafe_allow_html=True,
+                    )
+            except Exception:
+                st.info("地下岩石图例不可用")
 
             st.subheader("危险等级图例")
-            hazard_legend = legend_manager.get_hazard_legend()
-            for item in hazard_legend:
-                color_hex = f"#{int(item.color[0]*255):02x}{int(item.color[1]*255):02x}{int(item.color[2]*255):02x}"
-                st.markdown(
-                    f"""
-                    <div style='display: flex; align-items: center; margin: 5px 0;'>
-                        <div style='width: 30px; height: 30px; background: {color_hex}; border-radius: 5px; margin-right: 10px; border: 1px solid #ccc;'></div>
-                        <div>
-                            <b>{item.label}</b><br>
-                            <span style='color: #666; font-size: 0.9em;'>{item.description}</span>
+            try:
+                hazard_legend = legend_manager.get_hazard_legend()
+                for item in hazard_legend:
+                    color_hex = f"#{int(item.color[0]*255):02x}{int(item.color[1]*255):02x}{int(item.color[2]*255):02x}"
+                    desc = getattr(item, 'description', '')
+                    st.markdown(
+                        f"""
+                        <div style='display: flex; align-items: center; margin: 5px 0;'>
+                            <div style='width: 30px; height: 30px; background: {color_hex}; border-radius: 5px; margin-right: 10px; border: 1px solid #ccc;'></div>
+                            <div><b>{item.label}</b>{'<br><span style="color: #666; font-size: 0.9em;">' + desc + '</span>' if desc else ''}</div>
                         </div>
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
-
-            st.subheader("植被覆盖图例")
-            veg_legend = legend_manager.get_vegetation_legend()
-            for item in veg_legend:
-                color_hex = f"#{int(item.color[0]*255):02x}{int(item.color[1]*255):02x}{int(item.color[2]*255):02x}"
-                st.markdown(
-                    f"""
-                    <div style='display: flex; align-items: center; margin: 5px 0;'>
-                        <div style='width: 30px; height: 30px; background: {color_hex}; border-radius: 5px; margin-right: 10px; border: 1px solid #ccc;'></div>
-                        <div>
-                            <b>{item.label}</b><br>
-                            <span style='color: #666; font-size: 0.9em;'>{item.description}</span>
-                        </div>
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
+                        """,
+                        unsafe_allow_html=True,
+                    )
+            except Exception:
+                st.info("危险等级图例不可用")
 
         st.markdown("---")
 
