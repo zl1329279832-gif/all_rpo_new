@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { BuildingComponent, COMPONENT_INFO } from '@/types'
+import { COMPONENT_INFO } from '@/types'
 
 export interface ComponentInfo {
   id: string
@@ -16,17 +16,18 @@ export class ComponentLabelSystem {
   private raycaster: THREE.Raycaster = new THREE.Raycaster()
   private mouse: THREE.Vector2 = new THREE.Vector2()
 
-  private clickableObjects: THREE.Object3D[] = []
   private cachedMeshes: THREE.Mesh[] = []
   private selectedObject: THREE.Object3D | null = null
-  private highlightMesh: THREE.Mesh | null = null
 
   private onSelectCallback?: (info: ComponentInfo | null) => void
   private onHoverCallback?: (info: ComponentInfo | null) => void
 
   private hoveredObject: THREE.Object3D | null = null
   private lastMoveTime: number = 0
-  private readonly THROTTLE_MS: number = 50
+  private readonly THROTTLE_MS: number = 100
+  private needsRaycast: boolean = false
+  private pendingMouseX: number = 0
+  private pendingMouseY: number = 0
 
   private boundOnClick: (e: MouseEvent) => void
   private boundOnMouseMove: (e: MouseEvent) => void
@@ -38,7 +39,6 @@ export class ComponentLabelSystem {
     this.boundOnClick = this.onClick.bind(this)
     this.boundOnMouseMove = this.onMouseMove.bind(this)
     this.setupEventListeners()
-    this.createHighlight()
   }
 
   private setupEventListeners(): void {
@@ -46,45 +46,22 @@ export class ComponentLabelSystem {
     this.renderer.domElement.addEventListener('mousemove', this.boundOnMouseMove)
   }
 
-  private createHighlight(): void {
-    const geometry = new THREE.BoxGeometry(1, 1, 1)
-    const material = new THREE.MeshBasicMaterial({
-      color: 0x00ffff,
-      transparent: true,
-      opacity: 0.3,
-      wireframe: true,
-      wireframeLinewidth: 2,
-      depthTest: false
-    })
-    this.highlightMesh = new THREE.Mesh(geometry, material)
-    this.highlightMesh.visible = false
-    this.highlightMesh.renderOrder = 999
-    this.scene.add(this.highlightMesh)
-  }
-
-  private rebuildMeshCache(): void {
-    this.cachedMeshes = []
-    this.clickableObjects.forEach(obj => {
-      obj.traverse(child => {
-        if (child instanceof THREE.Mesh) {
-          this.cachedMeshes.push(child)
-        }
-      })
-    })
-  }
-
-  registerObject(obj: THREE.Object3D): void {
-    this.clickableObjects.push(obj)
-    this.rebuildMeshCache()
-  }
-
   registerRecursive(root: THREE.Object3D): void {
+    this.cachedMeshes = []
     root.traverse(child => {
-      if (child.userData.componentId) {
-        this.clickableObjects.push(child)
+      if (child instanceof THREE.Mesh && child.userData.componentId) {
+        this.cachedMeshes.push(child)
+      } else if (child instanceof THREE.Mesh) {
+        let parent: THREE.Object3D | null = child
+        while (parent) {
+          if (parent.userData.componentId) {
+            this.cachedMeshes.push(child)
+            break
+          }
+          parent = parent.parent
+        }
       }
     })
-    this.rebuildMeshCache()
   }
 
   private getComponentInfo(obj: THREE.Object3D): ComponentInfo | null {
@@ -113,15 +90,22 @@ export class ComponentLabelSystem {
   private onMouseMove(e: MouseEvent): void {
     const now = performance.now()
     if (now - this.lastMoveTime < this.THROTTLE_MS) {
+      this.pendingMouseX = e.clientX
+      this.pendingMouseY = e.clientY
+      this.needsRaycast = true
       return
     }
     this.lastMoveTime = now
+    this.performHoverRaycast(e.clientX, e.clientY)
+  }
 
+  private performHoverRaycast(clientX: number, clientY: number): void {
     const rect = this.renderer.domElement.getBoundingClientRect()
-    this.mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1
-    this.mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1
+    this.mouse.x = ((clientX - rect.left) / rect.width) * 2 - 1
+    this.mouse.y = -((clientY - rect.top) / rect.height) * 2 + 1
 
     this.raycaster.setFromCamera(this.mouse, this.camera)
+    this.raycaster.firstHitOnly = true
     const intersects = this.raycaster.intersectObjects(this.cachedMeshes, false)
 
     if (intersects.length > 0) {
@@ -132,23 +116,7 @@ export class ComponentLabelSystem {
         if (this.hoveredObject !== hit) {
           this.hoveredObject = hit
           this.renderer.domElement.style.cursor = 'pointer'
-
-          if (this.highlightMesh && hit !== this.selectedObject) {
-            const box = new THREE.Box3().setFromObject(hit)
-            const center = new THREE.Vector3()
-            const size = new THREE.Vector3()
-            box.getCenter(center)
-            box.getSize(size)
-
-            this.highlightMesh.position.copy(center)
-            this.highlightMesh.scale.copy(size).multiplyScalar(1.05)
-            this.highlightMesh.visible = true
-            const material = this.highlightMesh.material as THREE.MeshBasicMaterial
-            material.color.setHex(0x00ff88)
-            material.opacity = 0.2
-          }
         }
-
         if (this.onHoverCallback) {
           this.onHoverCallback(info)
         }
@@ -162,14 +130,8 @@ export class ComponentLabelSystem {
 
   private clearHover(): void {
     if (this.hoveredObject === null) return
-    
     this.hoveredObject = null
     this.renderer.domElement.style.cursor = 'default'
-
-    if (this.highlightMesh && this.selectedObject === null) {
-      this.highlightMesh.visible = false
-    }
-
     if (this.onHoverCallback) {
       this.onHoverCallback(null)
     }
@@ -181,6 +143,7 @@ export class ComponentLabelSystem {
     this.mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1
 
     this.raycaster.setFromCamera(this.mouse, this.camera)
+    this.raycaster.firstHitOnly = true
     const intersects = this.raycaster.intersectObjects(this.cachedMeshes, false)
 
     if (intersects.length > 0) {
@@ -189,22 +152,6 @@ export class ComponentLabelSystem {
 
       if (info) {
         this.selectedObject = hit
-
-        if (this.highlightMesh) {
-          const box = new THREE.Box3().setFromObject(hit)
-          const center = new THREE.Vector3()
-          const size = new THREE.Vector3()
-          box.getCenter(center)
-          box.getSize(size)
-
-          this.highlightMesh.position.copy(center)
-          this.highlightMesh.scale.copy(size).multiplyScalar(1.1)
-          this.highlightMesh.visible = true
-          const material = this.highlightMesh.material as THREE.MeshBasicMaterial
-          material.color.setHex(0x00ffff)
-          material.opacity = 0.4
-        }
-
         if (this.onSelectCallback) {
           this.onSelectCallback(info)
         }
@@ -216,9 +163,6 @@ export class ComponentLabelSystem {
 
   clearSelection(): void {
     this.selectedObject = null
-    if (this.highlightMesh) {
-      this.highlightMesh.visible = false
-    }
     if (this.onSelectCallback) {
       this.onSelectCallback(null)
     }
@@ -232,33 +176,17 @@ export class ComponentLabelSystem {
     this.onHoverCallback = callback
   }
 
-  getSelectedInfo(): ComponentInfo | null {
-    if (this.selectedObject) {
-      return this.getComponentInfo(this.selectedObject)
-    }
-    return null
-  }
-
   update(): void {
-    if (this.highlightMesh && this.selectedObject) {
-      const box = new THREE.Box3().setFromObject(this.selectedObject)
-      const center = new THREE.Vector3()
-      const size = new THREE.Vector3()
-      box.getCenter(center)
-      box.getSize(size)
-      this.highlightMesh.position.copy(center)
-      this.highlightMesh.scale.copy(size).multiplyScalar(1.1)
+    if (this.needsRaycast) {
+      this.needsRaycast = false
+      this.lastMoveTime = performance.now()
+      this.performHoverRaycast(this.pendingMouseX, this.pendingMouseY)
     }
   }
 
   dispose(): void {
     this.renderer.domElement.removeEventListener('click', this.boundOnClick)
     this.renderer.domElement.removeEventListener('mousemove', this.boundOnMouseMove)
-    if (this.highlightMesh) {
-      this.highlightMesh.material.dispose()
-      this.highlightMesh.geometry.dispose()
-    }
     this.cachedMeshes = []
-    this.clickableObjects = []
   }
 }

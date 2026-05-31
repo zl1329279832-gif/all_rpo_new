@@ -18,12 +18,8 @@ function mergeGeometries(geometries: THREE.BufferGeometry[]): THREE.BufferGeomet
     if (posAttr) {
       for (let i = 0; i < posAttr.count; i++) {
         positions.push(posAttr.getX(i), posAttr.getY(i), posAttr.getZ(i))
-        if (normAttr) {
-          normals.push(normAttr.getX(i), normAttr.getY(i), normAttr.getZ(i))
-        }
-        if (uvAttr) {
-          uvs.push(uvAttr.getX(i), uvAttr.getY(i))
-        }
+        if (normAttr) normals.push(normAttr.getX(i), normAttr.getY(i), normAttr.getZ(i))
+        if (uvAttr) uvs.push(uvAttr.getX(i), uvAttr.getY(i))
       }
     }
 
@@ -31,7 +27,7 @@ function mergeGeometries(geometries: THREE.BufferGeometry[]): THREE.BufferGeomet
       for (let i = 0; i < indexAttr.count; i++) {
         indices.push(indexAttr.getX(i) + indexOffset)
       }
-    } else {
+    } else if (posAttr) {
       for (let i = 0; i < posAttr.count; i++) {
         indices.push(i + indexOffset)
       }
@@ -41,15 +37,10 @@ function mergeGeometries(geometries: THREE.BufferGeometry[]): THREE.BufferGeomet
   }
 
   mergedGeo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3))
-  if (normals.length > 0) {
-    mergedGeo.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3))
-  }
-  if (uvs.length > 0) {
-    mergedGeo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2))
-  }
+  if (normals.length > 0) mergedGeo.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3))
+  if (uvs.length > 0) mergedGeo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2))
   mergedGeo.setIndex(indices)
   mergedGeo.computeBoundingSphere()
-
   return mergedGeo
 }
 
@@ -62,25 +53,22 @@ export class BaseComponents {
     const group = new THREE.Group()
     group.userData.componentId = 'column'
 
-    const geometry = new THREE.CylinderGeometry(radius, radius * 1.05, height, 16)
-    const material = MaterialLibrary.redWoodColumn
-    const column = new THREE.Mesh(geometry, material)
+    const columnGeo = new THREE.CylinderGeometry(radius, radius * 1.05, height, 12)
+    const column = new THREE.Mesh(columnGeo, MaterialLibrary.redWoodColumn)
     column.position.y = height / 2
     column.castShadow = true
     column.receiveShadow = true
     group.add(column)
 
-    const baseGeometry = new THREE.CylinderGeometry(radius * 1.4, radius * 1.5, 0.15, 16)
-    const baseMaterial = MaterialLibrary.stoneStep
-    const base = new THREE.Mesh(baseGeometry, baseMaterial)
-    base.position.y = 0.075
+    const baseGeo = new THREE.CylinderGeometry(radius * 1.4, radius * 1.5, 0.12, 12)
+    const base = new THREE.Mesh(baseGeo, MaterialLibrary.stoneStep)
+    base.position.y = 0.06
     base.castShadow = true
-    base.receiveShadow = true
     group.add(base)
 
-    const capitalGeometry = new THREE.CylinderGeometry(radius * 1.3, radius * 1.1, 0.2, 16)
-    const capital = new THREE.Mesh(capitalGeometry, MaterialLibrary.darkWoodBeam)
-    capital.position.y = height - 0.1
+    const capitalGeo = new THREE.CylinderGeometry(radius * 1.3, radius * 1.1, 0.15, 12)
+    const capital = new THREE.Mesh(capitalGeo, MaterialLibrary.darkWoodBeam)
+    capital.position.y = height - 0.075
     capital.castShadow = true
     group.add(capital)
 
@@ -119,8 +107,8 @@ export class BaseComponents {
 
     const woodGeometries: THREE.BoxGeometry[] = []
 
-    const baseGeo = new THREE.BoxGeometry(size, size * 0.25, size)
-    baseGeo.translate(0, 0, 0)
+    const baseGeo = new THREE.BoxGeometry(size, size * 0.2, size)
+    baseGeo.translate(0, size * 0.1, 0)
     woodGeometries.push(baseGeo)
 
     for (let i = 0; i < 4; i++) {
@@ -128,13 +116,13 @@ export class BaseComponents {
       const cos = Math.cos(angle)
       const sin = Math.sin(angle)
 
-      const armGeo = new THREE.BoxGeometry(size * 0.8, size * 0.15, size * 0.15)
-      armGeo.translate(cos * size * 0.4, size * 0.2, sin * size * 0.4)
+      const armGeo = new THREE.BoxGeometry(size * 0.7, size * 0.12, size * 0.12)
+      armGeo.translate(cos * size * 0.35, size * 0.25, sin * size * 0.35)
       armGeo.rotateY(angle)
       woodGeometries.push(armGeo)
 
-      const bowGeo = new THREE.BoxGeometry(size * 0.15, size * 0.2, size * 0.5)
-      bowGeo.translate(cos * size * 0.6, size * 0.35, sin * size * 0.6)
+      const bowGeo = new THREE.BoxGeometry(size * 0.12, size * 0.15, size * 0.4)
+      bowGeo.translate(cos * size * 0.5, size * 0.35, sin * size * 0.5)
       bowGeo.rotateY(angle)
       woodGeometries.push(bowGeo)
     }
@@ -144,14 +132,13 @@ export class BaseComponents {
     woodMesh.castShadow = true
     woodMesh.receiveShadow = true
     group.add(woodMesh)
-
     woodGeometries.forEach(g => g.dispose())
 
     const topBlock = new THREE.Mesh(
-      new THREE.BoxGeometry(size * 0.9, size * 0.2, size * 0.9),
+      new THREE.BoxGeometry(size * 0.85, size * 0.15, size * 0.85),
       goldMaterial
     )
-    topBlock.position.y = size * 0.5
+    topBlock.position.y = size * 0.45
     topBlock.castShadow = true
     group.add(topBlock)
 
@@ -169,30 +156,11 @@ export class BaseComponents {
 
     const tileMaterial = MaterialLibrary.greyTileRoof
 
-    const baseGeometry = new THREE.BoxGeometry(width, 0.08, depth)
-    const base = new THREE.Mesh(baseGeometry, tileMaterial)
+    const baseGeo = new THREE.BoxGeometry(width, 0.06, depth)
+    const base = new THREE.Mesh(baseGeo, tileMaterial)
     base.castShadow = true
     base.receiveShadow = true
     group.add(base)
-
-    const tileCount = Math.floor(width / 0.15)
-    for (let i = 0; i < tileCount; i++) {
-      const x = -width / 2 + 0.075 + i * 0.15
-      const tileGeo = new THREE.CylinderGeometry(0.06, 0.04, depth, 8, 1, true, Math.PI, Math.PI)
-      const tile = new THREE.Mesh(tileGeo, tileMaterial)
-      tile.rotation.x = Math.PI / 2
-      tile.rotation.z = Math.PI / 2
-      tile.position.set(x, 0.06, 0)
-      tile.castShadow = true
-      group.add(tile)
-
-      const dripGeo = new THREE.CylinderGeometry(0.07, 0.07, 0.02, 12)
-      const drip = new THREE.Mesh(dripGeo, tileMaterial)
-      drip.rotation.x = Math.PI / 2
-      drip.position.set(x, 0.05, -depth / 2 - 0.01)
-      drip.castShadow = true
-      group.add(drip)
-    }
 
     group.position.copy(position)
     return group
@@ -208,34 +176,34 @@ export class BaseComponents {
     const tileMaterial = MaterialLibrary.greyTileRoof
     const goldMaterial = MaterialLibrary.goldDecorative
 
-    const mainRidgeGeo = new THREE.BoxGeometry(length, 0.35, 0.45)
+    const mainRidgeGeo = new THREE.BoxGeometry(length, 0.3, 0.4)
     const mainRidge = new THREE.Mesh(mainRidgeGeo, tileMaterial)
-    mainRidge.position.y = 0.175
+    mainRidge.position.y = 0.15
     mainRidge.castShadow = true
     group.add(mainRidge)
 
-    const ridgeTopGeo = new THREE.BoxGeometry(length, 0.12, 0.2)
+    const ridgeTopGeo = new THREE.BoxGeometry(length, 0.1, 0.18)
     const ridgeTop = new THREE.Mesh(ridgeTopGeo, goldMaterial)
-    ridgeTop.position.y = 0.4
+    ridgeTop.position.y = 0.35
     ridgeTop.castShadow = true
     group.add(ridgeTop)
 
     const chiwenLeft = this.createChiwen()
-    chiwenLeft.position.set(-length / 2 - 0.15, 0.15, 0)
+    chiwenLeft.position.set(-length / 2 - 0.1, 0.15, 0)
     chiwenLeft.rotation.z = -0.3
     group.add(chiwenLeft)
 
     const chiwenRight = this.createChiwen()
-    chiwenRight.position.set(length / 2 + 0.15, 0.15, 0)
+    chiwenRight.position.set(length / 2 + 0.1, 0.15, 0)
     chiwenRight.rotation.z = 0.3
     chiwenRight.rotation.y = Math.PI
     group.add(chiwenRight)
 
-    const beastCount = Math.min(5, Math.floor(length / 1.5) - 1)
+    const beastCount = Math.min(3, Math.floor(length / 2))
     for (let i = 0; i < beastCount; i++) {
-      const offset = (length - 1) / (beastCount + 1) * (i + 1) - length / 2 + 0.5
+      const offset = (length - 0.8) / (beastCount + 1) * (i + 1) - length / 2 + 0.4
       const beast = this.createRidgeBeast()
-      beast.position.set(offset, 0.35, 0.25)
+      beast.position.set(offset, 0.3, 0.2)
       group.add(beast)
     }
 
@@ -247,19 +215,19 @@ export class BaseComponents {
     const group = new THREE.Group()
     const material = MaterialLibrary.goldDecorative
 
-    const body = new THREE.Mesh(new THREE.SphereGeometry(0.18, 8, 8), material)
+    const body = new THREE.Mesh(new THREE.SphereGeometry(0.15, 8, 6), material)
     body.scale.set(1, 1.2, 0.8)
     body.position.y = 0.1
     body.castShadow = true
     group.add(body)
 
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 8), material)
-    head.position.set(0.1, 0.25, 0)
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.1, 8, 6), material)
+    head.position.set(0.08, 0.2, 0)
     head.castShadow = true
     group.add(head)
 
-    const tail = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.3, 6), material)
-    tail.position.set(-0.15, 0.3, 0)
+    const tail = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.25, 6), material)
+    tail.position.set(-0.12, 0.25, 0)
     tail.rotation.z = Math.PI / 4
     tail.castShadow = true
     group.add(tail)
@@ -271,13 +239,13 @@ export class BaseComponents {
     const group = new THREE.Group()
     const material = MaterialLibrary.goldDecorative
 
-    const body = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.2, 0.12), material)
-    body.position.y = 0.1
+    const body = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.16, 0.1), material)
+    body.position.y = 0.08
     body.castShadow = true
     group.add(body)
 
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 8), material)
-    head.position.set(0, 0.22, 0.06)
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.06, 6, 4), material)
+    head.position.set(0, 0.18, 0.04)
     head.castShadow = true
     group.add(head)
 
@@ -293,77 +261,65 @@ export class BaseComponents {
     const group = new THREE.Group()
     group.userData.componentId = 'eave'
 
-    const curvePoints: THREE.Vector2[] = []
-    const segments = 20
-    for (let i = 0; i <= segments; i++) {
-      const t = i / segments
-      const x = t * depth
-      const y = Math.pow(t, 1.8) * rise + Math.sin(t * Math.PI) * rise * 0.3
-      curvePoints.push(new THREE.Vector2(x, y))
+    const tileMaterial = MaterialLibrary.greyTileRoof
+    const woodMaterial = MaterialLibrary.darkWoodBeam
+    const goldMaterial = MaterialLibrary.goldDecorative
+
+    const eaveGeometries: THREE.BufferGeometry[] = []
+
+    const curveSteps = 8
+    for (let i = 0; i < curveSteps; i++) {
+      const t1 = i / curveSteps
+      const t2 = (i + 1) / curveSteps
+
+      const y1 = Math.pow(t1, 1.5) * rise
+      const z1 = -t1 * depth
+      const y2 = Math.pow(t2, 1.5) * rise
+      const z2 = -t2 * depth
+
+      const segGeo = new THREE.BoxGeometry(width, 0.06, depth / curveSteps)
+      segGeo.translate(0, (y1 + y2) / 2 + 0.03, (z1 + z2) / 2)
+      const angle = Math.atan2(y2 - y1, z2 - z1)
+      segGeo.rotateX(angle)
+      eaveGeometries.push(segGeo)
     }
 
-    const curve = new THREE.CatmullRomCurve3(
-      curvePoints.map(p => new THREE.Vector3(0, p.y, -p.x))
-    )
-
-    const profileShape = new THREE.Shape()
-    profileShape.moveTo(-0.05, -0.02)
-    profileShape.lineTo(0.05, -0.02)
-    profileShape.lineTo(0.04, 0.02)
-    profileShape.lineTo(-0.04, 0.02)
-    profileShape.closePath()
-
-    const extrudeSettings = {
-      steps: segments,
-      bevelEnabled: false,
-      extrudePath: curve
+    const rafterCount = Math.min(8, Math.floor(width / 0.6))
+    for (let i = 0; i < rafterCount; i++) {
+      const x = -width / 2 + (i + 0.5) * (width / rafterCount)
+      const rafterGeo = new THREE.BoxGeometry(0.06, 0.08, depth * 0.9)
+      rafterGeo.translate(x, rise * 0.3 + 0.04, -depth * 0.45)
+      rafterGeo.rotateX(-Math.atan2(rise * 0.6, depth * 0.9))
+      eaveGeometries.push(rafterGeo)
     }
 
-    const rafterCount = Math.floor(width / 0.25)
-    for (let i = 0; i <= rafterCount; i++) {
-      const x = -width / 2 + i * (width / rafterCount)
-      const rafterGeo = new THREE.ExtrudeGeometry(profileShape, extrudeSettings)
-      const rafter = new THREE.Mesh(rafterGeo, MaterialLibrary.darkWoodBeam)
-      rafter.position.x = x
-      rafter.castShadow = true
-      group.add(rafter)
+    if (eaveGeometries.length > 0) {
+      const mergedEaveGeo = mergeGeometries(eaveGeometries as THREE.BoxGeometry[])
+      const eaveMesh = new THREE.Mesh(mergedEaveGeo, woodMaterial)
+      eaveMesh.castShadow = true
+      eaveMesh.receiveShadow = true
+      group.add(eaveMesh)
+      eaveGeometries.forEach(g => g.dispose())
     }
 
-    const tileSegments = 8
-    for (let i = 0; i < tileSegments; i++) {
-      const t = i / tileSegments
-      const tileDepth = depth * 0.9
-      const tileY = Math.pow(t, 1.8) * rise + Math.sin(t * Math.PI) * rise * 0.3
-      const tileZ = -t * tileDepth
-
-      const tileGroup = this.createTileRow(width, 0.35)
-      tileGroup.position.set(0, tileY + 0.05, tileZ)
-      tileGroup.rotation.x = -Math.atan(
-        (1.8 * Math.pow(t, 0.8) * rise + 0.3 * Math.PI * Math.cos(t * Math.PI) * rise) / depth
-      )
-      group.add(tileGroup)
-    }
-
-    const cornerRaise = rise * 1.5
     for (let corner of [-1, 1]) {
       const cornerCurve: THREE.Vector3[] = []
-      for (let i = 0; i <= 10; i++) {
-        const t = i / 10
+      for (let i = 0; i <= 8; i++) {
+        const t = i / 8
         cornerCurve.push(new THREE.Vector3(
-          corner * (width / 2 + t * 0.5),
-          t * t * cornerRaise,
-          -t * depth * 0.8
+          corner * (width / 2 + t * 0.4),
+          t * t * rise * 1.3,
+          -t * depth * 0.7
         ))
       }
-
       const cornerGeo = new THREE.TubeGeometry(
         new THREE.CatmullRomCurve3(cornerCurve),
-        10,
-        0.06,
         8,
+        0.05,
+        6,
         false
       )
-      const cornerMesh = new THREE.Mesh(cornerGeo, MaterialLibrary.goldDecorative)
+      const cornerMesh = new THREE.Mesh(cornerGeo, goldMaterial)
       cornerMesh.castShadow = true
       group.add(cornerMesh)
     }
@@ -383,51 +339,28 @@ export class BaseComponents {
     const frameMaterial = MaterialLibrary.darkWoodBeam
     const latticeMaterial = MaterialLibrary.latticeWindow
 
-    const frameThickness = 0.08
-    const frameDepth = 0.15
+    const frameThickness = 0.06
+    const frameDepth = 0.12
 
-    const framePositions = [
-      { w: width, h: frameThickness, d: frameDepth, x: 0, y: height / 2 - frameThickness / 2, z: 0 },
-      { w: width, h: frameThickness, d: frameDepth, x: 0, y: -height / 2 + frameThickness / 2, z: 0 },
-      { w: frameThickness, h: height, d: frameDepth, x: -width / 2 + frameThickness / 2, y: 0, z: 0 },
-      { w: frameThickness, h: height, d: frameDepth, x: width / 2 - frameThickness / 2, y: 0, z: 0 }
-    ]
+    const geos: THREE.BoxGeometry[] = []
 
-    framePositions.forEach(pos => {
-      const geo = new THREE.BoxGeometry(pos.w, pos.h, pos.d)
-      const mesh = new THREE.Mesh(geo, frameMaterial)
-      mesh.position.set(pos.x, pos.y, pos.z)
-      mesh.castShadow = true
-      group.add(mesh)
-    })
+    geos.push(new THREE.BoxGeometry(width, frameThickness, frameDepth).translate(0, height / 2 - frameThickness / 2, 0) as THREE.BoxGeometry)
+    geos.push(new THREE.BoxGeometry(width, frameThickness, frameDepth).translate(0, -height / 2 + frameThickness / 2, 0) as THREE.BoxGeometry)
+    geos.push(new THREE.BoxGeometry(frameThickness, height, frameDepth).translate(-width / 2 + frameThickness / 2, 0, 0) as THREE.BoxGeometry)
+    geos.push(new THREE.BoxGeometry(frameThickness, height, frameDepth).translate(width / 2 - frameThickness / 2, 0, 0) as THREE.BoxGeometry)
+
+    const mergedFrameGeo = mergeGeometries(geos)
+    const frameMesh = new THREE.Mesh(mergedFrameGeo, frameMaterial)
+    frameMesh.castShadow = true
+    group.add(frameMesh)
+    geos.forEach(g => g.dispose())
 
     const innerWidth = width - frameThickness * 2
     const innerHeight = height - frameThickness * 2
     const latticeGeo = new THREE.PlaneGeometry(innerWidth, innerHeight)
     const lattice = new THREE.Mesh(latticeGeo, latticeMaterial)
     lattice.position.z = 0.01
-    lattice.castShadow = true
     group.add(lattice)
-
-    const mullionGeo = new THREE.BoxGeometry(0.04, innerHeight, 0.06)
-    const m1 = new THREE.Mesh(mullionGeo, frameMaterial)
-    m1.position.x = -innerWidth / 4
-    m1.castShadow = true
-    group.add(m1)
-    const m2 = new THREE.Mesh(mullionGeo, frameMaterial)
-    m2.position.x = innerWidth / 4
-    m2.castShadow = true
-    group.add(m2)
-
-    const transomGeo = new THREE.BoxGeometry(innerWidth, 0.04, 0.06)
-    const t1 = new THREE.Mesh(transomGeo, frameMaterial)
-    t1.position.y = -innerHeight / 6
-    t1.castShadow = true
-    group.add(t1)
-    const t2 = new THREE.Mesh(transomGeo, frameMaterial)
-    t2.position.y = innerHeight / 6
-    t2.castShadow = true
-    group.add(t2)
 
     group.position.copy(position)
     return group
@@ -444,60 +377,46 @@ export class BaseComponents {
     const frameMaterial = MaterialLibrary.redWoodColumn
     const latticeMaterial = MaterialLibrary.latticeWindow
 
-    const frameThickness = 0.1
-    const frameDepth = 0.18
+    const frameThickness = 0.08
+    const frameDepth = 0.15
 
-    const framePositions = [
-      { w: width, h: frameThickness, d: frameDepth, x: 0, y: height / 2 - frameThickness / 2, z: 0 },
-      { w: frameThickness, h: height, d: frameDepth, x: -width / 2 + frameThickness / 2, y: 0, z: 0 },
-      { w: frameThickness, h: height, d: frameDepth, x: width / 2 - frameThickness / 2, y: 0, z: 0 }
-    ]
+    const frameGeos: THREE.BoxGeometry[] = []
+    frameGeos.push(new THREE.BoxGeometry(width, frameThickness, frameDepth).translate(0, height / 2 - frameThickness / 2, 0) as THREE.BoxGeometry)
+    frameGeos.push(new THREE.BoxGeometry(frameThickness, height, frameDepth).translate(-width / 2 + frameThickness / 2, 0, 0) as THREE.BoxGeometry)
+    frameGeos.push(new THREE.BoxGeometry(frameThickness, height, frameDepth).translate(width / 2 - frameThickness / 2, 0, 0) as THREE.BoxGeometry)
 
-    framePositions.forEach(pos => {
-      const geo = new THREE.BoxGeometry(pos.w, pos.h, pos.d)
-      const mesh = new THREE.Mesh(geo, frameMaterial)
-      mesh.position.set(pos.x, pos.y, pos.z)
-      mesh.castShadow = true
-      group.add(mesh)
-    })
+    const mergedFrameGeo = mergeGeometries(frameGeos)
+    const frameMesh = new THREE.Mesh(mergedFrameGeo, frameMaterial)
+    frameMesh.castShadow = true
+    group.add(frameMesh)
+    frameGeos.forEach(g => g.dispose())
 
-    const leafWidth = (width - frameThickness * 2 - 0.05) / 2
+    const leafWidth = (width - frameThickness * 2 - 0.04) / 2
     for (let leafSide of [-1, 1]) {
-      const leafGroup = new THREE.Group()
+      const leafGeo = new THREE.BoxGeometry(leafWidth, height - frameThickness * 2, 0.1)
+      const leaf = new THREE.Mesh(leafGeo, frameMaterial)
+      leaf.position.set(leafSide * (leafWidth + 0.02) / 2, -frameThickness / 2, 0)
+      leaf.castShadow = true
+      group.add(leaf)
 
-      const leafFrameGeo = new THREE.BoxGeometry(leafWidth, height - frameThickness * 2, 0.12)
-      const leafFrame = new THREE.Mesh(leafFrameGeo, frameMaterial)
-      leafFrame.castShadow = true
-      leafGroup.add(leafFrame)
-
-      const panelWidth = leafWidth - 0.15
-      const upperPanelHeight = (height - frameThickness * 2) * 0.45
-      const upperPanelGeo = new THREE.PlaneGeometry(panelWidth, upperPanelHeight - 0.1)
+      const panelWidth = leafWidth - 0.1
+      const upperPanelGeo = new THREE.PlaneGeometry(panelWidth, (height - frameThickness * 2) * 0.35)
       const upperPanel = new THREE.Mesh(upperPanelGeo, latticeMaterial)
-      upperPanel.position.set(0, (height - frameThickness * 2) * 0.25, 0.07)
-      upperPanel.castShadow = true
-      leafGroup.add(upperPanel)
-
-      const lowerPanelHeight = (height - frameThickness * 2) * 0.45
-      const lowerPanelGeo = new THREE.BoxGeometry(panelWidth, lowerPanelHeight - 0.1, 0.05)
-      const lowerPanel = new THREE.Mesh(lowerPanelGeo, frameMaterial)
-      lowerPanel.position.set(0, -(height - frameThickness * 2) * 0.25, 0.05)
-      lowerPanel.castShadow = true
-      leafGroup.add(lowerPanel)
-
-      const knockerGeo = new THREE.SphereGeometry(0.06, 8, 8)
-      const knocker = new THREE.Mesh(knockerGeo, MaterialLibrary.goldDecorative)
-      knocker.position.set(leafSide * 0.25, 0, 0.13)
-      leafGroup.add(knocker)
-
-      leafGroup.position.x = leafSide * (leafWidth + 0.025) / 2
-      leafGroup.position.y = -frameThickness / 2
-      group.add(leafGroup)
+      upperPanel.position.set(leafSide * (leafWidth + 0.02) / 2, (height - frameThickness * 2) * 0.2 - frameThickness / 2, 0.06)
+      group.add(upperPanel)
     }
 
-    const thresholdGeo = new THREE.BoxGeometry(width + 0.1, 0.15, 0.25)
+    const knockerGeo = new THREE.SphereGeometry(0.05, 8, 6)
+    const knocker1 = new THREE.Mesh(knockerGeo, MaterialLibrary.goldDecorative)
+    knocker1.position.set(-0.2, 0, 0.1)
+    group.add(knocker1)
+    const knocker2 = new THREE.Mesh(knockerGeo.clone(), MaterialLibrary.goldDecorative)
+    knocker2.position.set(0.2, 0, 0.1)
+    group.add(knocker2)
+
+    const thresholdGeo = new THREE.BoxGeometry(width + 0.08, 0.12, 0.2)
     const threshold = new THREE.Mesh(thresholdGeo, MaterialLibrary.stoneStep)
-    threshold.position.y = -height / 2 + 0.075
+    threshold.position.y = -height / 2 + 0.06
     threshold.castShadow = true
     threshold.receiveShadow = true
     group.add(threshold)
@@ -519,20 +438,12 @@ export class BaseComponents {
     const material = MaterialLibrary.stoneStep
 
     for (let i = 0; i < steps; i++) {
-      const stepHeight = height
-      const stepWidth = width - i * 0.15
-      const stepDepth = depth
-      const stepGeo = new THREE.BoxGeometry(stepWidth, stepHeight, stepDepth)
+      const stepGeo = new THREE.BoxGeometry(width - i * 0.12, height, depth)
       const step = new THREE.Mesh(stepGeo, material)
-      step.position.set(0, i * stepHeight + stepHeight / 2, -i * stepDepth * 0.8)
+      step.position.set(0, i * height + height / 2, -i * depth * 0.7)
       step.castShadow = true
       step.receiveShadow = true
       group.add(step)
-
-      const nosingGeo = new THREE.BoxGeometry(stepWidth + 0.04, 0.03, stepDepth + 0.04)
-      const nosing = new THREE.Mesh(nosingGeo, MaterialLibrary.darkPaint)
-      nosing.position.set(0, i * stepHeight + stepHeight + 0.015, -i * stepDepth * 0.8)
-      group.add(nosing)
     }
 
     group.position.copy(position)
@@ -550,49 +461,40 @@ export class BaseComponents {
     const material = MaterialLibrary.woodRailing
 
     const postCount = Math.floor(width / 1.5) + 1
+    const railingGeos: THREE.BoxGeometry[] = []
+
     for (let i = 0; i < postCount; i++) {
       const x = -width / 2 + i * (width / (postCount - 1))
-
-      const postGeo = new THREE.BoxGeometry(0.1, height, 0.1)
-      const post = new THREE.Mesh(postGeo, material)
-      post.position.set(x, height / 2, 0)
-      post.castShadow = true
-      group.add(post)
-
-      const capGeo = new THREE.CylinderGeometry(0.08, 0.08, 0.08, 8)
-      const cap = new THREE.Mesh(capGeo, material)
-      cap.position.set(x, height + 0.04, 0)
-      cap.castShadow = true
-      group.add(cap)
+      const postGeo = new THREE.BoxGeometry(0.08, height, 0.08)
+      postGeo.translate(x, height / 2, 0)
+      railingGeos.push(postGeo)
     }
 
-    const topRailGeo = new THREE.BoxGeometry(width + 0.1, 0.1, 0.08)
-    const topRail = new THREE.Mesh(topRailGeo, material)
-    topRail.position.set(0, height - 0.05, 0)
-    topRail.castShadow = true
-    group.add(topRail)
+    const topRailGeo = new THREE.BoxGeometry(width, 0.08, 0.06)
+    topRailGeo.translate(0, height - 0.04, 0)
+    railingGeos.push(topRailGeo)
 
-    const midRailGeo = new THREE.BoxGeometry(width + 0.1, 0.06, 0.06)
-    const midRail = new THREE.Mesh(midRailGeo, material)
-    midRail.position.set(0, height * 0.45, 0)
-    midRail.castShadow = true
-    group.add(midRail)
+    const midRailGeo = new THREE.BoxGeometry(width, 0.05, 0.05)
+    midRailGeo.translate(0, height * 0.5, 0)
+    railingGeos.push(midRailGeo)
 
-    const bottomRailGeo = new THREE.BoxGeometry(width + 0.1, 0.08, 0.08)
-    const bottomRail = new THREE.Mesh(bottomRailGeo, material)
-    bottomRail.position.set(0, 0.04, 0)
-    bottomRail.castShadow = true
-    group.add(bottomRail)
+    const bottomRailGeo = new THREE.BoxGeometry(width, 0.06, 0.06)
+    bottomRailGeo.translate(0, 0.03, 0)
+    railingGeos.push(bottomRailGeo)
 
-    const balusterCount = postCount * 3 - 2
+    const balusterCount = postCount * 2 - 1
     for (let i = 0; i < balusterCount; i++) {
       const x = -width / 2 + i * (width / (balusterCount - 1))
-      const balusterGeo = new THREE.BoxGeometry(0.04, height * 0.35, 0.04)
-      const baluster = new THREE.Mesh(balusterGeo, material)
-      baluster.position.set(x, height * 0.625, 0)
-      baluster.castShadow = true
-      group.add(baluster)
+      const balGeo = new THREE.BoxGeometry(0.03, height * 0.35, 0.03)
+      balGeo.translate(x, height * 0.65, 0)
+      railingGeos.push(balGeo)
     }
+
+    const mergedGeo = mergeGeometries(railingGeos)
+    const railingMesh = new THREE.Mesh(mergedGeo, material)
+    railingMesh.castShadow = true
+    group.add(railingMesh)
+    railingGeos.forEach(g => g.dispose())
 
     group.position.copy(position)
     return group
@@ -608,69 +510,46 @@ export class BaseComponents {
 
     const frameMaterial = MaterialLibrary.lanternFrame
     const paperMaterial = MaterialLibrary.lanternPaper.clone()
-    paperMaterial.emissiveIntensity = lit ? 1.2 : 0.2
+    paperMaterial.emissiveIntensity = lit ? 1.0 : 0.2
 
-    const topCapGeo = new THREE.CylinderGeometry(0, size * 0.5, size * 0.15, 6)
+    const topCapGeo = new THREE.CylinderGeometry(0, size * 0.4, size * 0.12, 6)
     const topCap = new THREE.Mesh(topCapGeo, frameMaterial)
-    topCap.position.y = size * 0.55
+    topCap.position.y = size * 0.5
     topCap.castShadow = true
     group.add(topCap)
 
-    const bottomBaseGeo = new THREE.CylinderGeometry(size * 0.5, 0, size * 0.15, 6)
+    const bottomBaseGeo = new THREE.CylinderGeometry(size * 0.4, 0, size * 0.12, 6)
     const bottomBase = new THREE.Mesh(bottomBaseGeo, frameMaterial)
-    bottomBase.position.y = -size * 0.55
+    bottomBase.position.y = -size * 0.5
     bottomBase.rotation.x = Math.PI
     bottomBase.castShadow = true
     group.add(bottomBase)
 
-    for (let i = 0; i < 6; i++) {
-      const angle = (i / 6) * Math.PI * 2
-      const frameBarGeo = new THREE.BoxGeometry(size * 0.04, size * 0.8, size * 0.04)
-      const frameBar = new THREE.Mesh(frameBarGeo, frameMaterial)
-      frameBar.position.set(
-        Math.cos(angle) * size * 0.45,
-        0,
-        Math.sin(angle) * size * 0.45
-      )
-      frameBar.rotation.y = angle
-      frameBar.castShadow = true
-      group.add(frameBar)
-    }
-
-    const panelGeo = new THREE.CylinderGeometry(size * 0.42, size * 0.48, size * 0.7, 6, 1, true)
+    const panelGeo = new THREE.CylinderGeometry(size * 0.38, size * 0.42, size * 0.65, 6, 1, true)
     const panel = new THREE.Mesh(panelGeo, paperMaterial)
     panel.castShadow = true
     group.add(panel)
 
-    const topRingGeo = new THREE.TorusGeometry(size * 0.46, size * 0.03, 6, 6)
+    const topRingGeo = new THREE.TorusGeometry(size * 0.4, size * 0.025, 6, 6)
     const topRing = new THREE.Mesh(topRingGeo, frameMaterial)
-    topRing.position.y = size * 0.35
+    topRing.position.y = size * 0.32
     topRing.rotation.x = Math.PI / 2
     group.add(topRing)
 
-    const bottomRingGeo = new THREE.TorusGeometry(size * 0.46, size * 0.03, 6, 6)
+    const bottomRingGeo = new THREE.TorusGeometry(size * 0.4, size * 0.025, 6, 6)
     const bottomRing = new THREE.Mesh(bottomRingGeo, frameMaterial)
-    bottomRing.position.y = -size * 0.35
+    bottomRing.position.y = -size * 0.32
     bottomRing.rotation.x = Math.PI / 2
     group.add(bottomRing)
 
-    const tasselGeo = new THREE.CylinderGeometry(0.02, 0.01, size * 0.25, 6)
+    const tasselGeo = new THREE.CylinderGeometry(0.015, 0.008, size * 0.2, 6)
     const tassel = new THREE.Mesh(tasselGeo, MaterialLibrary.goldDecorative)
-    tassel.position.y = -size * 0.72
+    tassel.position.y = -size * 0.65
     group.add(tassel)
 
-    const topHookGeo = new THREE.TorusGeometry(size * 0.05, size * 0.015, 6, 12, Math.PI)
-    const topHook = new THREE.Mesh(topHookGeo, frameMaterial)
-    topHook.position.y = size * 0.65
-    topHook.rotation.x = Math.PI / 2
-    group.add(topHook)
-
     if (lit) {
-      const light = new THREE.PointLight(0xff6633, 1.5, 8, 2)
+      const light = new THREE.PointLight(0xff6633, 1.2, 6, 2)
       light.position.y = 0
-      light.castShadow = true
-      light.shadow.mapSize.width = 512
-      light.shadow.mapSize.height = 512
       group.add(light)
     }
 
@@ -689,44 +568,20 @@ export class BaseComponents {
     const leavesMaterial = MaterialLibrary.treeLeaves
 
     const trunkHeight = height * 0.5
-    const trunkGeo = new THREE.CylinderGeometry(0.15, 0.25, trunkHeight, 8)
+    const trunkGeo = new THREE.CylinderGeometry(0.12, 0.2, trunkHeight, 6)
     const trunk = new THREE.Mesh(trunkGeo, trunkMaterial)
     trunk.position.y = trunkHeight / 2
     trunk.castShadow = true
     trunk.receiveShadow = true
     group.add(trunk)
 
-    const branchCount = 4
-    for (let i = 0; i < branchCount; i++) {
-      const branchHeight = trunkHeight * 0.5 + i * trunkHeight * 0.15
-      const branchLength = height * 0.3 - i * 0.2
-      const branchGeo = new THREE.CylinderGeometry(0.06, 0.08, branchLength, 6)
-      const branch = new THREE.Mesh(branchGeo, trunkMaterial)
-      branch.position.set(
-        Math.cos(i * 1.2) * 0.3,
-        branchHeight,
-        Math.sin(i * 1.2) * 0.3
-      )
-      branch.rotation.z = Math.PI / 4 + i * 0.2
-      branch.rotation.y = i * 1.2
-      branch.castShadow = true
-      group.add(branch)
-    }
-
-    const foliageLayers = 5
-    for (let i = 0; i < foliageLayers; i++) {
-      const layerY = trunkHeight + i * height * 0.1
-      const layerRadius = height * (0.45 - i * 0.07)
-      const foliageGeo = new THREE.SphereGeometry(layerRadius, 8, 6)
-      const foliage = new THREE.Mesh(foliageGeo, leavesMaterial.clone())
-      foliage.position.y = layerY
-      foliage.position.x = Math.sin(i * 0.8) * 0.2
-      foliage.position.z = Math.cos(i * 0.8) * 0.2
-      foliage.scale.y = 0.7
-      foliage.castShadow = true
-      foliage.receiveShadow = true
-      group.add(foliage)
-    }
+    const foliageGeo = new THREE.SphereGeometry(height * 0.35, 8, 6)
+    const foliage = new THREE.Mesh(foliageGeo, leavesMaterial)
+    foliage.position.y = trunkHeight + height * 0.15
+    foliage.scale.y = 0.7
+    foliage.castShadow = true
+    foliage.receiveShadow = true
+    group.add(foliage)
 
     group.position.copy(position)
     return group

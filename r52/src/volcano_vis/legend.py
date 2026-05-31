@@ -6,6 +6,11 @@ import numpy as np
 from dataclasses import dataclass
 from typing import Optional, List, Tuple, Dict
 import pyvista as pv
+try:
+    from pyvista.plotting.plotter import Plotter as _Plotter
+    pv.Plotter = _Plotter
+except (ImportError, AttributeError):
+    pass
 
 from .data_generator import VolcanoDataset
 from .material_mapper import MaterialMapper, ColormapConfig
@@ -356,12 +361,21 @@ class LegendManager:
         if label is None:
             label = f"{int(length)} m"
 
-        plotter.add_scale_bar(
-            length=length,
-            location=position,
-            font_size=10,
-            fmt=label,
-        )
+        try:
+            plotter.add_scale_bar(
+                length=length,
+                location=position,
+                font_size=10,
+                fmt=label,
+            )
+        except AttributeError:
+            try:
+                plotter.add_legend_scale(
+                    label_format=label,
+                    show_ticks=True,
+                )
+            except AttributeError:
+                pass
 
     def add_axes(self, plotter: pv.Plotter, view_size: float = 0.1) -> None:
         """添加坐标轴"""

@@ -1,5 +1,5 @@
 import type { RoadSegment, RoadPoint, Building } from '@/types';
-import { smoothHeightTransition, createRampPoints } from '@/utils/curveUtils';
+import { smoothHeightTransition } from '@/utils/curveUtils';
 
 const LEVEL_0 = 0;
 const LEVEL_1 = 6;
@@ -11,7 +11,7 @@ function createStraightRoad(
   endX: number,
   endZ: number,
   y: number,
-  segments: number = 30
+  segments: number = 40
 ): RoadPoint[] {
   const points: RoadPoint[] = [];
   for (let i = 0; i <= segments; i++) {
@@ -25,7 +25,36 @@ function createStraightRoad(
   return points;
 }
 
-function createCurveRoad(
+function createCurveRamp(
+  startX: number,
+  startZ: number,
+  startY: number,
+  endX: number,
+  endZ: number,
+  endY: number,
+  curveX: number,
+  curveZ: number,
+  segments: number = 40
+): RoadPoint[] {
+  const points: RoadPoint[] = [];
+  for (let i = 0; i <= segments; i++) {
+    const t = i / segments;
+    const mt = 1 - t;
+    const t2 = t * t;
+    const mt2 = mt * mt;
+
+    const x = mt2 * startX + 2 * mt * t * curveX + t2 * endX;
+    const z = mt2 * startZ + 2 * mt * t * curveZ + t2 * endZ;
+
+    const heightT = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+    const y = startY + (endY - startY) * heightT;
+
+    points.push({ x, y, z });
+  }
+  return points;
+}
+
+function createCircleRamp(
   centerX: number,
   centerZ: number,
   radius: number,
@@ -33,50 +62,20 @@ function createCurveRoad(
   endAngle: number,
   startY: number,
   endY: number,
-  segments: number = 40
+  segments: number = 50
 ): RoadPoint[] {
   const points: RoadPoint[] = [];
   for (let i = 0; i <= segments; i++) {
     const t = i / segments;
     const angle = startAngle + (endAngle - startAngle) * t;
-    const easedT = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    const heightT = t;
+    const y = startY + (endY - startY) * heightT;
+
     points.push({
       x: centerX + Math.cos(angle) * radius,
-      y: startY + (endY - startY) * easedT,
+      y,
       z: centerZ + Math.sin(angle) * radius
     });
-  }
-  return points;
-}
-
-function createTransitionRamp(
-  startX: number, startZ: number, startY: number,
-  endX: number, endZ: number, endY: number,
-  curveAmount: number = 1,
-  segments: number = 35
-): RoadPoint[] {
-  const midPoint = {
-    x: (startX + endX) / 2 + (endZ - startZ) * curveAmount * 0.35,
-    y: (startY + endY) / 2,
-    z: (startZ + endZ) / 2 + (startX - endX) * curveAmount * 0.35
-  };
-
-  const points: RoadPoint[] = [];
-  for (let i = 0; i <= segments; i++) {
-    const t = i / segments;
-    const easedT = t < 0.3
-      ? 4 * t * t * t / 0.027
-      : t > 0.7
-        ? 1 - Math.pow(1 - t, 3) / 0.027
-        : t;
-    const finalT = Math.min(1, Math.max(0, easedT > 1 ? 1 : easedT));
-
-    const mt = 1 - finalT;
-    const x = mt * mt * startX + 2 * mt * finalT * midPoint.x + finalT * finalT * endX;
-    const y = startY + (endY - startY) * (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
-    const z = mt * mt * startZ + 2 * mt * finalT * midPoint.z + finalT * finalT * endZ;
-
-    points.push({ x, y, z });
   }
   return points;
 }
@@ -87,7 +86,7 @@ export const roadSegments: RoadSegment[] = [
     name: '东西主干道 (地面层)',
     type: 'main',
     level: 0,
-    points: createStraightRoad(-150, 0, 150, 0, LEVEL_0, 40),
+    points: createStraightRoad(-160, 0, 160, 0, LEVEL_0, 50),
     width: 24,
     lanes: 6,
     direction: 'bidirectional'
@@ -97,7 +96,7 @@ export const roadSegments: RoadSegment[] = [
     name: '南北主干道 (一层)',
     type: 'main',
     level: 1,
-    points: createStraightRoad(0, -150, 0, 150, LEVEL_1, 40),
+    points: createStraightRoad(0, -160, 0, 160, LEVEL_1, 50),
     width: 24,
     lanes: 6,
     direction: 'bidirectional'
@@ -107,7 +106,7 @@ export const roadSegments: RoadSegment[] = [
     name: '东西快速路 (二层)',
     type: 'main',
     level: 2,
-    points: createStraightRoad(-120, 40, 120, 40, LEVEL_2, 35),
+    points: createStraightRoad(-140, 50, 140, 50, LEVEL_2, 45),
     width: 20,
     lanes: 4,
     direction: 'forward'
@@ -117,42 +116,10 @@ export const roadSegments: RoadSegment[] = [
     name: '东北匝道 (地面→一层)',
     type: 'ramp',
     level: 0,
-    points: smoothHeightTransition(
-      createTransitionRamp(50, -20, LEVEL_0, 20, -50, LEVEL_1, 1.5, 35),
-      LEVEL_0,
-      LEVEL_1
-    ),
-    width: 10,
-    lanes: 2,
-    direction: 'forward'
-  },
-  {
-    id: 'ramp-nw-l1-to-l2',
-    name: '西北匝道 (一层→二层)',
-    type: 'ramp',
-    level: 1,
-    points: smoothHeightTransition(
-      createTransitionRamp(-20, 50, LEVEL_1, -50, 40, LEVEL_2, -1.2, 35),
-      LEVEL_1,
-      LEVEL_2
-    ),
-    width: 10,
-    lanes: 2,
-    direction: 'forward'
-  },
-  {
-    id: 'ramp-se-l2-to-l0',
-    name: '东南环形匝道 (二层→地面)',
-    type: 'ramp',
-    level: 2,
-    points: createCurveRoad(
-      60,
-      60,
-      40,
-      Math.PI,
-      -Math.PI * 0.5,
-      LEVEL_2,
-      LEVEL_0,
+    points: createCurveRamp(
+      60, 0, LEVEL_0,
+      0, -60, LEVEL_1,
+      60, -60,
       45
     ),
     width: 10,
@@ -160,63 +127,94 @@ export const roadSegments: RoadSegment[] = [
     direction: 'forward'
   },
   {
-    id: 'ramp-sw-l0-to-l1',
-    name: '西南匝道 (地面→一层)',
+    id: 'ramp-nw-l1-to-l0',
+    name: '西北匝道 (一层→地面)',
     type: 'ramp',
-    level: 0,
-    points: smoothHeightTransition(
-      createTransitionRamp(-50, 20, LEVEL_0, -20, 50, LEVEL_1, -1.5, 35),
-      LEVEL_0,
-      LEVEL_1
+    level: 1,
+    points: createCurveRamp(
+      0, 60, LEVEL_1,
+      -60, 0, LEVEL_0,
+      -60, 60,
+      45
     ),
     width: 10,
     lanes: 2,
     direction: 'forward'
   },
   {
-    id: 'connect-north-l1',
-    name: '北向连接路',
-    type: 'main',
+    id: 'ramp-se-l1-to-l2',
+    name: '东南匝道 (一层→二层)',
+    type: 'ramp',
     level: 1,
-    points: createStraightRoad(30, -80, 30, -30, LEVEL_1, 25),
+    points: createCurveRamp(
+      0, -60, LEVEL_1,
+      60, 50, LEVEL_2,
+      70, -30,
+      45
+    ),
+    width: 10,
+    lanes: 2,
+    direction: 'forward'
+  },
+  {
+    id: 'ramp-sw-l2-to-l0',
+    name: '西南环形匝道 (二层→地面)',
+    type: 'ramp',
+    level: 2,
+    points: createCircleRamp(
+      -70,
+      30,
+      45,
+      0,
+      Math.PI * 1.3,
+      LEVEL_2,
+      LEVEL_0,
+      55
+    ),
+    width: 10,
+    lanes: 2,
+    direction: 'forward'
+  },
+  {
+    id: 'ramp-es-l2-to-l1',
+    name: '东向匝道 (二层→一层)',
+    type: 'ramp',
+    level: 2,
+    points: createCurveRamp(
+      70, 50, LEVEL_2,
+      0, 60, LEVEL_1,
+      70, 70,
+      45
+    ),
+    width: 10,
+    lanes: 2,
+    direction: 'forward'
+  },
+  {
+    id: 'connect-west-l0',
+    name: '西向连接路',
+    type: 'main',
+    level: 0,
+    points: createStraightRoad(-80, -30, -80, 30, LEVEL_0, 30),
     width: 12,
     lanes: 3,
-    direction: 'forward'
-  },
-  {
-    id: 'ramp-curve-uturn',
-    name: 'U型转弯匝道',
-    type: 'ramp',
-    level: 1,
-    points: createCurveRoad(
-      -80,
-      0,
-      25,
-      0,
-      Math.PI,
-      LEVEL_1,
-      LEVEL_1,
-      30
-    ),
-    width: 10,
-    lanes: 2,
     direction: 'forward'
   }
 ];
 
 export const buildings: Building[] = [
-  { id: 'b1', position: { x: 100, y: 0, z: 100 }, width: 25, depth: 25, height: 40, style: 'office' },
-  { id: 'b2', position: { x: -100, y: 0, z: 100 }, width: 30, depth: 20, height: 55, style: 'commercial' },
-  { id: 'b3', position: { x: 100, y: 0, z: -100 }, width: 20, depth: 20, height: 25, style: 'residential' },
-  { id: 'b4', position: { x: -100, y: 0, z: -100 }, width: 35, depth: 25, height: 45, style: 'office' },
-  { id: 'b5', position: { x: 130, y: 0, z: 0 }, width: 20, depth: 15, height: 30, style: 'residential' },
-  { id: 'b6', position: { x: -130, y: 0, z: 0 }, width: 25, depth: 20, height: 35, style: 'commercial' },
-  { id: 'b7', position: { x: 0, y: 0, z: 130 }, width: 25, depth: 25, height: 50, style: 'office' },
-  { id: 'b8', position: { x: 0, y: 0, z: -130 }, width: 18, depth: 18, height: 28, style: 'residential' },
-  { id: 'b9', position: { x: 80, y: 0, z: 80 }, width: 15, depth: 15, height: 20, style: 'residential' },
-  { id: 'b10', position: { x: -80, y: 0, z: -80 }, width: 22, depth: 22, height: 42, style: 'commercial' },
-  { id: 'b11', position: { x: 60, y: 0, z: -90 }, width: 28, depth: 18, height: 38, style: 'office' },
-  { id: 'b12', position: { x: -60, y: 0, z: 90 }, width: 20, depth: 24, height: 32, style: 'commercial' }
+  { id: 'b1', position: { x: 110, y: 0, z: 110 }, width: 25, depth: 25, height: 45, style: 'office' },
+  { id: 'b2', position: { x: -110, y: 0, z: 110 }, width: 30, depth: 20, height: 60, style: 'commercial' },
+  { id: 'b3', position: { x: 110, y: 0, z: -110 }, width: 20, depth: 20, height: 28, style: 'residential' },
+  { id: 'b4', position: { x: -110, y: 0, z: -110 }, width: 35, depth: 25, height: 50, style: 'office' },
+  { id: 'b5', position: { x: 150, y: 0, z: 0 }, width: 20, depth: 15, height: 35, style: 'residential' },
+  { id: 'b6', position: { x: -150, y: 0, z: 0 }, width: 25, depth: 20, height: 40, style: 'commercial' },
+  { id: 'b7', position: { x: 0, y: 0, z: 150 }, width: 25, depth: 25, height: 55, style: 'office' },
+  { id: 'b8', position: { x: 0, y: 0, z: -150 }, width: 18, depth: 18, height: 30, style: 'residential' },
+  { id: 'b9', position: { x: 90, y: 0, z: 90 }, width: 15, depth: 15, height: 22, style: 'residential' },
+  { id: 'b10', position: { x: -90, y: 0, z: -90 }, width: 22, depth: 22, height: 48, style: 'commercial' },
+  { id: 'b11', position: { x: 70, y: 0, z: -100 }, width: 28, depth: 18, height: 42, style: 'office' },
+  { id: 'b12', position: { x: -70, y: 0, z: 100 }, width: 20, depth: 24, height: 36, style: 'commercial' }
 ];
 
 export const vehiclePaths = [
@@ -224,17 +222,17 @@ export const vehiclePaths = [
   'main-north-south-l1',
   'main-east-west-l2',
   'ramp-ne-l0-to-l1',
-  'ramp-nw-l1-to-l2',
-  'ramp-se-l2-to-l0',
-  'ramp-sw-l0-to-l1',
-  'connect-north-l1'
+  'ramp-nw-l1-to-l0',
+  'ramp-se-l1-to-l2',
+  'ramp-sw-l2-to-l0',
+  'ramp-es-l2-to-l1'
 ];
 
 export const roadSignData = [
-  { id: 'sign1', position: { x: 80, y: LEVEL_0, z: 15 }, text: '向东行驶', direction: { x: 1, y: 0, z: 0 } },
-  { id: 'sign2', position: { x: -80, y: LEVEL_0, z: -15 }, text: '向西行驶', direction: { x: -1, y: 0, z: 0 } },
-  { id: 'sign3', position: { x: 15, y: LEVEL_1, z: 80 }, text: '向北行驶', direction: { x: 0, y: 0, z: 1 } },
-  { id: 'sign4', position: { x: -15, y: LEVEL_1, z: -80 }, text: '向南行驶', direction: { x: 0, y: 0, z: -1 } },
-  { id: 'sign5', position: { x: 60, y: LEVEL_1, z: -30 }, text: '立交桥入口', direction: { x: 1, y: 0, z: 0 } },
-  { id: 'sign6', position: { x: -60, y: LEVEL_2, z: 50 }, text: '快速路', direction: { x: -1, y: 0, z: 0 } }
+  { id: 'sign1', position: { x: 80, y: LEVEL_0, z: 18 }, text: '向东行驶', direction: { x: 1, y: 0, z: 0 } },
+  { id: 'sign2', position: { x: -80, y: LEVEL_0, z: -18 }, text: '向西行驶', direction: { x: -1, y: 0, z: 0 } },
+  { id: 'sign3', position: { x: 18, y: LEVEL_1, z: 80 }, text: '向北行驶', direction: { x: 0, y: 0, z: 1 } },
+  { id: 'sign4', position: { x: -18, y: LEVEL_1, z: -80 }, text: '向南行驶', direction: { x: 0, y: 0, z: -1 } },
+  { id: 'sign5', position: { x: 65, y: LEVEL_0, z: 5 }, text: '立交桥入口', direction: { x: 1, y: 0, z: 0 } },
+  { id: 'sign6', position: { x: -70, y: LEVEL_2, z: 60 }, text: '快速路', direction: { x: -1, y: 0, z: 0 } }
 ];

@@ -77,8 +77,8 @@ export function useTrafficSystem(scene: THREE.Scene, curves: Map<string, ThreeCu
 
     const wheels: THREE.Mesh[] = [];
     const wheelPositions = vehicleData.type === 'truck'
-      ? [[-1.5, 0.4, -0.7], [1.5, 0.4, -0.7], [-1.5, 0.4, 0.7], [1.5, 0.4, 0.7]]
-      : [[-1.2, 0.3, -0.6], [1.2, 0.3, -0.6], [-1.2, 0.3, 0.6], [1.2, 0.3, 0.6]];
+      ? [[-0.7, 0.4, -1.5], [0.7, 0.4, -1.5], [-0.7, 0.4, 1.5], [0.7, 0.4, 1.5]]
+      : [[-0.6, 0.3, -1.2], [0.6, 0.3, -1.2], [-0.6, 0.3, 1.2], [0.6, 0.3, 1.2]];
 
     for (const pos of wheelPositions) {
       const wheel = new THREE.Mesh(carWheelGeo, wheelMaterial);
@@ -91,8 +91,8 @@ export function useTrafficSystem(scene: THREE.Scene, curves: Map<string, ThreeCu
     const tailLightMeshes: THREE.Mesh[] = [];
 
     const hlPositions = vehicleData.type === 'truck'
-      ? [[2.2, 0.6, -0.5], [2.2, 0.6, 0.5]]
-      : [[1.7, 0.5, -0.4], [1.7, 0.5, 0.4]];
+      ? [[-0.5, 0.6, 2.2], [0.5, 0.6, 2.2]]
+      : [[-0.4, 0.5, 1.7], [0.4, 0.5, 1.7]];
 
     for (const pos of hlPositions) {
       const hl = new THREE.Mesh(headLightGeo, headLightMat);
@@ -101,7 +101,7 @@ export function useTrafficSystem(scene: THREE.Scene, curves: Map<string, ThreeCu
       headLightMeshes.push(hl);
 
       const tl = new THREE.Mesh(tailLightGeo, tailLightMat);
-      tl.position.set(-pos[0], pos[1], pos[2]);
+      tl.position.set(pos[0], pos[1], -pos[2]);
       group.add(tl);
       tailLightMeshes.push(tl);
     }

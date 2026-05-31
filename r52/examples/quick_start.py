@@ -9,6 +9,11 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 import numpy as np
 import pyvista as pv
+try:
+    from pyvista.plotting.plotter import Plotter as _Plotter
+    pv.Plotter = _Plotter
+except (ImportError, AttributeError):
+    pass
 from volcano_vis import (
     VolcanoDataGenerator,
     VolcanoParameters,

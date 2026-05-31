@@ -98,7 +98,7 @@ export class SceneManager {
     })
 
     const stonePlanterGeo = new THREE.CylinderGeometry(0.8, 0.9, 0.6, 8)
-    const stonePlanterMat = BaseComponents.createColumn().children[1].material as THREE.Material
+    const stonePlanterMat = new THREE.MeshStandardMaterial({ color: 0x8a8a7a, roughness: 0.9 })
     const planterPositions = [
       { x: -6, z: -7 },
       { x: 6, z: -7 },
@@ -106,6 +106,8 @@ export class SceneManager {
       { x: 3, z: -2 }
     ]
 
+    const plantGeo = new THREE.SphereGeometry(0.7, 8, 6)
+    const plantMat = new THREE.MeshStandardMaterial({ color: 0x3a7a3a, roughness: 0.8 })
     planterPositions.forEach(pos => {
       const planter = new THREE.Mesh(stonePlanterGeo, stonePlanterMat)
       planter.position.set(pos.x, 0.3, pos.z)
@@ -114,11 +116,6 @@ export class SceneManager {
       planter.userData.componentId = 'railing'
       this.environmentGroup.add(planter)
 
-      const plantGeo = new THREE.SphereGeometry(0.7, 8, 6)
-      const plantMat = new THREE.MeshStandardMaterial({
-        color: 0x3a7a3a,
-        roughness: 0.8
-      })
       const plant = new THREE.Mesh(plantGeo, plantMat)
       plant.position.set(pos.x, 1.2, pos.z)
       plant.scale.y = 0.6

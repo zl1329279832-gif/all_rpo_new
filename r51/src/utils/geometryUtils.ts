@@ -187,7 +187,6 @@ export function createGuardRailGeometry(
 export function createCarGeometry(type: 'car' | 'suv' | 'truck'): { body: THREE.BufferGeometry; wheels: THREE.BufferGeometry[] } {
   const wheelGeos: THREE.BufferGeometry[] = [];
   const wheelGeo = new THREE.CylinderGeometry(0.35, 0.35, 0.25, 12);
-  wheelGeo.rotateZ(Math.PI / 2);
 
   for (let i = 0; i < 4; i++) {
     wheelGeos.push(wheelGeo.clone());
@@ -199,34 +198,34 @@ export function createCarGeometry(type: 'car' | 'suv' | 'truck'): { body: THREE.
 
   if (type === 'car') {
     const bodyShape = new ShapeClass();
-    bodyShape.moveTo(-1.8, -0.5);
-    bodyShape.lineTo(1.8, -0.5);
-    bodyShape.lineTo(1.8, 0.1);
-    bodyShape.lineTo(1.2, 0.6);
-    bodyShape.lineTo(-1.2, 0.6);
-    bodyShape.lineTo(-1.8, 0.1);
+    bodyShape.moveTo(-0.5, -1.8);
+    bodyShape.lineTo(0.5, -1.8);
+    bodyShape.lineTo(0.5, -1.2);
+    bodyShape.lineTo(0.3, 1.2);
+    bodyShape.lineTo(-0.3, 1.2);
+    bodyShape.lineTo(-0.5, -1.2);
     bodyShape.closePath();
 
     const extrudeSettings = { depth: 1, bevelEnabled: true, bevelSize: 0.08, bevelThickness: 0.08 };
     bodyGeo = new THREE.ExtrudeGeometry(bodyShape, extrudeSettings);
-    bodyGeo.rotateX(Math.PI / 2);
+    bodyGeo.rotateX(-Math.PI / 2);
     bodyGeo.translate(0, 0.5, 0);
   } else if (type === 'suv') {
     const bodyShape = new ShapeClass();
-    bodyShape.moveTo(-2, -0.6);
-    bodyShape.lineTo(2, -0.6);
-    bodyShape.lineTo(2, 0.2);
-    bodyShape.lineTo(1.6, 0.8);
-    bodyShape.lineTo(-1.6, 0.8);
-    bodyShape.lineTo(-2, 0.2);
+    bodyShape.moveTo(-0.6, -2);
+    bodyShape.lineTo(0.6, -2);
+    bodyShape.lineTo(0.6, -1.6);
+    bodyShape.lineTo(0.4, 1.6);
+    bodyShape.lineTo(-0.4, 1.6);
+    bodyShape.lineTo(-0.6, -1.6);
     bodyShape.closePath();
 
     const extrudeSettings = { depth: 1.2, bevelEnabled: true, bevelSize: 0.08, bevelThickness: 0.08 };
     bodyGeo = new THREE.ExtrudeGeometry(bodyShape, extrudeSettings);
-    bodyGeo.rotateX(Math.PI / 2);
+    bodyGeo.rotateX(-Math.PI / 2);
     bodyGeo.translate(0, 0.6, 0);
   } else {
-    bodyGeo = new THREE.BoxGeometry(4.5, 1.8, 1.8);
+    bodyGeo = new THREE.BoxGeometry(1.8, 1.8, 4.5);
     bodyGeo.translate(0, 0.9, 0);
   }
 

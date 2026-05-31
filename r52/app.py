@@ -9,11 +9,15 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
 
 import numpy as np
 import pyvista as pv
+try:
+    from pyvista.plotting.plotter import Plotter as _Plotter
+    pv.Plotter = _Plotter
+except (ImportError, AttributeError):
+    pass
 from io import BytesIO
 import tempfile
 
 import streamlit as st
-from streamlit_option_menu import option_menu
 
 from volcano_vis import (
     VolcanoDataGenerator,

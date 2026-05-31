@@ -7,6 +7,11 @@ import numpy as np
 from dataclasses import dataclass
 from typing import Optional, List, Dict, Callable
 import pyvista as pv
+try:
+    from pyvista.plotting.plotter import Plotter as _Plotter
+    pv.Plotter = _Plotter
+except (ImportError, AttributeError):
+    pass
 from pathlib import Path
 
 from .animator import AnimationFrame, AnimationConfig
