@@ -99,8 +99,9 @@ export class SatelliteBuilder {
 
   private registerPart(id: string, object: THREE.Object3D): void {
     this.parts.set(id, object)
+    object.userData.partId = id
     object.traverse((child) => {
-      if (child.userData.partId) {
+      if (child !== object) {
         child.userData.parentPartId = id
       }
     })

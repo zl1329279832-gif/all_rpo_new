@@ -10,26 +10,24 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'view-change', mode: ViewMode): void
-  (e: 'toggle-data-panel'): void
+  (e: 'toggle-panel'): void
 }>()
 
 const getAnimationSystem = inject<() => AnimationSystem | null>('getAnimationSystem')
 const getSceneManager = inject<() => SceneManager | null>('getSceneManager')
 
-const isExploded = ref(false)
-const isInternalView = ref(false)
 const isDeploying = ref(false)
 
 async function toggleExplodedView() {
   const animationSystem = getAnimationSystem?.()
   if (!animationSystem) return
 
-  if (isExploded.value) {
+  if (props.currentView === 'exploded') {
     await animationSystem.resetExplodedView()
-    isExploded.value = false
+    emit('view-change', 'normal')
   } else {
     await animationSystem.playExplodedView(1)
-    isExploded.value = true
+    emit('view-change', 'exploded')
   }
 }
 
@@ -37,13 +35,11 @@ async function toggleInternalView() {
   const animationSystem = getAnimationSystem?.()
   if (!animationSystem) return
 
-  if (isInternalView.value) {
+  if (props.currentView === 'internal') {
     await animationSystem.resetInternalView()
-    isInternalView.value = false
     emit('view-change', 'normal')
   } else {
     await animationSystem.playInternalView()
-    isInternalView.value = true
     emit('view-change', 'internal')
   }
 }
@@ -75,7 +71,7 @@ function setViewMode(mode: ViewMode) {
       <span class="group-label">视图模式</span>
       <button 
         class="control-btn"
-        :class="{ active: !isExploded && !isInternalView }"
+        :class="{ active: currentView === 'normal' }"
         @click="setViewMode('normal')"
       >
         <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -86,7 +82,7 @@ function setViewMode(mode: ViewMode) {
       </button>
       <button 
         class="control-btn"
-        :class="{ active: isExploded }"
+        :class="{ active: currentView === 'exploded' }"
         @click="toggleExplodedView"
       >
         <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -99,7 +95,7 @@ function setViewMode(mode: ViewMode) {
       </button>
       <button 
         class="control-btn"
-        :class="{ active: isInternalView }"
+        :class="{ active: currentView === 'internal' }"
         @click="toggleInternalView"
       >
         <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -134,7 +130,7 @@ function setViewMode(mode: ViewMode) {
         </svg>
         复位视角
       </button>
-      <button class="control-btn" @click="$emit('toggle-data-panel')">
+      <button class="control-btn" @click="emit('toggle-panel')">
         <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
           <line x1="3" y1="9" x2="21" y2="9"/>

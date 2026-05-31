@@ -169,6 +169,45 @@ export const partMetadata: Record<string, PartMetadata> = {
     },
     function: '在地影期为卫星供电，平滑太阳能功率输出',
   },
+  supports: {
+    id: 'supports',
+    name: '支撑结构',
+    category: 'structure',
+    description: '太阳能帆板支架和天线桅杆',
+    specifications: {
+      '材质': '碳纤维复合材料',
+      '展开长度': '6m',
+      '质量': '25 kg',
+      '固有频率': '20 Hz',
+    },
+    function: '支撑太阳能帆板和天线，提供结构刚度和定位精度',
+  },
+  cables: {
+    id: 'cables',
+    name: '线缆系统',
+    category: 'internal',
+    description: '电力和数据传输线缆',
+    specifications: {
+      '总长度': '150 m',
+      '类型': '屏蔽线缆',
+      '连接器': '宇航级',
+      '信号类型': '电力、数据、射频',
+    },
+    function: '传输电力和数据信号，连接各子系统',
+  },
+  connectors: {
+    id: 'connectors',
+    name: '连接器',
+    category: 'internal',
+    description: '宇航级电连接器',
+    specifications: {
+      '类型': '多针圆形连接器',
+      '针数': '15-100 针',
+      '插拔次数': '500 次',
+      '工作温度': '-55°C ~ +125°C',
+    },
+    function: '提供可靠的电气连接，便于装配和维护',
+  },
 }
 
 export function getPartMetadata(partId: string): PartMetadata | undefined {

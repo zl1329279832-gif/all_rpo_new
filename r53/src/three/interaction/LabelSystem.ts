@@ -14,11 +14,34 @@ export class LabelSystem {
   private labelElements: Map<string, HTMLDivElement> = new Map()
   private container: HTMLElement
   private activeLabelId: string | null = null
+  private onLabelCloseCallback: (() => void) | null = null
+  private ignoreNextClick: boolean = false
 
   constructor(scene: THREE.Scene, camera: THREE.Camera, container: HTMLElement) {
     this.scene = scene
     this.camera = camera
     this.container = container
+    this.setupClickOutsideListener()
+  }
+
+  private setupClickOutsideListener(): void {
+    document.addEventListener('click', this.handleDocumentClick)
+  }
+
+  private handleDocumentClick = (event: MouseEvent): void => {
+    if (this.ignoreNextClick) {
+      this.ignoreNextClick = false
+      return
+    }
+
+    if (!this.activeLabelId) return
+
+    const activeElement = this.labelElements.get(this.activeLabelId)
+    const target = event.target as Node
+    
+    if (activeElement && !activeElement.contains(target)) {
+      this.hideActiveLabel()
+    }
   }
 
   addLabel(id: string, position: THREE.Vector3, metadata: PartMetadata): void {
@@ -44,6 +67,7 @@ export class LabelSystem {
     this.labelElements.set(id, labelElement)
     this.container.appendChild(labelElement)
     this.activeLabelId = id
+    this.ignoreNextClick = true
 
     this.updateLabelPosition(id, labelData.position)
   }
@@ -107,6 +131,10 @@ export class LabelSystem {
     return label
   }
 
+  setOnLabelClose(callback: () => void): void {
+    this.onLabelCloseCallback = callback
+  }
+
   hideActiveLabel(): void {
     if (this.activeLabelId) {
       const element = this.labelElements.get(this.activeLabelId)
@@ -115,6 +143,7 @@ export class LabelSystem {
       }
       this.labelElements.delete(this.activeLabelId)
       this.activeLabelId = null
+      this.onLabelCloseCallback?.()
     }
   }
 
@@ -152,6 +181,7 @@ export class LabelSystem {
   }
 
   dispose(): void {
+    document.removeEventListener('click', this.handleDocumentClick)
     this.clearAllLabels()
   }
 }
